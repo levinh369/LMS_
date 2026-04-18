@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý danh mục | LMS System</title>
+    <link rel="stylesheet" href="../../assets/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1><i class="fa-solid fa-list-ul"></i> Quản lý danh mục</h1>
+            <a href="create.html" class="btn btn-primary">
+                <i class="fa-solid fa-plus"></i> Thêm danh mục mới
+            </a>
+        </header>
+
+        <hr>
+
+        <section class="filter-bar">
+            <div class="filter-group">
+                <label>Tìm kiếm:</label>
+                <input type="text" id="keySearch" placeholder="Nhập tên danh mục...">
+            </div>
+
+            <div class="filter-group">
+                <label>Từ ngày:</label>
+                <input type="date" id="fromDate">
+            </div>
+
+            <div class="filter-group">
+                <label>Đến ngày:</label>
+                <input type="date" id="toDate">
+            </div>
+
+            <div class="filter-group">
+                <label>Trạng thái:</label>
+                <select id="isActive">
+                    <option value="-1">-- Tất cả --</option>
+                    <option value="1">Đang hoạt động</option>
+                    <option value="0">Đang khóa</option>
+                </select>
+            </div>
+
+            <button id="btnSearch" class="btn btn-success">
+                <i class="fa-solid fa-magnifying-glass"></i> Tìm kiếm
+            </button>
+        </section>
+
+        <section class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 50px;">ID</th>
+                        <th>Tên danh mục</th>
+                        <th>Ngày tạo</th>
+                        <th style="width: 120px;">Trạng thái</th>
+                        <th style="width: 150px;">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody id="category-data">
+                    <tr>
+                        <td colspan="5" style="text-align: center;">Đang tải dữ liệu...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="pagination-container">
+            <div class="page-info">
+                Hiển thị <span id="current-count">0</span>/<span id="total-count">0</span> bản ghi
+            </div>
+            <div id="pagination-buttons" class="pagination">
+                </div>
+        </section>
+    </div>
+
+    <script type="module" src="../../js/pages/category-list.js"></script>
+</body>
+</html>

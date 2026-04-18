@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tất Cả Lộ Trình - LMS PRO</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+    :root {
+        --primary-blue: #0d6efd;
+        --text-dark: #2d3436;
+        --text-muted: #636e72;
+        --bg-light: #f8f9fa;
+    }
+
+    body { 
+        background-color: var(--bg-light); 
+        font-family: 'Inter', sans-serif; 
+        color: var(--text-dark);
+    }
+
+    /* 1. Tiêu đề Section */
+    .section-title {
+        font-weight: 800;
+        font-size: 1.75rem;
+        letter-spacing: -0.5px;
+    }
+    .roadmap-card {
+        background: #fff;
+        border-radius: 20px;
+        padding: 30px 25px; /* Tăng padding để card đầy đặn */
+        border: 1px solid rgba(0,0,0,0.06);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        text-decoration: none !important;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* Hiệu ứng dải màu trang trí phía trên (Subtle Top Bar) */
+    .roadmap-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 5px;
+        background: linear-gradient(90deg, #0d6efd, #6610f2);
+        opacity: 0.8;
+    }
+
+    .roadmap-card:hover {
+        transform: translateY(-8px);
+        border-color: #0d6efd;
+        box-shadow: 0 15px 35px rgba(13, 110, 253, 0.1) !important;
+    }
+
+    /* Icon làm trung tâm */
+    .roadmap-header-icon {
+        width: 60px;
+        height: 60px;
+        background: rgba(13, 110, 253, 0.08);
+        color: #0d6efd;
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8rem;
+        margin-bottom: 20px;
+        transition: all 0.3s ease;
+    }
+
+    .roadmap-card:hover .roadmap-header-icon {
+        background: #0d6efd;
+        color: #fff;
+        transform: rotate(-5deg) scale(1.1);
+    }
+
+    .roadmap-card .step-count {
+        font-size: 0.75rem;
+        font-weight: 800;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 1.2px;
+        margin-bottom: 10px;
+        display: block;
+    }
+
+    .roadmap-card h4 {
+        font-weight: 800;
+        font-size: 1.25rem;
+        color: #2d3436;
+        margin-bottom: 12px;
+        line-height: 1.3;
+    }
+
+    /* Giữ nguyên logic cắt chữ 2 dòng của bác */
+    .roadmap-desc {
+        font-size: 0.9rem;
+        color: #636e72;
+        line-height: 1.6;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        height: 2.8rem;
+    }
+
+    /* Mũi tên đi kèm ở góc dưới */
+    .roadmap-footer {
+        margin-top: auto;
+        padding-top: 20px;
+        display: flex;
+        align-items: center;
+        color: #0d6efd;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+</style>
+</style>
+</head>
+<body>
+
+<div id="header-placeholder"></div>
+
+<main class="container py-5">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="index.html" class="text-decoration-none">Trang chủ</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Lộ trình học tập</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex align-items-center justify-content-between mb-5">
+        <div>
+            <h3 class="section-title mb-1">
+                <i class="bi bi-map-fill text-primary me-2"></i>Lộ trình học bài bản
+            </h3>
+            <p class="text-muted mb-0">Được thiết kế để giúp bác đi từ con số 0 đến khi có việc làm.</p>
+        </div>
+        <span id="roadmapCount" class="badge bg-primary-subtle text-primary rounded-pill px-3 py-2 fw-bold">
+            0 Lộ trình
+        </span>
+    </div>
+
+    <div class="row g-4" id="roadmapList">
+        <div class="loading-wrapper text-center w-100">
+            <div class="spinner-border text-primary mb-3" role="status"></div>
+            <p class="text-muted fw-medium">Đang tải danh sách lộ trình...</p>
+        </div>
+    </div>
+</main>
+
+<div id="footer-placeholder"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="../../assets/js/common.js"></script>
+<script src="../../assets/js/roadmap.js"></script>
+<script>
+    $(document).ready(function() {
+        RoadMap.getAllRoadMaps();
+    });
+</script>
+</body>
+</html>

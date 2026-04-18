@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Lộ trình - Admin LMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        :root { --primary: #4f46e5; --bg: #f9fafb; }
+        body { background-color: var(--bg); font-family: 'Inter', sans-serif; color: #1f2937; }
+        .card { border: none; border-radius: 20px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+        .roadmap-img { width: 100px; height: 60px; object-fit: cover; border-radius: 12px; background: #eee; }
+        .table thead th { background-color: #f3f4f6; color: #4b5563; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; border: none; padding: 15px; }
+        #previewContainer { width: 100%; height: 180px; border: 2px dashed #e5e7eb; border-radius: 15px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #f9fafb; }
+        #previewImg { width: 100%; height: 100%; object-fit: cover; display: none; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid py-5 px-4">
+    <div class="row mb-4 align-items-end">
+        <div class="col-lg-6">
+            <h2 class="fw-bold mb-1"><i class="bi bi-compass-fill me-2 text-primary"></i>Hệ thống Lộ trình</h2>
+            <p class="text-muted small">Quản lý và định hướng nghề nghiệp cho học viên</p>
+        </div>
+        <div class="col-lg-6 text-lg-end">
+            <button class="btn btn-primary px-4 py-2 rounded-pill fw-bold shadow-sm" onclick="RoadMap.openModal()">
+                <i class="bi bi-plus-lg me-2"></i>Tạo Lộ Trình Mới
+            </button>
+        </div>
+    </div>
+
+   <div class="card mb-4 p-3 border-0 shadow-sm" style="border-radius: 15px;">
+    <div class="row g-3 align-items-center">
+        <div class="col-md-4">
+            <div class="input-group">
+                <span class="input-group-text bg-white border-end-0 text-muted">
+                    <i class="bi bi-search"></i>
+                </span>
+                <input type="text" class="form-control border-start-0 ps-0" id="keySearch" 
+                       placeholder="Tìm tên lộ trình...">
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <select class="form-select" id="isActive">
+                <option value="-1">Tất cả trạng thái</option>
+                <option value="1">Đang kích hoạt</option>
+                <option value="0">Đang tạm ẩn</option>
+            </select>
+        </div>
+
+        <div class="col-md-5 d-flex gap-2">
+            <button class="btn btn-primary px-4 rounded-pill fw-bold shadow-sm" onclick="RoadMap.loadData(1)">
+                <i class="bi bi-funnel-fill me-1"></i> Lọc dữ liệu
+            </button>
+            <button class="btn btn-light px-4 rounded-pill border fw-bold text-secondary" onclick="RoadMap.resetFilter()">
+                <i class="bi bi-arrow-clockwise me-1"></i> Làm mới
+            </button>
+        </div>
+    </div>
+</div>
+
+    <div class="card overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Ảnh</th>
+                        <th>Thông tin lộ trình</th>
+                        <th class="text-center">Số khóa học</th>
+                        <th>Trạng thái</th>
+                        <th class="text-end pe-4">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="roadmapBody">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="roadmapModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 24px;">
+            <div class="modal-header border-bottom-0 p-4 pb-0">
+                <h5 class="fw-bold mb-0" id="modalTitle">Thiết lập Lộ trình</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+               <form id="roadmapForm">
+                <input type="hidden" id="roadmapId" name="Id" value="0">
+                
+                <div class="row">
+                    <div class="col-md-7">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Tên lộ trình</label>
+                            <input type="text" class="form-control" id="Title" name="Title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Mô tả</label>
+                            <textarea class="form-control" id="description" name="Description" rows="4"></textarea>
+                        </div>
+                        <div class="form-check form-switch mt-4">
+                            <input class="form-check-input" type="checkbox" id="txtIsActive" name="IsActive" checked>
+                            <label class="form-check-label fw-bold" for="isActive">Kích hoạt hiển thị</label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-5 text-center">
+                        <label class="form-label small fw-bold d-block text-start">Ảnh đại diện</label>
+                        <input type="file" class="form-control mb-2" id="thumbnailFile" name="ImageFile"
+                            accept="image/*" onchange="RoadMap.previewImage(this)">
+                        
+                        <input type="hidden" id="thumbnailUrl" name="ThumbnailUrl">
+                        <div id="previewContainer" class="mt-2" style="height: 180px; border: 2px dashed #e5e7eb; border-radius: 15px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #f9fafb;">
+
+                    <span class="text-muted small" id="previewPlaceholder">Chưa có ảnh</span>
+
+                    <img src="" id="previewImg" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+
+                </div>
+                        </div>
+                        
+                </div>
+            </form>
+            </div>
+            <div class="modal-footer border-top-0 p-4 pt-0">
+                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary rounded-pill px-5 fw-bold" onclick="RoadMap.save()">Lưu Lại</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="../../assets/js/roadmap.js"></script>
+<script>
+    $(document).ready(function() {
+        RoadMap.init();
+    });
+</script>
+</body>
+</html>

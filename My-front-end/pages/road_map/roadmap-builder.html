@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Thiết kế Lộ trình</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.min.js"></script>
+    
+    <style>
+        body { background-color: #f4f7f6; padding: 40px 0; }
+        .list-group-item { 
+            cursor: grab; border-radius: 10px !important; margin-bottom: 8px; 
+            border: 1px solid #eee; transition: 0.3s;
+        }
+        .list-group-item:hover { background-color: #f8f9fa; border-color: #0d6efd; }
+        .handle { cursor: grab; color: #ccc; margin-right: 10px; }
+        .column-box { 
+            background: white; border-radius: 15px; padding: 20px; 
+            min-height: 500px; box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        .step-num {
+            width: 24px; height: 24px; background: #0d6efd; color: white;
+            border-radius: 50%; display: inline-flex; align-items: center;
+            justify-content: center; font-size: 12px; margin-right: 10px;
+        }
+        .ghost { opacity: 0.4; background: #c8ebfb; }
+    </style>
+</head>
+<body>
+<div id="header-placeholder"></div>
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-dark">Thiết lập Lộ trình</h2>
+            <p class="text-muted">Kéo khóa học từ bên trái vào bên phải để xây dựng lộ trình</p>
+        </div>
+        <button class="btn btn-primary px-4 rounded-pill shadow" onclick="RoadMapBuider.saveRoadmap()">
+            <i class="bi bi-cloud-arrow-up-fill me-2"></i> Lưu thay đổi
+        </button>
+    </div>
+
+    <div class="row">
+        <div class="col-md-5">
+            <div class="column-box">
+                <h5 class="fw-bold mb-3"><i class="bi bi-collection-play me-2"></i>Kho khóa học</h5>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" placeholder="Tìm khóa học...">
+                </div>
+                <div id="allCoursesList" class="list-group">
+                   
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-2 d-flex align-items-center justify-content-center">
+            <i class="bi bi-arrow-left-right fs-1 text-muted opacity-25"></i>
+        </div>
+
+        <div class="col-md-5">
+            <div class="column-box" style="border: 2px dashed #0d6efd;">
+                 <button class="btn btn-xs btn-outline-primary rounded-pill fw-bold" onclick="RoadMapBuider.addPhase()">
+        <i class="bi bi-plus-circle me-1"></i> Giai đoạn
+    </button>
+                <h5 class="fw-bold mb-3 text-primary"><i class="bi bi-map-fill me-2"></i>Cấu trúc lộ trình</h5>
+                <div id="roadmapStepsList" class="list-group" style="min-height: 400px;">
+                    </div>
+                    
+                <div id="emptyNote" class="text-center text-muted mt-5">
+                    <i class="bi bi-plus-circle fs-1"></i>
+                    <p>Chưa có khóa học nào<br>Kéo thả vào đây</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="footer-placeholder"></div>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="../../assets/js/roadmap-buider.js"></script>
+<script src="../../assets/js/common.js"></script>
+</body>
+</html>

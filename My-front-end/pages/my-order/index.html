@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đơn hàng của tôi - LMS PRO</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    
+    <style>
+        :root { 
+            --f8-blue: #0866ff; 
+            --f8-orange: #ff511c; 
+        }
+        body { background-color: #f0f2f5; font-family: -apple-system, system-ui, sans-serif; }
+        .order-container { max-width: 800px; margin: 40px auto; min-height: 600px; }
+        
+        /* Item đơn hàng */
+        .order-item {
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(0,0,0,0.05);
+            transition: all 0.2s ease;
+        }
+        .order-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+
+        .course-preview {
+            width: 140px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 8px;
+            background: #eee;
+        }
+
+        .status-badge {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+
+        .status-success { 
+            background: #eaffea; 
+            color: #198754; 
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-pending { 
+            background: #fff4e5; 
+            color: #b06000; 
+            border: 1px solid #ffeeba; 
+        }
+
+        .price { color: var(--f8-orange); font-weight: 700; font-size: 18px; }
+        
+        .btn-learn { background-color: var(--f8-blue); color: #fff; border-radius: 8px; font-weight: 600; padding: 8px 20px; text-decoration: none; border: none; }
+        .btn-learn:hover { background-color: #0652d1; color: #fff; }
+        
+        .btn-detail { color: #65676b; border: 1px solid #ced4da; border-radius: 8px; font-weight: 600; padding: 8px 20px; background: #fff; }
+        .btn-detail:hover { background: #f8f9fa; }
+        #invoiceContent {
+    position: relative;
+    overflow: hidden;
+}
+#invoiceContent::before {
+    content: "ĐÃ THANH TOÁN";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-30deg);
+    font-size: 4rem;
+    font-weight: bold;
+    color: rgba(40, 167, 69, 0.1); /* Màu xanh lá nhạt */
+    pointer-events: none;
+    white-space: nowrap;
+}
+@media print {
+    /* 1. Ẩn tất cả mọi thứ trên trang web */
+    body * {
+        visibility: hidden;
+    }
+
+    /* 2. Chỉ hiển thị cái nội dung bên trong Modal hóa đơn */
+    #invoiceModal, 
+    #invoiceModal * {
+        visibility: visible;
+    }
+
+    /* 3. Cố định vị trí nội dung in lên trên cùng bên trái của trang giấy */
+    #invoiceModal {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+    }
+
+    /* 4. Ẩn các nút bấm không cần thiết khi in (như nút Đóng, nút In) */
+    .modal-footer, .btn-close {
+        display: none !important;
+    }
+
+    /* 5. Loại bỏ border và bóng đổ của modal để nhìn giống tờ giấy thật */
+    .modal-content {
+        border: none !important;
+        box-shadow: none !important;
+    }
+}
+    </style>
+</head>
+<body>
+
+    <div id="header-placeholder"></div>
+
+    <div class="container order-container">
+        <div class="mb-4">
+            <h3 class="fw-bold">Đơn hàng của tôi</h3>
+            <p class="text-muted">Xem lại lịch sử thanh toán và quản lý các khóa học đã mua.</p>
+        </div>
+
+        <div id="orderList">
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2 text-muted">Đang tải đơn hàng...</p>
+            </div>
+        </div>
+
+        <div id="noOrder" class="text-center py-5 d-none">
+            <i class="bi bi-bag-x fs-1 text-muted"></i>
+            <p class="mt-2 text-muted">Bạn chưa có đơn hàng nào.</p>
+            <a href="/courses" class="btn btn-primary rounded-pill px-4">Khám phá khóa học ngay</a>
+        </div>
+    </div>
+<div class="modal fade" id="invoiceModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold"><i class="bi bi-receipt me-2"></i>Chi tiết hóa đơn</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4" id="invoiceContent">
+                </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-primary" onclick="window.print()">
+                    <i class="bi bi-printer me-1"></i>In hóa đơn
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+    <div id="footer-placeholder"></div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+
+    <script src="../../assets/js/common.js"></script>
+    <script src="../../assets/js/detail.js"></script>
+    <script src="../../assets/js/order.js"></script>
+
+</body>
+</html>

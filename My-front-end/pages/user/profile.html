@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hồ sơ của tôi | LMS Academy</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --f8-orange: #f05123;
+            --f8-text: #292e39;
+            --f8-bg: #f8f9fa;
+        }
+
+        body {
+            background-color: var(--f8-bg);
+            font-family: 'Be Vietnam Pro', sans-serif;
+            color: var(--f8-text);
+        }
+
+        /* --- Sidebar Style --- */
+        .profile-sidebar {
+            background: #fff;
+            border-radius: 20px;
+            padding: 30px 20px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            position: sticky;
+            top: 20px;
+        }
+
+        .avatar-lg {
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid #fff;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .sidebar-stat {
+            background: var(--f8-bg);
+            border-radius: 12px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-val {
+            font-size: 20px;
+            font-weight: 800;
+            display: block;
+        }
+
+        /* --- Main Content Tabs --- */
+        .content-box {
+            background: #fff;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            min-height: 500px;
+        }
+
+        .nav-tabs-horizontal {
+            display: flex;
+            gap: 30px;
+            border-bottom: 2px solid #f0f0f0;
+            margin-bottom: 25px;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 12px 0;
+            font-weight: 700;
+            color: #777;
+            font-size: 16px;
+            position: relative;
+            transition: 0.3s;
+        }
+
+        .tab-btn.active {
+            color: var(--f8-orange);
+        }
+
+        .tab-btn.active::after {
+            content: "";
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: var(--f8-orange);
+            border-radius: 10px;
+        }
+
+        /* --- Course Cards --- */
+        .course-card {
+            border: 1px solid #f2f2f2;
+            border-radius: 16px;
+            overflow: hidden;
+            transition: 0.3s;
+            height: 100%;
+        }
+
+        .course-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+        }
+
+        .thumb-wrap {
+            height: 150px;
+            overflow: hidden;
+        }
+
+        .thumb-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .btn-action {
+            background: var(--f8-orange);
+            color: white;
+            border-radius: 10px;
+            font-weight: 600;
+            padding: 8px;
+            width: 100%;
+            border: none;
+        }
+
+        .badge-completed {
+            background: #e8fff3;
+            color: #27ae60;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 5px 12px;
+            border-radius: 20px;
+        }
+    </style>
+</head>
+<body>
+<div id="header-placeholder"></div>
+
+<div class="container my-5">
+    <div class="row g-4">
+        
+        <div class="col-lg-3">
+            <div class="profile-sidebar">
+                <img id="profile-avatar" src="/assets/img/default-avatar.png" class="avatar-lg" alt="Avatar">
+                
+                <h4 id="profile-name" class="fw-800 mb-1 text-truncate">Đang tải...</h4>
+                
+                <p id="profile-join-date" class="text-muted small mb-4"></p>
+                
+                <button class="btn btn-outline-dark btn-sm rounded-pill w-100 fw-bold mb-4" onclick="location.href='/pages/user/settings.html'">
+                    <i class="bi bi-pencil-square me-2"></i>Sửa hồ sơ
+                </button>
+
+                <div class="sidebar-stat d-flex justify-content-around">
+                    <div class="text-center">
+                        <span id="stat-ongoing" class="stat-val">0</span>
+                        <small class="text-muted small fw-600">Đang học</small>
+                    </div>
+                    <div class="vr"></div>
+                    <div class="text-center">
+                        <span id="stat-completed" class="stat-val text-success">0</span>
+                        <small class="text-muted small fw-600">Đã xong</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-9">
+            <div class="content-box">
+                
+                <div class="nav-tabs-horizontal">
+                    <button class="tab-btn active" onclick="switchTab(event, 'ongoing-container')">Khóa học đang học</button>
+                    <button class="tab-btn" onclick="switchTab(event, 'completed-container')">Khóa học đã hoàn thành</button>
+                </div>
+
+                <div id="ongoing-container" class="tab-pane-custom">
+                    <div id="ongoing-list" class="row g-4">
+                        </div>
+                </div>
+
+                <div id="completed-container" class="tab-pane-custom d-none">
+                    <div id="completed-list" class="row g-4">
+                        </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div id="footer-placeholder"></div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
+
+<script src="../../assets/js/notification.js"></script>
+<script src="../../assets/js/user.js"></script>
+
+<script src="../../assets/js/common.js"></script>
+</body>
+</html>

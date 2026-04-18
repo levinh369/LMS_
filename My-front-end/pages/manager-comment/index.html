@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LMS Ultra Admin - Comment Command Center</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twbs-pagination/1.4.2/jquery.twbsPagination.min.js"></script>
+
+    <style>
+        :root { --primary: #4f46e5; --bg: #f8fafc; --sidebar: #0f172a; }
+        body { background-color: var(--bg); font-family: 'Plus Jakarta Sans', sans-serif; color: #1e293b; overflow-x: hidden; }
+        .sidebar { width: 260px; height: 100vh; background: var(--sidebar); position: fixed; left: 0; top: 0; padding: 25px; color: white; z-index: 1000; }
+        .nav-link { color: #94a3b8; padding: 12px 15px; border-radius: 10px; margin-bottom: 5px; text-decoration: none; display: block; transition: 0.3s; }
+        .nav-link:hover, .nav-link.active { background: var(--primary); color: white; }
+        .main-content { margin-left: 260px; padding: 40px; }
+        .glass-card { background: rgba(255, 255, 255, 0.9); border: 1px solid #e2e8f0; border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .thread-item { border-radius: 24px; border: 1px solid #e2e8f0; background: white; margin-bottom: 20px; transition: 0.3s; position: relative; padding: 20px; }
+        .thread-item:hover { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); transform: translateY(-2px); }
+        .is-hidden { opacity: 0.4; filter: grayscale(1); }
+        .bubble-admin { background: #f1f5f9; border-radius: 0 15px 15px 15px; padding: 12px 18px; }
+        .avatar-box { width: 45px; height: 45px; border-radius: 14px; object-fit: cover; }
+        .reply-branch { border-left: 2px solid #e2e8f0; margin-left: 22px; padding-left: 30px; margin-top: 15px; }
+        .btn-tool { width: 34px; height: 34px; border-radius: 10px; border: 1px solid #e2e8f0; background: white; color: #64748b; transition: 0.2s; }
+        .btn-tool:hover { background: var(--primary); color: white; }
+        #bulkBar { display: none; background: var(--primary); color: white; padding: 12px 25px; border-radius: 15px; margin-bottom: 20px; align-items: center; justify-content: space-between; }
+        .badge-course { font-size: 10px; background: #e0e7ff; color: #4338ca; padding: 4px 8px; border-radius: 6px; font-weight: 700; }
+        /* CSS cho phân trang */
+        #pagination-container .page-link { border: none; padding: 8px 16px; color: var(--secondary); border-radius: 8px; margin: 0 2px; }
+        #pagination-container .active .page-link { background-color: var(--primary); color: white; }
+.is-inactive { 
+    opacity: 0.4; 
+    filter: grayscale(0.8); 
+    transition: 0.3s ease;
+}
+
+/* Trạng thái XÓA (isDeleted = true): Biến mất hoàn toàn khi ở trang chính */
+.is-deleted-hidden { 
+    display: none !important; 
+}
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <div class="mb-5 px-3">
+        <h4 class="fw-bold mb-0 text-white">LMS <span class="text-primary">ULTRA</span></h4>
+        <small class="opacity-50 small">Admin Dashboard v3.0</small>
+    </div>
+    <div class="nav flex-column">
+        <a href="#" class="nav-link"><i class="bi bi-speedometer2 me-2"></i> Tổng quan</a>
+        <a href="#" class="nav-link active"><i class="bi bi-chat-square-dots me-2"></i> Quản lý Hội thoại</a>
+        <a href="#" class="nav-link"><i class="bi bi-mortarboard me-2"></i> Khóa học</a>
+        <a href="#" class="nav-link"><i class="bi bi-people me-2"></i> Người dùng</a>
+    </div>
+</div>
+
+<div class="main-content">
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h3 class="fw-bold mb-1 text-dark">Comment Command Center</h3>
+                <p class="text-muted small mb-0">Hệ thống xử lý <span id="admin-total-records">0</span> bản ghi thực tế.</p>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-primary rounded-3 px-4 shadow-sm" onclick="AdminComment.createAnnouncement()">
+                    <i class="bi bi-megaphone-fill me-2"></i>Thông báo ghim
+                </button>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+            <div class="col-md-4">
+                <div class="glass-card p-3 d-flex align-items-center">
+                    <div class="p-3 bg-primary bg-opacity-10 rounded-4 me-3"><i class="bi bi-chat-text text-primary fs-4"></i></div>
+                    <div><small class="text-muted d-block">Tỷ lệ tương tác</small><h4 class="fw-bold mb-0">Cao</h4></div>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <div class="glass-card p-3"><canvas id="miniChart" height="50"></canvas></div>
+            </div>
+        </div>
+
+        <div id="bulkBar" class="shadow-lg">
+            <span class="fw-bold"><i class="bi bi-check2-all me-2"></i> Đang chọn <span id="selectedCount">0</span> bình luận</span>
+            <div>
+                <button class="btn btn-sm btn-light me-2 fw-bold" onclick="AdminComment.bulkAction('hide')">Ẩn hàng loạt</button>
+                <button class="btn btn-sm btn-danger fw-bold" onclick="AdminComment.bulkAction('delete')">Xóa tất cả</button>
+            </div>
+        </div>
+
+        <div class="glass-card p-3 mb-4 d-flex gap-3 align-items-center shadow-sm">
+    <div class="input-group w-50 border rounded-3 overflow-hidden bg-white">
+        <span class="input-group-text bg-white border-0"><i class="bi bi-search"></i></span>
+        <input type="text" class="form-control border-0" id="searchInp" placeholder="Tìm kiếm nội dung...">
+    </div>
+    
+    <select class="form-select border shadow-sm w-auto" id="courseFilter">
+        <option value="all">Tất cả khóa học</option>
+    </select>
+
+    <select class="form-select border shadow-sm w-auto" id="statusFilter">
+        <option value="active">Đang hiển thị</option>
+        <option value="trash">Thùng rác (Đã xóa)</option>
+    </select>
+
+    <div class="ms-auto" id="pagination-container">
+        <ul id="order-pagination" class="pagination-sm mb-0"></ul>
+    </div>
+</div>
+
+        <div id="commentFeed">
+            <div class="text-center p-5"><div class="spinner-border text-primary"></div></div>
+        </div>
+    </div>
+</div>
+<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script src="../../assets/js/managerComment.js"></script>

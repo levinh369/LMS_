@@ -1,0 +1,31 @@
+<div class="modal fade" id="categoryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Thêm Danh Mục</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Tên danh mục</label>
+                    <input type="text" id="txtName" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Mô tả</label>
+                    <textarea id="txtDescription" class="form-control"></textarea>
+                </div>
+                <div class="mb-3">
+                <label class="form-label fw-bold">Trạng thái</label>
+                <div class="form-check form-switch p-0 ms-4"> <input class="form-check-input" type="checkbox" id="txtIsActive" checked style="width: 40px; height: 20px; cursor: pointer;">
+                    <label class="form-check-label ms-2 fw-semibold" for="txtIsActive" id="lblStatus">Đang Hoạt động</label>
+                </div>
+                <small class="text-muted">Gạt để bật/tắt trạng thái hiển thị của danh mục.</small>
+            </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" onclick="saveData()" class="btn btn-primary">Lưu vào API</button>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý bài học - LMS System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    
+    <style>
+        :root { --primary-color: #4361ee; --secondary-color: #4cc9f0; }
+        body { background-color: #f8f9fa; font-family: 'Inter', sans-serif; }
+        
+        .card { border: none; border-radius: 20px; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); }
+        .rounded-pill { padding-left: 1.5rem; padding-right: 1.5rem; }
+        
+        /* Video Container cho Modal Preview */
+        .video-wrapper { 
+            border-radius: 15px; overflow: hidden; 
+            background: #000; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        /* Hiệu ứng hàng trong bảng */
+        .table tbody tr { transition: all 0.2s; cursor: pointer; }
+        .table tbody tr:hover { background-color: rgba(67, 97, 238, 0.05); }
+        
+        /* Custom Switch */
+        .form-check-input:checked { background-color: var(--primary-color); border-color: var(--primary-color); }
+        
+        /* Bọc ID video đẹp hơn */
+        #lblVideoId { color: var(--primary-color); letter-spacing: 1px; }
+/* Đảm bảo modal video luôn nằm trên cùng */
+#videoPreviewModal {
+    z-index: 1060 !important; 
+}
+
+/* Đảm bảo màn đen của modal video nằm trên màn đen của modal danh sách */
+.modal-backdrop.show:nth-of-type(2) {
+    z-index: 1059 !important; 
+}
+/* 1. Hiệu ứng cho hàng đang được chọn để kéo */
+.sortable-chosen {
+    background-color: #f8f9fa !important;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    opacity: 0.8;
+}
+
+/* 2. Hiệu ứng cho "bóng" của hàng tại vị trí mới (Ghost) */
+.sortable-ghost {
+    background-color: #4361ee !important; /* Màu xanh Primary */
+    opacity: 0.1;
+    border: 2px dashed #4361ee;
+}
+
+/* 3. Tùy chỉnh icon tay nắm */
+.drag-handle {
+    cursor: grab;
+    padding: 10px;
+    transition: all 0.2s;
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+.drag-handle:hover {
+    color: #4361ee !important;
+    transform: scale(1.2);
+}
+
+/* 4. Làm mượt việc di chuyển các hàng */
+.sortable-row {
+    transition: transform 0.2s;
+}
+    </style>
+</head>
+<body>
+
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Quản Lý Bài Học</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    
+    <style>
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        .card { border-radius: 15px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .drag-handle { cursor: move; color: #adb5bd; }
+        .drag-handle:hover { color: #0d6efd; }
+        
+        /* Modal Bulk Styling */
+        .modal-xl { max-width: 90%; }
+        .table-bulk input { border: 1px solid transparent !important; background-color: #f1f3f5; }
+        .table-bulk input:focus { border-color: #0d6efd !important; background-color: #fff; box-shadow: none; }
+        .sticky-thead th { position: sticky; top: 0; background: #fff; z-index: 10; border-bottom: 2px solid #dee2e6 !important; }
+        
+        /* Animation */
+        .row-fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid py-4 px-lg-5">
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label fw-bold small text-muted text-uppercase">Tìm kiếm tiêu đề</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-search"></i></span>
+                        <input type="text" id="keySearch" class="form-control border-start-0 ps-0" placeholder="Nhập tên bài học...">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold small text-muted text-uppercase">Loại bài học</label>
+                    <select id="isPreview" class="form-select">
+                        <option value="">Tất cả loại</option>
+                        <option value="true">Cho phép học thử</option>
+                        <option value="false">Nội dung khóa học</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold small text-muted text-uppercase">Trạng thái</label>
+                    <select id="isActive" class="form-select">
+                        <option value="-1">Tất cả trạng thái</option>
+                        <option value="1">Đang hoạt động</option>
+                        <option value="0">Đang tạm ẩn</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary w-100 shadow-sm fw-bold" onclick="Lesson.loadData()">
+                            <i class="bi bi-search me-1"></i> TÌM KIẾM
+                        </button>
+                        <button class="btn btn-outline-secondary w-50 shadow-sm" onclick="Lesson.resetFilters()">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="fw-bold text-primary mb-0"><i class="bi bi-collection-play-fill me-2"></i>QUẢN LÝ BÀI HỌC</h5>
+                <small class="text-muted">Chương hiện tại: <b id="displayChapterId">Đang tải...</b></small>
+            </div>
+            <button class="btn btn-primary shadow-sm fw-bold" onclick="Lesson.openCreateModal()">
+                <i class="bi bi-plus-circle-fill me-1"></i> Thêm bài học hàng loạt
+            </button>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="mainLessonTable">
+                    <thead class="table-light">
+                        <tr class="text-center text-uppercase small fw-bold">
+                            <th style="width: 50px">#</th>
+                            <th style="width: 50px">STT</th>
+                            <th class="text-start">Tiêu đề bài học</th>
+                            <th>Video Link / ID</th>
+                            <th style="width: 100px">Học thử</th>
+                            <th style="width: 120px">Trạng thái</th>
+                            <th style="width: 80px">Xóa</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mainLessonBody">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="lessonModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <form id="frmLessonBulk" class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <div class="modal-header border-0 bg-light py-3">
+                <h5 class="modal-title fw-bold text-primary">
+                    <i class="bi bi-layers-half me-2"></i>Cấu hình bài học (Thêm hàng loạt)
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            
+            <div class="modal-body p-4">
+               
+
+                <div class="table-responsive" style="max-height: 400px;">
+                    <table class="table table-borderless align-middle" id="tblBulkLessons">
+                        <thead class="bg-light sticky-top" style="z-index: 1;">
+                            <tr class="small text-muted text-uppercase">
+                                <th style="width: 35%">Tiêu đề bài học</th>
+                                <th style="width: 45%">Link YouTube hoặc Video ID</th>
+                                <th style="width: 15%">Thứ tự</th>
+                                <th style="width: 80px;" class="text-center">Học thử</th> <th style="width: 50px;"></th>
+                                <th style="width: 5%"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-3">
+                    <button type="button" onclick="Lesson.addBulkRow()" class="btn btn-outline-primary rounded-pill fw-bold btn-sm">
+                        <i class="bi bi-plus-circle me-1"></i> Thêm dòng mới
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-footer border-0 p-4 pt-0">
+                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Đóng</button>
+                <button type="submit" class="btn btn-success rounded-pill px-5 fw-bold shadow">
+                    <i class="bi bi-cloud-arrow-up me-1"></i> Lưu tất cả bài học
+                </button>
+            </div>
+        </form>
+        
+    </div>
+</div>
+
+<!-- modal chi tiết -->
+<div class="modal fade" id="modalViewLesson" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered shadow-lg">
+        <div class="modal-content border-0">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-eye me-2"></i>CHI TIẾT BÀI HỌC
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-4">
+                            <label class="form-label fw-bold small text-muted text-uppercase">Tiêu đề bài học</label>
+                            <h5 id="viewTitle" class="fw-bold text-primary mb-0"></h5>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-6">
+                                <label class="form-label fw-bold small text-muted text-uppercase">Nguồn (Provider)</label>
+                                <div>
+                                    <span class="badge bg-light text-dark border p-2 w-100 text-start">
+                                        <i class="bi bi-share me-2 text-danger"></i><span id="viewProvider"></span>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-bold small text-muted text-uppercase">Thời lượng</label>
+                                <div>
+                                    <span class="badge bg-light text-dark border p-2 w-100 text-start">
+                                        <i class="bi bi-clock me-2 text-primary"></i><span id="viewDuration"></span>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold small text-muted text-uppercase">Trạng thái & Chế độ</label>
+                            <div id="viewStatusBadges" class="d-flex gap-2">
+                                </div>
+                        </div>
+
+                        <div class="mb-0 p-3 bg-light rounded border-start border-4 border-primary">
+                            <div class="row">
+                                <div class="col-6">
+                                    <label class="d-block small text-muted fw-bold">Thứ tự hiện tại</label>
+                                    <span id="viewOrder" class="fw-bold text-dark">#</span>
+                                </div>
+                                <div class="col-6">
+                                    <label class="d-block small text-muted fw-bold">Ngày tạo</label>
+                                    <span id="viewCreatedAt" class="small text-dark text-nowrap">--/--/----</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small text-muted text-uppercase">Nội dung bài học</label>
+                        <div class="ratio ratio-16x9 bg-dark rounded overflow-hidden shadow-sm border" style="min-height: 200px;">
+                            <iframe id="viewVideoPlayer" 
+                                    src="" 
+                                    title="Lesson player" 
+                                    frameborder="0" 
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                    allowfullscreen>
+                            </iframe>
+                            <div class="video-placeholder d-flex align-items-center justify-content-center text-white-50 position-absolute w-100 h-100 bg-dark">
+                                <div class="text-center">
+                                    <i class="bi bi-play-circle display-4"></i>
+                                    <p class="small mt-2">Đang tải video...</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-2 small text-muted text-center">
+                            <i class="bi bi-info-circle me-1"></i> ID: <span id="viewVideoId" class="font-monospace"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-top-0">
+                <button type="button" class="btn btn-secondary fw-bold px-4" data-bs-dismiss="modal">ĐÓNG</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- modal SUA -->
+<div class="modal fade" id="modalEditLesson" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered shadow-lg">
+        <div class="modal-content border-0">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-pencil-square me-2"></i>CẬP NHẬT BÀI HỌC
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="formEditLesson">
+                    <input type="hidden" name="Id" id="editLessonId">
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small text-muted">TIÊU ĐỀ BÀI HỌC</label>
+                                <input name="Title" type="text" id="editTitle" class="form-control border-primary-subtle" placeholder="Nhập tiêu đề..." required>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold small text-muted">PROVIDER</label>
+                                    <select name="Provider" id="editProvider" class="form-select border-primary-subtle">
+                                        <option value="YouTube">YouTube</option>
+                                        <option value="Vimeo">Vimeo</option>
+                                        <option value="Bunny">Bunny.net</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold small text-muted">THỜI LƯỢNG</label>
+                                    <div class="input-group">
+                                        <input type="number" id="editDuration" 
+                                            class="form-control border-primary-subtle bg-light" 
+                                            placeholder="Giây" readonly> <span class="input-group-text bg-light small" id="editFormattedDuration" style="font-size: 0.7rem;">
+                                            00h 00m 00s
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small text-muted">YOUTUBE VIDEO ID / LINK</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0 "><i class="bi bi-youtube text-danger"></i></span>
+                                    <input type="text" name="VideoId" id="editVideoId" class="lesson-video form-control border-start-0 ps-0" placeholder="ID video...">
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold small text-muted">CHẾ ĐỘ XEM</label>
+                                    <select name="IsPreview" id="editIsPreview" class="form-select border-primary-subtle">
+                                        <option value="true">Học thử</option>
+                                        <option value="false">Yêu cầu đăng ký</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold small text-muted">TRẠNG THÁI (<span id="editLblStatus" class="small"></span>)</label>
+                                    <div class="form-check form-switch mt-1">
+                                        <input name="IsActive" class="form-check-input" type="checkbox" id="editIsActive">
+                                        <label class="form-check-label small" for="editIsActive">Kích hoạt</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-muted">XEM TRƯỚC VIDEO</label>
+                            <div class="ratio ratio-16x9 bg-dark rounded overflow-hidden shadow-sm border" style="height: calc(100% - 35px); min-height: 200px;">
+                                <iframe id="editVideoPreview" 
+                                        src="" 
+                                        title="YouTube video player" 
+                                        frameborder="0" 
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                        allowfullscreen>
+                                </iframe>
+                                <div class="video-placeholder d-flex align-items-center justify-content-center text-white-50 position-absolute w-100 h-100 bg-dark">
+                                    <div class="text-center">
+                                        <i class="bi bi-play-circle display-4"></i>
+                                        <p class="small mt-2">Nhập ID để xem</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-3 text-muted opacity-25">
+                    
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="alert alert-info py-1 px-2 mb-0 mb-0 border-0 bg-transparent" style="font-size: 0.8rem;">
+                            <i class="bi bi-info-circle me-1"></i> Thứ tự được quản lý bằng kéo thả.
+                        </div>
+                        <div class="text-end">
+                            <button type="button" class="btn btn-light fw-bold px-4 me-2" data-bs-dismiss="modal">HỦY</button>
+                            <button type="button" class="btn btn-primary fw-bold px-4" onclick="Lesson.update()">
+                                <i class="bi bi-check-circle me-1"></i> CẬP NHẬT
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/twbs-pagination/1.4.2/jquery.twbsPagination.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script src="../../assets/js/lesson.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+</body>
+</html>

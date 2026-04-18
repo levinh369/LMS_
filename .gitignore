@@ -1,0 +1,22 @@
+# --- [BACKEND] Visual Studio / .NET ---
+[Bb]in/
+[Oo]bj/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+appsettings.Development.json
+
+# --- [FRONTEND] VS Code / Web ---
+.vscode/
+.history/
+node_modules/
+dist/
+*.log
+.env
+
+# --- [HỆ ĐIỀU HÀNH] Rác Windows/Mac ---
+Thumbs.db
+Desktop.ini
+.DS_Store

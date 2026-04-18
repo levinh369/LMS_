@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Học Tập - LMS Academy</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    
+    <style>
+        :root {
+            --header-height: 56px;
+            --sidebar-width: 350px;
+        }
+
+        body { 
+            background-color: #f0f2f5; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            height: 100vh; 
+            overflow: hidden; 
+        }
+
+        /* Header tinh chỉnh */
+        .navbar { 
+            height: var(--header-height);
+            background-color: #29303b !important; 
+            z-index: 1030;
+        }
+
+        .main-wrapper { 
+            display: flex; 
+            height: calc(100vh - var(--header-height)); 
+        }
+
+        /* Khu vực Video bên trái */
+        .video-container { 
+            flex: 1; 
+            background-color: #000; 
+            display: flex; 
+            flex-direction: column; 
+            overflow-y: auto;
+        }
+
+        .video-wrapper { 
+            background-color: #000;
+            width: 100%;
+        }
+
+        .video-info { 
+            background: white; 
+            padding: 25px; 
+            border-top: 1px solid #dee2e6;
+        }
+
+        /* Sidebar bên phải */
+        .lesson-sidebar { 
+            width: var(--sidebar-width); 
+            background: white; 
+            border-left: 1px solid #dee2e6; 
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .chapter-container {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        /* Accordion Style cho Chương */
+        .accordion-button {
+            padding: 1rem;
+            font-size: 0.9rem;
+            font-weight: 700;
+            background-color: #f8f9fa !important;
+            color: #333;
+        }
+
+        .accordion-button:not(.collapsed) {
+            color: #0d6efd;
+            box-shadow: none;
+        }
+
+        /* Item bài học */
+        .lesson-item { 
+            cursor: pointer; 
+            transition: 0.2s; 
+            border-left: 4px solid transparent;
+            font-size: 0.85rem;
+            padding: 12px 15px;
+        }
+
+        .lesson-item:hover { 
+            background-color: #f1f3f5; 
+        }
+
+        .lesson-item.active { 
+            background-color: #e7f1ff; 
+            border-left-color: #0d6efd;
+            font-weight: 600;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #999; }
+        /* Tinh chỉnh Tab */
+.nav-tabs .nav-link {
+    color: #6c757d;
+    padding: 10px 0;
+    margin-right: 30px;
+    border-bottom: 2px solid transparent !important;
+}
+
+.nav-tabs .nav-link.active {
+    color: #0d6efd !important;
+    border-bottom: 2px solid #0d6efd !important;
+}
+
+/* Ô nhập bình luận */
+.comment-section textarea {
+    resize: none;
+    font-size: 0.9rem;
+}
+
+.comment-section textarea:focus {
+    background: #fff !important;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.1);
+}
+
+/* Các item bình luận */
+.comment-item p {
+    line-height: 1.5;
+}
+/* Container bọc nút Like và Menu icon */
+.reaction-container {
+    position: relative;
+    display: inline-block;
+}
+
+/* Hộp chứa icon cảm xúc */
+/* --- 1. Fix Ảnh đại diện: Chống dài, chống méo --- */
+.avatar-md, .avatar-sm {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover; /* Cắt trung tâm ảnh */
+    flex-shrink: 0;    /* Không cho flexbox bóp méo */
+    border: 1px solid #ddd;
+}
+
+.avatar-sm {
+    width: 28px;
+    height: 28px;
+}
+
+/* --- 2. Bong bóng chat & Dải cảm xúc (Total) --- */
+.comment-bubble-wrapper {
+    position: relative;
+    display: inline-block; /* Ôm sát nội dung */
+    max-width: 92%;        /* Tránh tràn màn hình */
+}
+
+.comment-bubble {
+    background-color: #f0f2f5;
+    padding: 10px 16px;
+    border-radius: 18px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.reaction-summary-pos {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 5px; /* Khoảng cách với nút Trả lời */
+    /* Nếu bác muốn nó nhảy hẳn về cuối hàng bên phải, hãy dùng: margin-left: auto; */
+}
+
+.reaction-summary-wrapper {
+    display: flex;
+    align-items: center;
+    background: #ffffff;
+    padding: 1px 8px;
+    border-radius: 15px;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    cursor: pointer;
+    height: 22px; /* Cho chiều cao cố định để bằng với hàng nút bấm */
+}
+
+/* Các icon vẫn đè nhau như cũ */
+.summary-icon-item {
+    margin-left: -4px;
+    font-size: 12px;
+}
+.summary-icon-item:first-child { margin-left: 0; }
+
+.reaction-total-count {
+    font-size: 11px;
+    color: #65676b;
+    font-weight: bold;
+    margin-left: 4px;
+}
+
+.reaction-total-count {
+    font-size: 12px;
+    color: #65676b;
+    font-weight: bold;
+    margin-left: 4px;
+}
+
+/* --- 3. Menu Hover Cảm xúc --- */
+.reaction-container { position: relative; display: inline-block; }
+
+.reaction-box {
+    position: absolute;
+    bottom: 130%;
+    left: 0;
+    background: white;
+    border-radius: 30px;
+    padding: 6px 10px;
+    display: flex;
+    gap: 10px;
+    z-index: 1000;
+    border: 1px solid #eee;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    transition: all 0.3s ease;
+    transition-delay: 0.5s; 
+}
+
+.reaction-container:hover .reaction-box {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    transition-delay: 0.6s;
+}
+
+.reaction-icon { font-size: 24px; cursor: pointer; transition: 0.2s; }
+.reaction-icon:hover { transform: scale(1.4); transition-delay: 0s !important; }
+
+/* --- 4. Cấu trúc lồng nhau --- */
+.replies-list {
+    border-left: 2px solid #eee;
+    margin-top: 15px;
+}
+
+.btn-action-text {
+    font-size: 12px;
+    font-weight: bold;
+    color: #65676b;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+}
+
+.btn-action-text:hover { text-decoration: underline; }
+.time-text { font-size: 11px; color: #8a8d91; }
+/* 1. Đảm bảo container cha không cắt mất tooltip */
+.comment-item, .flex-grow-1, .comment-bubble {
+    overflow: visible !important; /* QUAN TRỌNG: Bỏ hidden để tooltip hiện ra được */
+}
+
+/* 2. Container chính */
+.reaction-summary-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    background: white;
+    padding: 2px 8px;
+    border-radius: 15px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    cursor: pointer;
+    border: 1px solid #ddd;
+    z-index: 100; /* Nằm trên bong bóng chat */
+}
+
+/* 3. Ô Tooltip đen mờ */
+.reaction-custom-tooltip {
+    position: absolute;
+    bottom: 140%; /* Đẩy lên cao hơn một chút */
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    background: rgba(0, 0, 0, 0.9) !important;
+    color: #fff !important;
+    padding: 6px 12px;
+    border-radius: 8px;
+    display: flex;
+    gap: 12px;
+    z-index: 99999 !important; /* Cao nhất có thể */
+    
+    /* Hiệu ứng ẩn hiện */
+    visibility: hidden;
+    opacity: 0;
+    transition: all 0.2s ease;
+    pointer-events: none; /* Tránh cản trở chuột */
+}
+
+/* 4. Item bên trong tooltip */
+.reaction-custom-tooltip .stat-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.reaction-custom-tooltip .stat-item b {
+    color: #fff !important;
+    font-size: 12px;
+}
+
+/* 5. KÍCH HOẠT HOVER */
+.reaction-summary-wrapper:hover .reaction-custom-tooltip {
+    visibility: visible !important;
+    opacity: 1 !important;
+    transform: translateX(-50%) translateY(0); /* Bay lên mượt mà */
+}
+#reactionTabs {
+    overflow-x: auto;
+    white-space: nowrap;
+    display: flex;
+    flex-wrap: nowrap;
+}
+
+#reactionTabs::-webkit-scrollbar {
+    display: none; /* Ẩn thanh cuộn cho đẹp */
+}
+
+#reactionTabs .nav-link {
+    transition: all 0.2s;
+    border-radius: 0;
+    color: #65676b !important;
+}
+
+#reactionTabs .nav-link.active {
+    color: #0866ff !important; /* Màu xanh đặc trưng */
+}
+
+.user-item:hover {
+    background-color: #f2f3f5;
+    transition: 0.2s;
+}
+.comment-actions-menu {
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+.comment-item:hover .comment-actions-menu, 
+.reply-item:hover .comment-actions-menu {
+    opacity: 1;
+}
+/* Style cho dropdown menu nhỏ lại cho hợp web học tập */
+.dropdown-menu {
+    font-size: 13px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+/* Keyframes cho hiệu ứng nháy mượt mà */
+@keyframes comment-highlight-pulse {
+    0% { 
+        background-color: transparent;
+        transform: scale(1);
+        box-shadow: 0 0 0 rgba(255, 193, 7, 0);
+    }
+    15% { 
+        background-color: rgba(255, 193, 7, 0.15); /* Vàng nhạt trong suốt */
+        transform: scale(1.01); /* Phóng to cực nhẹ để gây chú ý */
+        box-shadow: 0 4px 20px rgba(255, 193, 7, 0.2);
+        border-left: 4px solid #ffc107;
+    }
+    30% {
+        background-color: rgba(255, 193, 7, 0.1);
+        transform: scale(1.01);
+    }
+    100% { 
+        background-color: transparent;
+        transform: scale(1);
+        box-shadow: 0 0 0 rgba(255, 193, 7, 0);
+        border-left: 4px solid transparent;
+    }
+}
+
+.highlight-comment-active {
+    /* Chạy hiệu ứng trong 3 giây, mượt mà từ đầu đến cuối */
+    animation: comment-highlight-pulse 3s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+    border-radius: 10px; /* Bo góc mềm mại hơn */
+    z-index: 10;
+    position: relative;
+    transition: all 0.4s ease;
+}
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+    <div class="container-fluid">
+        <a class="navbar-brand fw-bold" href="/">
+            <i class="bi bi-chevron-left me-2"></i>LMS ACADEMY
+        </a>
+        <span class="navbar-text text-white fw-bold d-none d-md-block" id="topCourseTitle">
+            Đang tải khóa học...
+        </span>
+        <div class="ms-auto d-flex align-items-center">
+            <div class="progress d-none d-md-flex me-3" style="width: 100px; height: 8px;">
+                <div id="progressBar" class="progress-bar bg-success" role="progressbar" style="width: 0%"></div>
+            </div>
+            <span class="text-white-50 small" id="completionStatus">0/0 bài học</span>
+        </div>
+    </div>
+</nav>
+
+<div class="main-wrapper">
+    <div class="video-container">
+        <div class="video-wrapper">
+    <div class="ratio ratio-16x9 mx-auto" style="max-width: 1000px;">
+        <div id="mainVideoFrame"></div> 
+    </div>
+</div>
+        <div class="video-info">
+    <h4 id="currentLessonTitle" class="fw-bold mb-2">Đang tải bài học...</h4>
+    
+    <ul class="nav nav-tabs border-bottom-0 mt-4" id="lessonTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active fw-bold border-0 bg-transparent" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button">TỔNG QUAN</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link fw-bold border-0 bg-transparent" id="comment-tab" data-bs-toggle="tab" data-bs-target="#comment" type="button">THẢO LUẬN</button>
+        </li>
+    </ul>
+    <hr class="mt-0">
+
+    <div class="tab-content" id="lessonTabContent">
+        <div class="tab-pane fade show active" id="overview" role="tabpanel">
+            <div class="d-flex align-items-center text-muted small mb-3">
+                <span class="me-3"><i class="bi bi-calendar-event me-1"></i>Cập nhật 2026</span>
+                <span><i class="bi bi-patch-check-fill text-primary me-1"></i>Học viên chính thức</span>
+            </div>
+            <p class="text-secondary" style="font-size: 0.95rem;">
+                Chúc bạn có một buổi học hiệu quả. Nếu có thắc mắc hãy đặt câu hỏi trong phần thảo luận.
+            </p>
+        </div>
+
+        <div class="tab-pane fade" id="comment" role="tabpanel">
+            <div class="comment-section mt-4">
+                <div class="d-flex mb-4">
+                    <img src="/assets/img/default-avatar.png" class="rounded-circle me-3" style="width: 40px; height: 40px; object-fit: cover;">
+                    <div class="flex-grow-1">
+                        <textarea id="commentInput" class="form-control border-0 bg-light shadow-sm" rows="2" placeholder="Bạn có thắc mắc gì trong bài học này?"></textarea>
+                        <div class="text-end mt-2">
+                            <button onclick="Learn.postComment()" class="btn btn-primary btn-sm px-4 rounded-pill fw-bold">Bình luận</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="commentList">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+    </div>
+
+    <div class="lesson-sidebar">
+        <div class="sidebar-header">
+            <h6 class="fw-bold mb-0">Nội dung khóa học</h6>
+        </div>
+        
+        <div class="chapter-container">
+            <div class="accordion accordion-flush" id="chapterAccordion">
+                </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="reactionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm" style="max-width: 400px;">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header border-bottom p-2">
+                <ul class="nav nav-tabs border-0 w-100 d-flex justify-content-between" id="reactionTabs" role="tablist">
+                    </ul>
+            </div>
+            <div class="modal-body p-0" id="reactionModalBody" style="max-height: 450px; overflow-y: auto;">
+                </div>
+        </div>
+    </div>
+</div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+
+<script src="https://www.youtube.com/iframe_api"></script>
+
+<script src="../../assets/js/learning.js"></script>
+
+
+</body>
+</html>

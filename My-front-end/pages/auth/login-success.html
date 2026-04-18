@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Đang xử lý đăng nhập...</title>
+</head>
+<body>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="/assets/js/common.js"></script> <script>
+    // 1. Lấy tất cả thông tin từ URL
+    const params = new URLSearchParams(window.location.search);
+    
+    const authData = {
+        token: params.get('token'),
+        userId: params.get('userId'),
+        username: params.get('username'),
+        avatarUrl: params.get('avatar'),
+        role: params.get('role'),
+        email: params.get('email')
+    };
+
+    if (authData.token && authData.userId) {
+        // 2. GỌI HÀM SAVEAUTH CỦA VINH Ở ĐÂY
+        // Nó sẽ tự động lưu cả token, user_id và user_info vào localStorage
+        AuthHelper.saveAuth(authData);
+        
+        // 3. Đợi 1 chút rồi về Home cho mượt
+        setTimeout(() => {
+            window.location.href = "/pages/Home/home.html";
+        }, 500);
+    } else {
+        alert("Lỗi dữ liệu đăng nhập!");
+        window.location.href = "/pages/auth/login.html";
+    }
+</script>
+</body>
+</html>

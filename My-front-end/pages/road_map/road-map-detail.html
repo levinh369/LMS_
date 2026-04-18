@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chi tiết Lộ trình học tập</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+    :root { 
+        --f8-orange: #f05123; 
+        --text-color: #242424;
+        --desc-color: #666;
+        --bg-gray: #f8f9fa;
+    }
+    body { background-color: #fff; font-family: 'Inter', system-ui, -apple-system, sans-serif; color: var(--text-color); }
+    
+    /* Banner Header - Đã chỉnh ảnh nhỏ lại */
+    .header-section { padding: 30px 0; background: #fff; border-bottom: 1px solid #f0f0f0; }
+
+    .roadmap-thumb { 
+        width: 100%; 
+        max-width: 280px; /* Bóp nhỏ ảnh lại ở đây */
+        border-radius: 16px; 
+        box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+        object-fit: cover;
+    }
+
+.roadmap-stats-item { font-size: 0.9rem; font-weight: 600; color: #555; }
+
+    /* Lộ trình Content */
+    .roadmap-content { margin-top: 20px; }
+    
+    .phase-item { position: relative; padding-left: 45px; margin-bottom: 40px; }
+    /* Vạch kẻ dọc nối các phase */
+    .phase-item::before {
+        content: ""; position: absolute; left: 18px; top: 40px;
+        width: 3px; height: calc(100% - 20px); background: #ebebeb;
+    }
+    .phase-item:last-child::before { display: none; }
+
+    /* Icon hình tròn đánh dấu giai đoạn */
+    .phase-icon {
+        position: absolute; left: 0; top: 0; width: 38px; height: 38px;
+        background: #fff; border: 4px solid var(--f8-orange); border-radius: 50%; z-index: 10;
+    }
+
+    .phase-title { font-size: 1.6rem; font-weight: 800; margin-bottom: 24px; color: #000; }
+
+    /* Course Card - Style F8 */
+    .course-card {
+        background: #fff; border: 2px solid #f0f0f0; border-radius: 20px;
+        padding: 24px; display: flex; align-items: flex-start;
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        text-decoration: none; color: inherit; margin-bottom: 20px;
+    }
+    .course-card:hover { 
+        border-color: var(--f8-orange); transform: translateY(-3px);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.06);
+    }
+
+    .course-stt { font-size: 1.4rem; font-weight: 900; color: #d0d0d0; min-width: 45px; line-height: 1; }
+    .course-card:hover .course-stt { color: var(--f8-orange); }
+
+    .course-img { width: 140px; height: 80px; object-fit: cover; border-radius: 12px; margin: 0 24px; }
+    
+    .course-info h4 { font-size: 1.15rem; font-weight: 800; margin-bottom: 8px; color: #000; }
+    .course-info .course-desc { 
+        font-size: 0.95rem; color: var(--desc-color); line-height: 1.6; 
+        display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden;
+    }
+
+    .btn-start { 
+        background-color: var(--f8-orange); color: #fff; border-radius: 50px;
+        padding: 10px 24px; font-weight: 700; font-size: 0.9rem; border: none;
+        white-space: nowrap; align-self: center; margin-left: 20px;
+    }
+    .disclaimer-text {
+    background-color: #fff5f5;
+    padding: 8px 16px;
+    border-radius: 8px;
+    display: inline-block;
+    border: 1px dashed #feb2b2;
+    font-size: 0.85rem;
+}
+</style>
+</head>
+<body>
+<div id="header-placeholder"></div>
+<section class="header-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-9">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="index.html" class="text-decoration-none" style="color: var(--f8-orange)">Lộ trình</a></li>
+                        <li class="breadcrumb-item active" id="breadTitle">Chi tiết</li>
+                    </ol>
+                </nav>
+                <h1 class="display-6 fw-bold mb-3" id="roadmapTitle" style="color: #000;">Đang tải...</h1>
+                <p class="lead text-muted mb-4" id="roadmapDesc" style="font-size: 1.05rem; max-width: 85%;"></p>
+                <div id="roadmapStats" class="d-flex gap-4">
+                    </div>
+            </div>
+            
+            <div class="col-lg-3 text-end">
+                <img id="roadmapThumb" src="" class="roadmap-thumb" alt="Thumbnail">
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div id="roadmapContent" class="roadmap-content">
+                </div>
+        </div>
+    </div>
+</div>
+<div id="footer-placeholder"></div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="../../assets/js/roadmap.js"></script>
+<script src="../../assets/js/common.js"></script>
+<script>
+    $(document).ready(function() {
+        // Lấy ID từ URL: detail.html?id=123
+        debugger
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get('id');
+        if(id) {
+        RoadMap.RoadMapDetail(id);
+        }
+    });
+</script>
+</body>
+</html>
