@@ -248,7 +248,7 @@ updateProfile: async function() {
             title: 'Ngon lành! Cập nhật thành công.'
         }).then(() => {
             // Đợi Toast chạy xong (hoặc gần xong) thì bay về Home
-            window.location.href = "/pages/Home/home.html";
+            window.location.href = "/pages/index.html";
         });
 
     } catch (err) {

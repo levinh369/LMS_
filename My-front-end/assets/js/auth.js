@@ -52,7 +52,7 @@ login: async function(btn) {
                 }
             } else {
                 // Đăng nhập bình thường thì về trang chủ
-                window.location.href = "/pages/home/home.html";
+                window.location.href = "/pages/index.html";
             }
         });
 
@@ -105,7 +105,7 @@ login: async function(btn) {
                 if (courseId && courseId !== 0 && courseId !== "0") {
                     window.location.href = `/pages/learn/learning.html?id=${courseId}`;
                 } else {
-                    window.location.href = "/pages/Home/home.html";
+                    window.location.href = "/pages/index.html";
                 }
             });
         } catch (error) {
