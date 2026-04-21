@@ -7,7 +7,7 @@
 *.userosscache
 *.sln.docstates
 appsettings.Development.json
-
+appsettings.json
 # --- [FRONTEND] VS Code / Web ---
 .vscode/
 .history/

@@ -6,7 +6,7 @@ var Lesson = {
     currentCourseId : 0,
     isChapterNameLoaded: false,
     config: {
-        apiUrl: "https://localhost:7106/api/Lesson"
+        apiUrl: "http://vinh369-001-site1.site4future.com/api/Lesson"
     },
     
     // Hàm khởi tạo - Gọi khi trang load xong
@@ -463,7 +463,7 @@ openDetailModal: async function (id) {
     $('.video-placeholder').removeClass('d-none');
 
     try {
-        const response = await fetch(`https://localhost:7106/api/Lesson/${id}`);
+        const response = await fetch(`http://vinh369-001-site1.site4future.com/api/Lesson/${id}`);
         if (!response.ok) throw new Error('Không lấy được dữ liệu bài học');
         
         const item = await response.json(); 
@@ -718,7 +718,7 @@ delete: async function(id) {
 
         try {
             console.log("Gọi API lấy danh mục lần đầu");
-            const response = await fetch(`https://localhost:7106/api/Lesson`);
+            const response = await fetch(`http://vinh369-001-site1.site4future.com/api/Lesson`);
             Lesson.categories = await response.json(); 
             console.log(Lesson.categories)
             let filterHtml = '<option value="">Tất cả danh mục</option>';

@@ -9,7 +9,7 @@ const CourseApp = {
         const $empty = $('#emptyCourse');
 
         $.ajax({
-            url: "https://localhost:7106/api/Course/my-course",
+            url: "http://vinh369-001-site1.site4future.com/api/Course/my-course",
             type: 'GET',
             headers: { "Authorization": "Bearer " + token },
             success: (res) => {

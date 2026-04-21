@@ -1,7 +1,7 @@
 
 var Auth = {
     config: {
-        apiUrl: "https://localhost:7106/api/Auth"
+        apiUrl: "http://vinh369-001-site1.site4future.com/api/Auth"
     },
     
 login: async function(btn) {
@@ -122,7 +122,7 @@ loginWithSocial: function(provider) {
         ? `http://127.0.0.1:5500/pages/Home/detail.html?id=${courseId}`
         : "http://127.0.0.1:5500/pages/auth/login-success.html";
 
-    const backendUrl = `https://localhost:7106/api/auth/external-login?provider=${provider}&returnUrl=${encodeURIComponent(returnUrl)}`;
+    const backendUrl = `http://vinh369-001-site1.site4future.com/api/auth/external-login?provider=${provider}&returnUrl=${encodeURIComponent(returnUrl)}`;
     window.location.href = backendUrl;
 }
    

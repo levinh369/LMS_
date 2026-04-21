@@ -67,7 +67,7 @@ const RoadmapDetail = {
     loadData: async function(id) {
         try {
             // Gọi API lấy chi tiết lộ trình
-            const response = await fetch(`https://localhost:7106/api/roadmap/${id}/detail`);
+            const response = await fetch(`http://vinh369-001-site1.site4future.com/api/roadmap/${id}/detail`);
             const res = await response.json();
             const data = res.data;
 

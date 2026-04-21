@@ -1,7 +1,7 @@
 const AdminOrder = {
     config: {
         pageSize: 10,
-        apiUrl: "https://localhost:7106/api/order" // Đúng Route bác đã viết ở Controller
+        apiUrl: "http://vinh369-001-site1.site4future.com/api/order" // Đúng Route bác đã viết ở Controller
     },
 
     init: function () {

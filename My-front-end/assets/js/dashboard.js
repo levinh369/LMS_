@@ -59,7 +59,7 @@ const Dashboard = {
 
         // URL này phải khớp với Route trong Controller .NET của bác
         $.ajax({
-            url: `https://localhost:7106/api/Dashboard/statistics?fromDate=${fromDate}&toDate=${toDate}`,
+            url: `http://vinh369-001-site1.site4future.com/api/Dashboard/statistics?fromDate=${fromDate}&toDate=${toDate}`,
             type: 'GET',
             success: function(res) {
                 // 1. Cập nhật các thẻ số (Cards)

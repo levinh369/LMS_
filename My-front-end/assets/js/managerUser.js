@@ -14,7 +14,7 @@ const Toast = Swal.mixin({
 var Manager = {
     config: {
         pageSize: 10,
-        apiUrl: "https://localhost:7106/api/user"
+        apiUrl: "http://vinh369-001-site1.site4future.com/api/user"
     },
 
     init: function () {

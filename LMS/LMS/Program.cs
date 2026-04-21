@@ -125,19 +125,29 @@ builder.Services.AddAuthentication(options =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+// 1. Cấu hình Swagger: Luôn bật và cho nhảy vào trang chủ luôn
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "LMS API V1");
+    c.RoutePrefix = string.Empty; // Vào link gốc là hiện Swagger luôn, không bị 404 nữa
+});
 
-app.UseHttpsRedirection();
-app.UseCors("AllowFrontend");
+// 2. CORS: Sửa lại để cho phép Vercel và các nguồn khác
+app.UseCors(policy =>
+    policy.AllowAnyHeader()
+          .AllowAnyMethod()
+          .SetIsOriginAllowed(origin => true) // Cho phép tất cả các nguồn (để test cho nhanh)
+          .AllowCredentials());
+
+// 3. Cảnh báo: Tạm thời comment dòng này nếu ông dùng gói Free của SmarterASP 
+// vì gói Free đôi khi không hỗ trợ HTTPS mượt mà, dễ gây lỗi 403/404
+// app.UseHttpsRedirection(); 
+
 app.UseAuthentication();
 app.UseAuthorization();
-app.MapHub<NotificationHub>("/notificationHub");
 
+app.MapHub<NotificationHub>("/notificationHub");
 app.MapControllers();
 
 app.Run();

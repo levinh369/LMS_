@@ -2,9 +2,9 @@ var Home = {
     allCourses: [],
     config: {
         pageSize: 5,
-        apiUrl: "https://localhost:7106/api/course",
-        apiUrlCate : "https://localhost:7106/api/category",
-        apiUrlRoadMap : "https://localhost:7106/api/roadMap"
+        apiUrl: "http://vinh369-001-site1.site4future.com/api/course",
+        apiUrlCate : "http://vinh369-001-site1.site4future.com/api/category",
+        apiUrlRoadMap : "http://vinh369-001-site1.site4future.com/api/roadMap"
     },
 
     // Hàm khởi tạo - Gọi khi trang load xong

@@ -2,7 +2,7 @@
 var Detail = {
     currentLessons: [], // Sẽ chứa danh sách phẳng của tất cả bài học để hiện trong Modal
     config: {
-        apiUrl: "https://localhost:7106/api/course"
+        apiUrl: "http://vinh369-001-site1.site4future.com/api/course"
     },
     init: function () {
         const urlParams = new URLSearchParams(window.location.search);
@@ -184,7 +184,7 @@ handlePayment: function (courseId, orderId = 0) {
 
         // 4. Gọi API
         $.ajax({
-            url: 'https://localhost:7106/api/Payment/create-payment',
+            url: 'http://vinh369-001-site1.site4future.com/api/Payment/create-payment',
             type: 'POST',
             contentType: 'application/json',
             data: JSON.stringify(paymentData), // Gửi Object thay vì gửi mỗi cái ID lẻ
@@ -346,7 +346,7 @@ renderEnrollButton: async function() {
 
         try {
             // Gọi API check xem user này đã sở hữu khóa học chưa
-            const response = await fetch(`https://localhost:7106/api/enroll/check/${courseId}`, {
+            const response = await fetch(`http://vinh369-001-site1.site4future.com/api/enroll/check/${courseId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await response.json();

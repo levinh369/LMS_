@@ -4,7 +4,7 @@ var Course = {
     editDetails: [],
     config: {
         pageSize: 10,
-        apiUrl: "https://localhost:7106/api/course"
+        apiUrl: "http://vinh369-001-site1.site4future.com/api/course"
     },
     CourseLevel : {
         0: "Người mới bắt đầu",
@@ -170,7 +170,7 @@ renderTable: function (data) {
 
     try {
         console.log("Gọi API lấy danh mục...");
-        const response = await fetch(`https://localhost:7106/api/Category`);
+        const response = await fetch(`http://vinh369-001-site1.site4future.com/api/Category`);
         const result = await response.json(); 
         Course.categories = result.data || []; 
         let filterHtml = '<option value="">Tất cả danh mục</option>';

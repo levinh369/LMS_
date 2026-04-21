@@ -5,7 +5,7 @@ const User = {
 
         try {
             const res = await $.ajax({
-                url: "https://localhost:7106/api/User/my-profile",
+                url: "http://vinh369-001-site1.site4future.com/api/User/my-profile",
                 type: "GET",
                 // Header này nếu bác đã có $.ajaxSetup thì có thể bỏ qua
                 headers: { "Authorization": "Bearer " + token }
@@ -108,7 +108,7 @@ const User = {
     },
     loadProfile: function() {
     $.ajax({
-        url: "https://localhost:7106/api/User/settings-data",
+        url: "http://vinh369-001-site1.site4future.com/api/User/settings-data",
         type: "GET",
         headers: {
             "Authorization": "Bearer " + localStorage.getItem("jwt_token") 
@@ -213,7 +213,7 @@ updateProfile: async function() {
 
         // 5. Gửi AJAX lên Backend
         const res = await $.ajax({
-            url: "https://localhost:7106/api/User/update-profile",
+            url: "http://vinh369-001-site1.site4future.com/api/User/update-profile",
             type: "POST",
             data: formData,
             processData: false, // Bắt buộc khi dùng FormData

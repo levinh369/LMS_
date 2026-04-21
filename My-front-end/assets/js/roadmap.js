@@ -1,7 +1,7 @@
 var RoadMap = {
     currentPage : 0,
     config: {
-        apiUrl: "https://localhost:7106/api/roadmap",
+        apiUrl: "http://vinh369-001-site1.site4future.com/api/roadmap",
         pageSize : 10
     },
     init: function() {
@@ -476,7 +476,7 @@ handleGoToDetail: async function(courseId) {
 
     try {
         const res = await $.ajax({
-            url: `https://localhost:7106/api/course/course-detail/${courseId}`,
+            url: `http://vinh369-001-site1.site4future.com/api/course/course-detail/${courseId}`,
             type: 'GET',
             headers: { 'Authorization': `Bearer ${token}` } // QUAN TRỌNG: Phải có dòng này
         });

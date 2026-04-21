@@ -2,7 +2,7 @@ var RoadMapBuider = {
     currentPage: 0,
     roadmapId: null,
     config: {
-        apiUrl: "https://localhost:7106/api/roadmap",
+        apiUrl: "http://vinh369-001-site1.site4future.com/api/roadmap",
         pageSize: 10
     },
 
