@@ -16,7 +16,8 @@
 
         public int TotalLessons { get; set; }
 
-        // Chuỗi hiển thị thời lượng (VD: "15h 30m")
+        // Chuỗi hiển thị thời lượng (VD: "15h 30m"
+        public int StudentCount { get; set; }
         public string DurationDisplay { get; set; }
 
         // Thuộc tính logic để Frontend hiển thị Badge

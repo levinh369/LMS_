@@ -6,6 +6,7 @@ using LMS.Repositories;
 using LMS.Repositories.Interfaces;
 using LMS.Services.Interfaces;
 using System.ComponentModel.DataAnnotations;
+using static LMS.Controllers.CommentController;
 
 namespace LMS.Services
 {
@@ -15,7 +16,7 @@ namespace LMS.Services
         private readonly INotificationService notificationService;
         private readonly IUserRepository _userRepository;
         public CommentService(ICommentRepository commentRepository, INotificationService notificationService, IUserRepository userRepository)
-        {
+        { 
             _commentRepository = commentRepository;
             this.notificationService = notificationService;
             _userRepository = userRepository;
@@ -69,7 +70,57 @@ namespace LMS.Services
                 return false;
             }
         }
+        public async Task<bool> ProcessPinAsync(PinRequest request, int adminId, string adminName)
+        {
+            if (request.IsNew)
+            {
+                var newComment = new CommentModel
+                {
+                    Content = request.Content,
+                    LessonId = request.LessonId,
+                    UserId = adminId,
+                    ParentId = null, 
+                    IsPinned = true,
+                    CreatedAt = DateTime.Now,
+                    IsActive = true
+                };
 
+                var id = await _commentRepository.HandlePinLogicAsync(newComment, true);
+                return id > 0;
+            }
+            else
+            {
+                var updateModel = new CommentModel
+                {
+                    Id = request.CommentId.Value,
+                    LessonId = request.LessonId
+                };
+
+                var id = await _commentRepository.HandlePinLogicAsync(updateModel, false);
+
+                if (id > 0)
+                {
+                    // Bắn thông báo cho "khổ chủ"
+                    var comment = await _commentRepository.GetCommentByIdAsync(request.CommentId.Value);
+                    if (comment != null && comment.UserId != adminId)
+                    {
+                        string message = $"📌 <b>{adminName}</b> đã ghim bình luận của bạn lên đầu bài học.";
+                        var courseId = comment.Lesson?.Chapter?.CourseId ?? 0;
+                        string url = $"/pages/learn/learning.html?id={courseId}&lessonId={request.LessonId}#comment-{comment.Id}";
+
+                        await notificationService.SendNotificationAsync(
+                            comment.UserId,
+                            adminId,
+                            message,
+                            NotificationTypeEnum.CommentPinned,
+                            url,
+                            null
+                        );
+                    }
+                }
+                return id > 0;
+            }
+        }
         public async Task<bool> DeleteAsync(int commentId)
         {
             return await _commentRepository.SoftDeleteAsync(commentId);
@@ -104,9 +155,9 @@ namespace LMS.Services
             return true;
         }
 
-        public async Task<(List<AdminCommentResponseDTO> Items, int TotalCount)> GetAdminCommentsAsync(int pageIndex, int? courseId, string? search, string status)
+        public async Task<(List<AdminCommentResponseDTO> Items, int TotalCount)> GetAdminCommentsAsync(int pageIndex, int? courseId, int? lessonId, string? search, string status)
         {
-            return await _commentRepository.GetAdminCommentsAsync(pageIndex, courseId, search,status);
+            return await _commentRepository.GetAdminCommentsAsync(pageIndex, courseId, lessonId, search,status);
         }
 
         public async Task<List<CommentResponseDTO>> GetCommentListAsync(int lessonId, int userId)
@@ -121,6 +172,7 @@ namespace LMS.Services
                 UserAvatar = c.User?.AvatarUrl ?? "/assets/img/default-avatar.png",
                 CreatedAt = c.CreatedAt,
                 ParentId = c.ParentId,
+                IsPinned = c.IsPinned,
                 ReplyCount = c.Replies?.Count ?? 0,
                 TotalReactions = c.TotalReactions,
                 LikeCount = c.LikeCount,

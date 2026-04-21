@@ -361,5 +361,10 @@ namespace LMS.Services
         {
             return await lessonRepository.GetCourseIdByChapterIdAsync(chapterId);
         }
+        public async Task<List<LessonBasicDTO>> GetListLessonBasicAsync(int courseId)
+        {
+            // Gọi thẳng sang Repo bốc dữ liệu đã sắp xếp
+            return await lessonRepository.GetListLessonBasicAsync(courseId);
+        }
     }
 }

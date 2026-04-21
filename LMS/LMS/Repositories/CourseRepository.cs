@@ -84,13 +84,13 @@ namespace LMS.Repositories
 
         public async Task<List<CourseModel>> GetCourseFree()
         {
-            return await _context.Courses.Include(c=>c.Lessons).Include(c=>c.Category).
+            return await _context.Courses.Include(c=>c.Lessons).Include(c=>c.Category).Include(e=>e.Enrollments).Include(c => c.Teacher).
                 AsNoTracking().Where(c => c.Price == 0 && !c.IsDeleted && c.IsActive).ToListAsync();
         }
 
         public async Task<List<CourseModel>> GetCoursePremium()
         {
-            return await _context.Courses.Include(c=>c.Lessons).Include(c => c.Category).
+            return await _context.Courses.Include(c=>c.Lessons).Include(c => c.Category).Include(e => e.Enrollments).Include(c => c.Teacher).
                 AsNoTracking().Where(c=>c.Price > 0 && !c.IsDeleted && c.IsActive).ToListAsync();
         }
 
@@ -100,7 +100,9 @@ namespace LMS.Repositories
             .Include(c => c.Category)               
             .Include(c => c.CourseDetails)            
             .Include(c => c.Enrollments)
+            .Include(c => c.Teacher)
             .Include(c => c.Chapters)
+            
                 .ThenInclude(ch => ch.Lessons)      
             .FirstOrDefaultAsync(c => c.Id == id);
             

@@ -226,79 +226,6 @@ namespace LMS.Repositories
                 .FirstOrDefaultAsync(c => c.Id == id);
         }
 
-        public async Task<(List<AdminCommentResponseDTO> Items, int TotalCount)> GetAdminCommentsAsync(
-     int pageIndex,
-     int? courseId,
-     string? search,
-     string status) 
-        {
-            int pageSize = 5;
-
- 
-            var query = _context.Comments.AsNoTracking().Where(c => c.ParentId == null);
-
-
-            if (status == "trash")
-            {
-                // Chỉ lấy những thằng đã bị xóa mềm
-                query = query.Where(c => c.IsDeleted);
-            }
-            else
-            {
-                query = query.Where(c => !c.IsDeleted);
-            }
-
-            if (courseId.HasValue && courseId.Value > 0)
-            {
-                query = query.Where(c => c.Lesson.Chapter.CourseId == courseId.Value);
-            }
-
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                string searchLower = search.ToLower();
-                query = query.Where(c => c.Content.ToLower().Contains(searchLower)
-                                       || c.User.FullName.ToLower().Contains(searchLower));
-            }
-            int totalCount = await query.CountAsync();
-
-            var items = await query
-                .Include(c => c.User)
-                .Include(c => c.Lesson).ThenInclude(l => l.Chapter).ThenInclude(ch => ch.Course)
-                .OrderByDescending(c => c.CreatedAt)
-                .Skip((pageIndex - 1) * pageSize)
-                .Take(pageSize)
-                .Select(c => new AdminCommentResponseDTO
-                {
-                    Id = c.Id,
-                    Content = c.Content,
-                    CreatedAt = c.CreatedAt,
-                    IsActive = c.IsActive,
-                    IsDeleted = c.IsDeleted,
-                    UserName = c.User.FullName,
-                    UserAvatar = c.User.AvatarUrl,
-                    LessonName = c.Lesson.Title,
-                    CourseTitle = c.Lesson.Chapter.Course.Title,
-                    CourseId = c.Lesson.Chapter.CourseId,
-                    // Với Replies, bác cũng nên lọc !r.IsDeleted nếu đang ở chế độ Active
-                    Replies = c.Replies
-                        .Where(r => status == "trash" ? r.IsDeleted : !r.IsDeleted)
-                        .OrderBy(r => r.CreatedAt)
-                        .Select(r => new AdminCommentResponseDTO
-                        {
-                            Id = r.Id,
-                            Content = r.Content,
-                            CreatedAt = r.CreatedAt,
-                            IsDeleted = r.IsDeleted,
-                            IsActive = r.IsActive,
-                            UserName = r.User.FullName,
-                            UserAvatar = r.User.AvatarUrl,
-                            ParentId = r.ParentId
-                        }).ToList()
-                })
-                .ToListAsync();
-
-            return (items, totalCount);
-        }
 
         public async Task<bool> ToggleHideCommentAsync(int id)
         {
@@ -309,6 +236,89 @@ namespace LMS.Repositories
             return await _context.SaveChangesAsync() > 0;
         }
 
+        // 1. LẤY DANH SÁCH (Fix logic lọc để hiện cả con bị xóa lẻ)
+        public async Task<(List<AdminCommentResponseDTO> Items, int TotalCount)> GetAdminCommentsAsync(
+     int pageIndex, int? courseId, int? lessonId, string? search, string status) // Thêm lessonId ở đây
+        {
+            int pageSize = 5;
+            IQueryable<CommentModel> query;
+
+            if (status == "trash")
+            {
+                query = _context.Comments.Where(c => c.IsDeleted && (c.ParentId == null || c.ParentComment.IsDeleted == false));
+            }
+            else
+            {
+                query = _context.Comments.Where(c => !c.IsDeleted && c.ParentId == null);
+            }
+
+            // --- BỘ LỌC KHÓA HỌC ---
+            if (courseId.HasValue && courseId.Value > 0)
+            {
+                query = query.Where(c => c.Lesson.Chapter.CourseId == courseId.Value);
+            }
+
+            // --- BỘ LỌC BÀI HỌC (Cái này bác đừng bỏ nhé!) ---
+            if (lessonId.HasValue && lessonId.Value > 0)
+            {
+                query = query.Where(c => c.LessonId == lessonId.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                string searchLower = search.ToLower();
+                query = query.Where(c => c.Content.ToLower().Contains(searchLower) || c.User.FullName.ToLower().Contains(searchLower));
+            }
+
+            int totalCount = await query.CountAsync();
+
+            var items = await query
+                .Include(c => c.User).ThenInclude(u => u.Role)
+                .Include(c => c.Lesson).ThenInclude(l => l.Chapter).ThenInclude(ch => ch.Course)
+                // SẮP XẾP: Ghim lên đầu, rồi mới đến ngày tạo
+                .OrderByDescending(c => c.IsPinned)
+                .ThenByDescending(c => c.CreatedAt)
+                .Skip((pageIndex - 1) * pageSize)
+                .Take(pageSize)
+                .Select(c => new AdminCommentResponseDTO
+                {
+                    Id = c.Id,
+                    Content = c.Content,
+                    CreatedAt = c.CreatedAt,
+                    IsActive = c.IsActive,
+                    IsDeleted = c.IsDeleted,
+                    IsPinned = c.IsPinned, // PHẢI CÓ cái này để Frontend biết đường mà hiện Icon 📌
+                    UserName = c.User.FullName,
+                    UserAvatar = c.User.AvatarUrl,
+                    LessonName = c.Lesson.Title,
+                    LessonId = c.Lesson.Id,
+                    CourseTitle = c.Lesson.Chapter.Course.Title,
+                    IsAdmin = c.User.Role != null && c.User.Role.RoleName == "Admin",
+                    CourseId = c.Lesson.Chapter.CourseId,
+                    ParentId = c.ParentId,
+
+                    Replies = c.Replies
+                        .Where(r => r.IsDeleted == c.IsDeleted)
+                        .OrderBy(r => r.CreatedAt)
+                        .Select(r => new AdminCommentResponseDTO
+                        {
+                            Id = r.Id,
+                            Content = r.Content,
+                            CreatedAt = r.CreatedAt,
+                            IsDeleted = r.IsDeleted,
+                            IsActive = r.IsActive,
+                            UserName = r.User.FullName,
+                            UserAvatar = r.User.AvatarUrl,
+                            IsAdmin = r.User.Role != null && r.User.Role.RoleName == "Admin",
+                            ParentId = r.ParentId
+                        }).ToList()
+                })
+                .ToListAsync();
+
+            return (items, totalCount);
+        }
+
+        // 2. XÓA MỀM (Cascade - Thác nước)
         public async Task<bool> SoftDeleteAsync(int commentId)
         {
             var comment = await _context.Comments
@@ -316,32 +326,104 @@ namespace LMS.Repositories
                 .FirstOrDefaultAsync(c => c.Id == commentId);
 
             if (comment == null) return false;
-            comment.IsDeleted = true;
 
+            comment.IsDeleted = true;
+            comment.UpdatedAt = DateTime.Now;
+
+            // Xóa luôn cả đám con
             if (comment.Replies != null)
             {
                 foreach (var reply in comment.Replies)
                 {
                     reply.IsDeleted = true;
+                    reply.UpdatedAt = DateTime.Now;
                 }
             }
 
             return await _context.SaveChangesAsync() > 0;
         }
+
+        // 3. KHÔI PHỤC (Double-Side Restore)
         public async Task<bool> RestoreAsync(int commentId)
         {
             var comment = await _context.Comments
                 .Include(c => c.ParentComment)
+                .Include(c => c.Replies) // Nên Include thêm replies để khôi phục cả cụm
                 .FirstOrDefaultAsync(c => c.Id == commentId);
 
             if (comment == null) return false;
+
             comment.IsDeleted = false;
+            comment.UpdatedAt = DateTime.Now;
+
+            // Nếu khôi phục con lẻ -> Khôi phục luôn cha (để nó có chỗ hiện ra)
             if (comment.ParentId != null && comment.ParentComment != null && comment.ParentComment.IsDeleted)
             {
                 comment.ParentComment.IsDeleted = false;
             }
 
+            // Nếu khôi phục cha -> Khôi phục luôn toàn bộ con cho đồng bộ
+            if (comment.Replies != null)
+            {
+                foreach (var reply in comment.Replies)
+                {
+                    reply.IsDeleted = false;
+                }
+            }
+
             return await _context.SaveChangesAsync() > 0;
+        }
+
+        public async Task<int> HandlePinLogicAsync(CommentModel model, bool isNew)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // 1. Tìm thằng đang được ghim trong bài học này (nếu có) để gỡ ghim
+                var currentPin = await _context.Comments
+                    .FirstOrDefaultAsync(c => c.LessonId == model.LessonId && c.IsPinned && !c.IsDeleted);
+
+                if (currentPin != null)
+                {
+                    currentPin.IsPinned = false;
+                }
+
+                if (isNew)
+                {
+                    // 2a. Thêm comment mới và ghim luôn
+                    model.IsPinned = true;
+                    model.CreatedAt = DateTime.Now;
+                    model.IsActive = true;
+                    await _context.Comments.AddAsync(model);
+                    await _context.SaveChangesAsync(); // Lưu để lấy ID mới
+                }
+                else
+                {
+                    // 2b. Tìm comment cũ và đánh dấu IsPinned = true
+                    var existingComment = await _context.Comments.FindAsync(model.Id);
+                    if (existingComment != null)
+                    {
+                        existingComment.IsPinned = true;
+                        // Gán lại Id vào model để return phía dưới cho chuẩn
+                        model.Id = existingComment.Id;
+                    }
+                    else
+                    {
+                        return 0; // Không tìm thấy comment để ghim
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return model.Id;
+            }
+            catch (Exception ex)
+            {
+                // Log lỗi ở đây nếu cần: console.WriteLine(ex.Message);
+                await transaction.RollbackAsync();
+                return 0;
+            }
         }
     }
 }

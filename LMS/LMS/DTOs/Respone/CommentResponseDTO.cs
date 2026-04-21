@@ -11,6 +11,7 @@
         public int? ParentId { get; set; }
         public bool IsLiked { get; set; }
         public DateTime CreatedAt { get; set; }
+        public bool IsPinned { get; set; }
         public int? TeacherId { get; set; }
         // Số lượng phản hồi (nếu bác muốn hiện nút "Xem 5 câu trả lời")
         public int ReplyCount { get; set; }

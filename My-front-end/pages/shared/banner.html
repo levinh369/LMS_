@@ -1,0 +1,130 @@
+<div class="admin-top-bar py-2 px-4 shadow-sm d-flex justify-content-between align-items-center">
+    <div class="d-flex align-items-center" style="width: 200px;">
+        <div>
+            <h5 id="current-page-title" class="fw-bold m-0 text-white">Quản trị</h5>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0" style="font-size: 0.7rem;">
+                    <li id="current-breadcrumb" class="breadcrumb-item active text-white-50">Tổng quan</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="d-flex align-items-center gap-1">
+        <a href="/pages/dashboard/index.html" class="nav-menu-item" id="btn-nav-dashboard">
+            <i class="bi bi-graph-up-arrow"></i>
+            <span>Thống kê</span>
+        </a>
+        <a href="/pages/category/index.html" class="nav-menu-item" id="btn-nav-category">
+            <i class="bi bi-tags"></i>
+            <span>Danh mục</span>
+        </a>
+        <a href="/pages/course/index.html" class="nav-menu-item" id="btn-nav-course">
+            <i class="bi bi-book"></i>
+            <span>Khóa học</span>
+        </a>
+        <a href="/pages/road_map/index.html" class="nav-menu-item" id="btn-nav-roadmap">
+            <i class="bi bi-map"></i>
+            <span>Lộ trình</span>
+        </a>
+        <a href="/pages/managerUser/index.html" class="nav-menu-item" id="btn-nav-user">
+            <i class="bi bi-people"></i>
+            <span>Người dùng</span>
+        </a>
+        <a href="/pages/manager-comment/index.html" class="nav-menu-item" id="btn-nav-comment">
+            <i class="bi bi-chat-dots"></i>
+            <span>Bình luận</span>
+        </a>
+        <a href="/pages/order/index.html" class="nav-menu-item" id="btn-nav-order">
+            <i class="bi bi-cash-stack"></i>
+            <span>Đơn hàng</span>
+        </a>
+    </div>
+
+    <div class="d-flex align-items-center gap-3 border-start border-white border-opacity-10 ps-3">
+        
+        <div class="dropdown">
+            <a href="javascript:void(0)" class="btn-notif-circle position-relative" data-bs-toggle="dropdown">
+                <i class="bi bi-bell-fill"></i>
+                <span class="badge-status-new bg-danger animate__animated animate__pulse animate__infinite"></span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-3 p-0 overflow-hidden" style="width: 320px; border-radius: 12px;">
+                <li class="p-3 bg-light border-bottom fw-bold text-dark">Thông báo hệ thống</li>
+                <div style="max-height: 300px; overflow-y: auto;">
+                    <li>
+                        <a class="dropdown-item p-3 border-bottom d-flex align-items-start gap-2" href="/pages/order/orders.html">
+                            <i class="bi bi-dot text-primary fs-4"></i>
+                            <div>
+                                <p class="m-0 small fw-bold">Có đơn hàng mới #1092</p>
+                                <div class="text-muted small">2 phút trước</div>
+                            </div>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item p-3 border-bottom d-flex align-items-start gap-2" href="/pages/comment/comments.html">
+                            <i class="bi bi-dot text-warning fs-4"></i>
+                            <div>
+                                <p class="m-0 small fw-bold">Bình luận mới cần duyệt</p>
+                                <div class="text-muted small">15 phút trước</div>
+                            </div>
+                        </a>
+                    </li>
+                </div>
+                <li class="p-2 text-center bg-light">
+                    <a href="#" class="text-primary small text-decoration-none fw-bold">Xem tất cả</a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="text-end d-none d-md-block ms-2">
+            <div class="fw-bold text-white small" style="line-height: 1;">Lê Quang Vinh</div>
+            <small class="text-white-50" style="font-size: 10px;">Group Leader</small>
+        </div>
+        
+        <div class="dropdown">
+            <img src="/assets/img/default-avatar.png" class="rounded-circle border border-2 border-white-50 p-1" 
+                 style="width:40px; height:40px; object-fit:cover; cursor:pointer;" data-bs-toggle="dropdown">
+            <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
+                <li><a class="dropdown-item py-2" href="#"><i class="bi bi-person me-2"></i>Hồ sơ</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item py-2 text-danger fw-bold" href="javascript:void(0)" onclick="logout()">
+                    <i class="bi bi-box-arrow-right me-2"></i>Thoát
+                </a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<style>
+    .admin-top-bar {
+        background: linear-gradient(90deg, #4e73df 0%, #224abe 100%);
+        min-height: 70px;
+        position: sticky; top: 0; z-index: 1000;
+    }
+    
+    /* Menu chính ở giữa */
+    .nav-menu-item {
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        padding: 5px 10px; color: rgba(255, 255, 255, 0.7); text-decoration: none !important;
+        border-radius: 8px; transition: 0.2s; min-width: 70px;
+    }
+    .nav-menu-item:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+    .nav-menu-item.active { background: rgba(255, 255, 255, 0.2); color: #fff; box-shadow: inset 0 -3px 0 #fff; }
+    .nav-menu-item i { font-size: 1.1rem; margin-bottom: 2px; }
+    .nav-menu-item span { font-size: 0.6rem; font-weight: 600; text-transform: uppercase; }
+
+    /* Icon thông báo dạng hình tròn */
+    .btn-notif-circle {
+        width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;
+        background: rgba(255, 255, 255, 0.1); border-radius: 50%; color: #fff; text-decoration: none;
+        transition: 0.3s;
+    }
+    .btn-notif-circle:hover { background: rgba(255, 255, 255, 0.2); }
+
+    .badge-status-new {
+        position: absolute; top: 0; right: 0;
+        width: 10px; height: 10px; border-radius: 50%; border: 2px solid #224abe;
+    }
+
+    .dropdown-item:hover { background-color: #f8f9fc; }
+</style>

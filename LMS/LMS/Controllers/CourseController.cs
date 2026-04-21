@@ -1,9 +1,12 @@
-﻿using LMS.DTOs.Request;
+﻿using Azure.Core;
+using LMS.DTOs.Request;
 using LMS.Services;
 using LMS.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel.Design;
+using System.Security.Claims;
 
 namespace LMS.Controllers
 {
@@ -17,13 +20,31 @@ namespace LMS.Controllers
             this.courseService = courseService;
         }
         [HttpPost]
+        
         public async Task<IActionResult> AddAsync([FromForm] CourseRequestDTO dto)
         {
-            await courseService.CreateAsync(dto);
-            return Ok(new
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (userIdClaim == null)
             {
-                message = "Thêm khóa học thành công!"
-            });
+                return Unauthorized(new { message = "Bạn cần đăng nhập để thực hiện chức năng này!" });
+            }
+
+            try
+            {
+                int userId = int.Parse(userIdClaim.Value);
+                await courseService.CreateAsync(dto, userId);
+                return Ok(new
+                {
+                    message = "Thêm khóa học thành công!"
+                });
+
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+           
         }
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteAynsc(int id)

@@ -12,7 +12,7 @@ namespace LMS.Services.Interfaces
         Task UpdateAsync(int id, CourseRequestDTO dto);
         Task DeleteAsync(int id);
         Task<CourseResponeDTO> GetById(int id);   
-        Task CreateAsync(CourseRequestDTO dto);
+        Task CreateAsync(CourseRequestDTO dto, int userId);
         Task<CourseModel> GetByIdOrThrowAsync(int id);
         Task<(List<CourseResponeDTO> Data, int Total)> GetCourseListAsync(
         int page, int pageSize, string keySearch, DateTime? fromDate, DateTime? toDate, int isActive);

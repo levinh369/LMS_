@@ -5,6 +5,7 @@ namespace LMS.DTOs.Request
 {
     public class CommentRequestDTO
     {
+        public int CommentId    { get; set; }
         [StringLength(2000, ErrorMessage = "Bình luận không được quá 2000 ký tự")]
         public string Content { get; set; }
 

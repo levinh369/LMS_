@@ -41,41 +41,76 @@ var Detail = {
             console.error("Lỗi:", error);
         }
     },
-    renderDetail: function(data) {
-        // --- Phần Header & Sidebar giữ nguyên như code của ông ---
-        $('#courseTitle').text(data.title);
-        $('#currentCourseId').val(data.courseId);
-        debugger
-        const shortDesc = data.description ? data.description.replace(/<[^>]*>/g, '').substring(0, 150) + "..." : "";
-        $('#courseLead').text(shortDesc);
-        $('#instructorName').text(data.instructorName || "Giảng viên LMS");
-        $('#lastUpdated').text(`Cập nhật lần cuối: ${new Date(data.createAt).toLocaleDateString('vi-VN')}`);
-        $('#courseDescription').html(data.description);
-        $('#enrollNumber').html(data.totalEnrolled);
-        $('#courseThumbnail').attr('src', data.thumbnailUrl || '../../assets/img/default-course.png');
-        $('#coursePrice').text(data.price > 0 ? data.price.toLocaleString('vi-VN') + 'đ' : 'Miễn phí');
-        $('#totalChapters').text(data.totalChapters || 0);
-        $('#totalLessons').text(data.totalLessons || 0);
-const durationDisplay = Detail.formatDuration(data.totalDurationSeconds);
-$('#totalDuration').text(durationDisplay);
-        // --- Vẽ Benefits ---
-        let benefitsHtml = '';
-        if (data.courseDetails && data.courseDetails.length > 0) {
-            data.courseDetails.forEach(item => {
-                const isBenefit = item.detailType === 0;
-                
-                benefitsHtml += `
-                    <div class="col-md-6 mb-3 d-flex align-items-start">
-                        <div class="flex-shrink-0 d-flex align-items-center justify-content-center" style="height: 24px; width: 24px;">
-                            <i class="bi ${isBenefit ? 'bi-check2-circle text-success' : 'bi-info-circle text-warning'} fs-5"></i>
-                        </div>
-                        <div class="ms-2 text-secondary small py-1">
-                            ${item.content}
-                        </div>
-                    </div>`;
-            });
-        }
-        $('#benefitsContainer').html(benefitsHtml || '<p class="small text-muted ps-3">Thông tin đang được cập nhật...</p>');
+   renderDetail: function(data) {
+    // 1. Thông tin cơ bản & Header
+    $('#courseTitle').text(data.title);
+    $('#currentCourseId').val(data.courseId);
+    
+    // Xử lý mô tả ngắn (Lead)
+    const shortDesc = data.description ? data.description.replace(/<[^>]*>/g, '').substring(0, 160) + "..." : "Khóa học chất lượng cao dành cho bạn.";
+    $('#courseLead').text(shortDesc);
+    
+    // Giảng viên (Thêm Avatar nếu có)
+    $('#instructorName').text(data.instructorName || "Giảng viên LMS");
+    if (data.instructorUrl) {
+        $('#instructorAvatar').attr('src', data.instructorUrl);
+    }
+
+    // Thời gian cập nhật & Badge Level
+    const updateDate = new Date(data.createAt).toLocaleDateString('vi-VN');
+    $('#lastUpdated').text(`Cập nhật lần cuối: ${updateDate}`);
+    
+    // 2. Sidebar Stats (Giá & Thông số)
+    const isFree = data.price === 0;
+    const priceText = isFree ? 'Miễn phí' : new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(data.price);
+    
+    $('#coursePrice').text(priceText)
+        .removeClass('text-danger text-success')
+        .addClass(isFree ? 'text-success' : 'text-danger');
+
+    $('#enrollNumber').text(data.totalEnrolled.toLocaleString());
+    $('#totalChapters').text(data.totalChapters || 0);
+    $('#totalLessons').text(data.totalLessons || 0);
+    
+    // Format thời lượng từ giây sang hh:mm
+    const durationDisplay = Detail.formatDuration(data.totalDurationSeconds);
+    $('#totalDuration').text(durationDisplay);
+    
+    // Cấp độ khóa học (Dùng Badge Bootstrap)
+    const levelMap = { 0: 'Cơ bản', 1: 'Trung bình', 2: 'Nâng cao' };
+    $('#courseLevel').text(levelMap[data.level] || 'Mọi cấp độ');
+
+    // 3. Hình ảnh & Mô tả chi tiết
+    $('#courseThumbnail').attr('src', data.thumbnailUrl || '../../assets/img/default-course.png');
+    $('#courseDescription').html(data.description || 'Đang cập nhật nội dung...');
+
+    // 4. Vẽ Benefits (Lợi ích khóa học)
+    let benefitsHtml = '';
+    if (data.courseDetails && data.courseDetails.length > 0) {
+        data.courseDetails.forEach(item => {
+            const isBenefit = item.detailType === 0; // 0 là lợi ích, 1 là yêu cầu
+            benefitsHtml += `
+                <div class="col-md-6 mb-2 d-flex align-items-start">
+                    <div class="flex-shrink-0 mt-1">
+                        <i class="bi ${isBenefit ? 'bi-patch-check-fill text-primary' : 'bi-arrow-right-circle text-secondary'}"></i>
+                    </div>
+                    <div class="ms-2 text-dark small">
+                        ${item.content}
+                    </div>
+                </div>`;
+        });
+    }
+    $('#benefitsContainer').html(benefitsHtml || '<p class="small text-muted ps-3">Thông tin đang được cập nhật...</p>');
+
+    // 5. Trạng thái nút bấm (Đã đăng ký hay chưa)
+    if (data.isEnrolled) {
+        $('#btnEnroll').html('<i class="bi bi-play-fill me-1"></i> Vào học ngay')
+                       .removeClass('btn-primary').addClass('btn-success');
+    } else {
+        $('#btnEnroll').html(isFree ? 'Đăng ký học miễn phí' : 'Mua khóa học ngay')
+                       .removeClass('btn-success').addClass('btn-primary');
+    }
+
 
         let chapterHtml = '';
         if (data.chapters && data.chapters.length > 0) {

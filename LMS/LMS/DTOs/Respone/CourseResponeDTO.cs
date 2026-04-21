@@ -11,6 +11,7 @@ namespace LMS.DTOs.Respone
         public string ThumbnailUrl { get; set; }
         [Column(TypeName = "decimal(18,2)")]
         public decimal Price { get; set; }
+        public string? InstructorUrl {  get; set; }
         public DateTime CreateAt { get; set; }
         public bool IsActive { get; set; }
         public string CategoryName {  get; set; }

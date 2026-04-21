@@ -24,5 +24,6 @@ namespace LMS.Services.Interfaces
         string GenerateSecureBunnyUrl(string videoId, string? libraryId);
         Task<int> GetBunnyVideoDurationAsync(string videoId);
         Task<int> GetCourseId(int chapterId);
+        Task<List<LessonBasicDTO>> GetListLessonBasicAsync(int courseId);
     }
 }

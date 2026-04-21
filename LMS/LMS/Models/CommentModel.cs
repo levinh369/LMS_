@@ -26,10 +26,7 @@ namespace LMS.Models
 
         public ICollection<CommentModel> Replies { get; set; } = new List<CommentModel>();
 
-        // --- CÁC TRƯỜNG NÊN THÊM ---
-
-        // 1. Kiểm soát nội dung (Spam/Ẩn)
-        public bool IsHidden { get; set; } = false;
+        public bool IsPinned { get; set; } = false;
         public ICollection<CommentLikeModel> Likes { get; set; } = new List<CommentLikeModel>();
 
         // 2. Trường này bác giữ lại để "hiển thị nhanh" (Denormalization)

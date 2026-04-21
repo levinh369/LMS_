@@ -6,14 +6,17 @@
         public string Content { get; set; }
         public DateTime CreatedAt { get; set; }
         public bool IsActive { get; set; } // Quan trọng nhất để bác Ẩn/Hiện
+        public int LessonId {  get; set; }
 
         // Thông tin người gửi (Học viên)
         public int UserId { get; set; }
         public string UserName { get; set; }
         public string UserAvatar { get; set; }
         public bool IsDeleted {  get; set; }
+        public bool IsPinned {  get; set; }
 
         // Thông tin ngữ cảnh
+        public bool IsAdmin { get; set; }
         public int CourseId { get; set; }
         public string CourseTitle { get; set; }
         public string LessonName { get; set; } // Để Admin biết học viên đang hỏi ở bài nào

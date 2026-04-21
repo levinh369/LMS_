@@ -12,6 +12,7 @@ namespace LMS.Repositories.Interfaces
         Task AddRangeAsync(List<LessonModel> lessons);
         Task<(List<CourseLessonSummaryDTO> Data, int Total)> GetCourseSummariesAsync(int page, int pageSize, string keySearch);
         Task<List<LessonModel>> GetByCourseIdAsync(int courseId);
+        Task<List<LessonBasicDTO>> GetListLessonBasicAsync(int courseId);
         Task<List<LessonModel>?> GetLessonsByChapterId(int chapterId);
         Task<bool> UpdateLessonsOrderAsync(List<int> lessonIds);
         Task<int> GetMaxOrderIndexByChapterIdAsync(int chapterId);

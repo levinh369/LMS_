@@ -144,5 +144,18 @@ namespace LMS.Controllers
                 data = lessons
             });
         }
+        [HttpGet("list-lesson/{courseId}")]
+        public async Task<IActionResult> GetLessonsByCourse(int courseId)
+        {
+            if (courseId <= 0) return BadRequest(new { success = false, message = "ID khóa học không hợp lệ!" });
+
+            var data = await lessonService.GetListLessonBasicAsync(courseId);
+
+            return Ok(new
+            {
+                success = true,
+                data = data,
+            });
+        }
     }
 }

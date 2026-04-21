@@ -27,7 +27,7 @@ namespace LMS.Services
             this.enrollRepository = enrollRepository;
             this.lessonService = lessionService;
         }
-        public async Task CreateAsync(CourseRequestDTO dto)
+        public async Task CreateAsync(CourseRequestDTO dto, int userId)
         {
             var exist = await courseRepository.GetByTitleAsync(dto.Title);
             if (exist != null)
@@ -49,6 +49,7 @@ namespace LMS.Services
                 ThumbnailUrl = imageUrl,
                 CategoryId = dto.CategoryId,
                 Level = (LevelEnum)dto.Level,
+                TeacherId = userId,
                 CourseDetails = dto.CourseDetails.Select(d => new CourseDetailModel
                 {
                     Content = d.Content,
@@ -283,6 +284,10 @@ namespace LMS.Services
                 TotalLessons = c.Lessons.Count,
                 DurationDisplay = FormatDuration(c.Lessons.Sum(l => l.Duration)),
                 CategoryName = c.Category.Name,
+                InstructorAvatar = c.Teacher?.AvatarUrl ?? "/images/default-avatar.png",
+                InstructorName = c.Teacher?.FullName ?? "Giảng viên LMS",
+                StudentCount = c.Enrollments?.Count ?? 0,
+
             }).ToList();
             return modelList;
         }
@@ -299,6 +304,9 @@ namespace LMS.Services
                 TotalLessons = c.Lessons.Count,
                 DurationDisplay = FormatDuration(c.Lessons.Sum(l => l.Duration)),
                 CategoryName = c.Category.Name,
+                InstructorAvatar = c.Teacher?.AvatarUrl ?? "/images/default-avatar.png",
+                InstructorName = c.Teacher?.FullName ?? "Giảng viên LMS",
+                StudentCount = c.Enrollments?.Count ?? 0,
             }).ToList();
             return modelList;
         }
@@ -322,6 +330,8 @@ namespace LMS.Services
                 TotalEnrolled = course.Enrollments?.Count ?? 0,
                 TotalLessons = course.Chapters.Sum(ch => ch.Lessons.Count),
                 totalChapters = course.Chapters.Count(),
+                InstructorName = course.Teacher?.FullName ?? " Giảng viên LMS",
+                InstructorUrl = course.Teacher?.AvatarUrl ?? "/images/default-avatar.png",
                 IsEnrolled = userId.HasValue && course.Enrollments.Any(e => e.UserId == userId.Value && e.IsActive),
                 Level = course.Level,
 

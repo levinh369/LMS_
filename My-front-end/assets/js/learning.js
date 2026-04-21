@@ -171,6 +171,7 @@ changeVideo: async function(newLessonId) {
     $(`#lesson-${newLessonId}`).addClass('active');
 },
 renderYouTube: function(videoId, startTime) {
+    
     // Ẩn/Hiện Iframe hoặc xử lý logic switch player nếu cần
     if (player && typeof player.loadVideoById === 'function') {
         player.loadVideoById({ videoId: videoId, startSeconds: startTime });
@@ -511,7 +512,7 @@ renderCommentItem: function (comment, replies, teacherId) {
     const myId = (rawUserId && rawUserId !== "undefined" && rawUserId !== "null") ? String(rawUserId).trim() : "";
     const instructorId = String(teacherId || "").trim();
 
-    // 1. PHẢI CÓ reactionMap đầy đủ ở đây để config không bị undefined
+    // 1. Cấu hình Reaction Map
     const reactionMap = {
         0: { icon: 'bi-hand-thumbs-up', color: 'text-muted', text: 'Thích' },
         1: { icon: 'bi-hand-thumbs-up-fill', color: 'text-primary', text: 'Thích' },
@@ -522,7 +523,7 @@ renderCommentItem: function (comment, replies, teacherId) {
         6: { icon: 'bi-emoji-angry-fill', color: 'text-danger', text: 'Phẫn nộ' }
     };
 
-    // 2. Hàm tạo Menu 3 chấm
+    // 2. Hàm tạo Menu 3 chấm (Chỉnh sửa/Xóa)
     const createActionMenu = (item, isMe) => {
         if (!isMe) return ''; 
         return `
@@ -537,14 +538,12 @@ renderCommentItem: function (comment, replies, teacherId) {
             </div>`;
     };
 
-    // 3. Hàm tạo nút Reaction (Fix lỗi undefined)
+    // 3. Hàm tạo cụm Reaction
     const createReactionBtn = (item) => {
         const type = item.reactionType !== undefined ? item.reactionType : 
                      (item.ReactionType !== undefined ? item.ReactionType : 0);
         const isLiked = item.isLiked || item.IsLiked || false;
         const currentType = (type === 0 && isLiked) ? 1 : type;
-        
-        // Lấy config, nếu type lạ quá thì mặc định về Thích (0)
         const config = reactionMap[currentType] || reactionMap[0];
 
         return `
@@ -566,7 +565,7 @@ renderCommentItem: function (comment, replies, teacherId) {
             </div>`;
     };
 
-    // 4. Render danh sách Reply
+    // 4. Render danh sách Reply (Comment con)
     let repliesHtml = (replies || []).map(r => {
         const isMe = String(r.userId || "").trim() === myId;
         const isInst = String(r.userId || "").trim() === instructorId;
@@ -575,7 +574,7 @@ renderCommentItem: function (comment, replies, teacherId) {
 
         return `
             <div class="reply-item d-flex mb-3" id="comment-${r.id}">
-                <img src="${r.userAvatar || '/assets/img/default-avatar.png'}" class="avatar-sm me-2 border shadow-sm">
+                <img src="${r.userAvatar || '/assets/img/default-avatar.png'}" class="avatar-sm me-2 border shadow-sm rounded-circle">
                 <div class="flex-grow-1">
                     <div class="d-flex align-items-start">
                         <div class="bg-light p-2 rounded-3 d-inline-block" style="max-width: 90%;">
@@ -594,27 +593,40 @@ renderCommentItem: function (comment, replies, teacherId) {
                         <span class="time-text" style="font-size: 9px; color:#8a8d91;">${this.timeSince(r.createdAt)}</span>
                         ${createReactionBtn(r)}
                         <button onclick="Learn.showReplyInput(${comment.id}, '${r.userFullName}')" class="btn-action-text" style="font-size: 11px; background:none; border:none; font-weight:bold; color:#65676b;">Trả lời</button>
-                        ${this.renderReactionSummary(r)} 
+                        ${this.renderReactionSummary ? this.renderReactionSummary(r) : ''} 
                     </div>
                 </div>
             </div>`;
     }).join('');
 
+    // 5. Logic xử lý Ghim (Pin)
+    const isPinned = comment.isPinned || comment.IsPinned || false;
+    const pinnedClass = isPinned ? 'is-pinned shadow-sm border-warning' : '';
+    const pinnedHeader = isPinned ? 
+        `<div class="pinned-label text-warning fw-bold mb-1" style="font-size: 11px;">
+            <i class="bi bi-pin-angle-fill"></i> Thông báo từ quản trị viên
+         </div>` : '';
+
     const isParentMe = String(comment.userId || "").trim() === myId;
     const isParentInst = String(comment.userId || "").trim() === instructorId;
 
-    // 5. Render Comment Cha
+    // 6. Render Comment Cha
     return `
-        <div class="comment-item mb-4 border-bottom pb-3" id="comment-${comment.id}">
+        <div class="comment-item mb-4 border-bottom pb-3 ${pinnedClass}" id="comment-${comment.id}" 
+             style="${isPinned ? 'background-color: #fffdf0; padding: 10px; border-radius: 8px;' : ''}">
             <div class="d-flex">
-                <img src="${comment.userAvatar || '/assets/img/default-avatar.png'}" class="avatar-md me-2 border shadow-sm">
+                <img src="${comment.userAvatar || '/assets/img/default-avatar.png'}" class="avatar-md me-2 border shadow-sm rounded-circle">
                 <div class="flex-grow-1">
+                    
+                    ${pinnedHeader}
+
                     <div class="d-flex align-items-start">
                         <div class="bg-light p-3 rounded-3 shadow-sm d-inline-block" style="max-width: 90%;">
                             <div class="d-flex align-items-center gap-2 mb-1">
                                 <span class="fw-bold" style="font-size: 13px;">${comment.userFullName}</span>
                                 ${isParentInst ? '<span class="badge bg-danger" style="font-size: 9px;">Giảng viên</span>' : ''}
                                 ${isParentMe ? '<small class="text-primary fw-bold" style="font-size: 10px;">(Bạn)</small>' : ''}
+                                ${isPinned ? '<i class="bi bi-pin-angle-fill text-warning" title="Đã ghim"></i>' : ''}
                             </div>
                             <p class="mb-0 text-secondary" id="content-${comment.id}" style="font-size: 13px;">${comment.content}</p>
                         </div>
@@ -625,11 +637,11 @@ renderCommentItem: function (comment, replies, teacherId) {
                         <span class="time-text" style="font-size: 11px; color:#8a8d91;">${this.timeSince(comment.createdAt)}</span>
                         ${createReactionBtn(comment)}
                         <button onclick="Learn.showReplyInput(${comment.id}, '${comment.userFullName}')" class="btn-action-text" style="font-size: 12px; background:none; border:none; font-weight:bold; color:#65676b;">Trả lời</button>
-                        ${this.renderReactionSummary(comment)}
+                        ${this.renderReactionSummary ? this.renderReactionSummary(comment) : ''}
                     </div>
                     
                     <div id="reply-box-${comment.id}" class="mt-2"></div>
-                    <div class="replies-list ms-4 mt-2 ps-3">${repliesHtml}</div>
+                    <div class="replies-list ms-4 mt-2 ps-3 border-start">${repliesHtml}</div>
                 </div>
             </div>
         </div>`;

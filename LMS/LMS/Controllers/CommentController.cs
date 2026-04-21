@@ -6,6 +6,7 @@ using LMS.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 
 namespace LMS.Controllers
@@ -106,7 +107,7 @@ namespace LMS.Controllers
         [HttpGet("getReactions/{commentId}")]
         public async Task<IActionResult> getReactions(int commentId)
         {
-            try 
+            try
             {
                 var result = await commentService.GetReactionDetailServiceAsync(commentId);
 
@@ -116,7 +117,7 @@ namespace LMS.Controllers
                     data = result
                 });
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 return BadRequest(new { message = ex.Message });
             }
@@ -143,7 +144,7 @@ namespace LMS.Controllers
 
                 return Ok(new { success = true });
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 return BadRequest(new { message = ex.Message });
             }
@@ -178,14 +179,16 @@ namespace LMS.Controllers
         }
         [HttpGet("manager-comment")]
         public async Task<IActionResult> GetManagerComments(
-       [FromQuery] int page = 1,
-       [FromQuery] int? courseId = null,
-       [FromQuery] string? search = null,
-       [FromQuery] string status = "active") 
+     [FromQuery] int page = 1,
+     [FromQuery] int? courseId = null,
+     [FromQuery] int? lessonId = null, // THÊM THẰNG NÀY
+     [FromQuery] string? search = null,
+     [FromQuery] string status = "active")
         {
-            // Chặn nếu page nhỏ hơn 1
             if (page < 1) page = 1;
-            var (items, total) = await commentService.GetAdminCommentsAsync(page, courseId, search, status);
+
+            // Truyền thêm lessonId vào Service
+            var (items, total) = await commentService.GetAdminCommentsAsync(page, courseId, lessonId, search, status);
 
             return Ok(new
             {
@@ -235,6 +238,70 @@ namespace LMS.Controllers
 
             return Ok(new { success = true, message = "Đã khôi phục bình luận thành công!" });
         }
+        [HttpPost("pin-handler")]
+        [Authorize] // Phải login mới được ghim
+        public async Task<IActionResult> PinHandler([FromBody] PinRequest request)
+        {
+            // 1. Lấy thông tin Admin từ Claims
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            var userNameClaim = User.FindFirst(ClaimTypes.Name);
 
+            if (userIdClaim == null)
+                return Unauthorized(new { message = "Phiên đăng nhập hết hạn bác ơi!" });
+
+            int adminId = int.Parse(userIdClaim.Value);
+            string adminName = userNameClaim?.Value ?? "Quản trị viên";
+
+            // 2. Kiểm tra dữ liệu (Validation) - Bỏ request.Dto cũ đi
+            if (request == null || request.LessonId <= 0)
+            {
+                return BadRequest(new { message = "Thiếu ID bài học hoặc dữ liệu không hợp lệ!" });
+            }
+
+            // Nếu đăng mới mà quên nhập nội dung
+            if (request.IsNew && string.IsNullOrWhiteSpace(request.Content))
+            {
+                return BadRequest(new { message = "Bác chưa nhập nội dung thông báo kìa!" });
+            }
+
+            // Nếu ghim hàng cũ mà thiếu ID comment
+            if (!request.IsNew && (!request.CommentId.HasValue || request.CommentId <= 0))
+            {
+                return BadRequest(new { message = "Ghim hàng cũ thì phải có ID bình luận chứ bác!" });
+            }
+
+            // 3. Gọi Service xử lý (Truyền thẳng cái request "phẳng" vào)
+            var success = await commentService.ProcessPinAsync(request, adminId, adminName);
+
+            if (success)
+            {
+                return Ok(new
+                {
+                    success = true,
+                    message = request.IsNew ? "Đã đăng thông báo và ghim!" : "Đã ghim bình luận thành công!"
+                });
+            }
+
+            return BadRequest(new { success = false, message = "Lỗi xử lý ghim, bác check lại log nhé!" });
+        }
+
+        // Model để hứng dữ liệu từ JSON gửi lên
+        public class PinRequest
+        {
+            public bool IsNew { get; set; }
+
+            // Trường hợp ghim comment cũ (IsNew = false) thì cần Id này
+            public int? CommentId { get; set; }
+
+            // Trường hợp đăng mới (IsNew = true) thì cần nội dung này
+            // Để dấu ? (Nullable) để không bị lỗi 400 khi ghim comment cũ
+            public string? Content { get; set; }
+
+            [Required(ErrorMessage = "Thiếu ID bài học rồi bác ơi!")]
+            public int LessonId { get; set; }
+
+            public int? CourseId { get; set; }
+        }
     }
 }
+

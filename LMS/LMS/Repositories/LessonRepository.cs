@@ -133,5 +133,19 @@ namespace LMS.Repositories
                 .Select(c => c.CourseId)
                 .FirstOrDefaultAsync();
         }
+
+        public async Task<List<LessonBasicDTO>> GetListLessonBasicAsync(int courseId)
+        {
+            return await _context.Lessons
+                .Where(l => l.Chapter.CourseId == courseId && l.IsActive && !l.IsDeleted)
+                .OrderBy(l => l.Chapter.OrderIndex)
+                .ThenBy(l => l.OrderIndex)
+                .Select(l => new LessonBasicDTO
+                {
+                    LessonId = l.Id,
+                    LessonName = l.Title
+                })
+                .ToListAsync();
+        }
     }
 }

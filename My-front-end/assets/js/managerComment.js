@@ -1,3 +1,15 @@
+// Khai báo Toast mixin của SweetAlert2
+const Toast = Swal.mixin({
+    toast: true,
+    position: 'top-end',
+    showConfirmButton: false,
+    timer: 3000,
+    timerProgressBar: true,
+    didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer)
+        toast.addEventListener('mouseleave', Swal.resumeTimer)
+    }
+});
 const AdminComment = {
     config: {
         pageSize: 5,
@@ -12,7 +24,7 @@ const AdminComment = {
         this.loadData(1);
         this.registerEvents();
     },
-
+    
     registerEvents: function() {
         // Sự kiện lọc
        $('#courseFilter, #statusFilter').on('change', function() {
@@ -35,97 +47,154 @@ const AdminComment = {
             $('.cmt-checkbox').prop('checked', this.checked);
             AdminComment.onSelectItem();
         });
-        $('#courseFilter, #statusFilter').on('change', function() {
-            AdminComment.loadData(1); // Luôn về trang 1 khi đổi bộ lọc
+      // Sự kiện khi thay đổi Khóa học
+        $('#courseFilter').on('change', function() {
+            const courseId = $(this).val();
+            AdminComment.loadLessons(courseId); // Gọi hàm ở trên
+            AdminComment.loadData(1); // Load lại danh sách comment của khóa đó
+        });
+
+        // Sự kiện khi thay đổi Bài học
+        $('#lessonFilter').on('change', function() {
+            AdminComment.loadData(1); // Load lại comment của đúng bài đó
         });
     },
-
+    
     // 1. GỌI API LẤY DỮ LIỆU
-    loadData: async function (page) {
-        const { apiUrl, pageSize, token } = this.config;
-        debugger
-        const courseId = $('#courseFilter').val();
-        const searchContent = $('#searchInp').val();
-        const status = $('#statusFilter').val();
-        const url = new URL(`${apiUrl}/manager-comment`);
-        url.searchParams.append('page', page);
-        url.searchParams.append('pageSize', pageSize);
-        url.searchParams.append('status', status);
-        if(courseId !== 'all') url.searchParams.append('courseId', courseId);
-        if(searchContent) url.searchParams.append('search', searchContent);
-        try {
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: { 
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
+loadData: async function (page) {
+    const { apiUrl, pageSize, token } = this.config;
+    
+    // 1. Bốc thêm giá trị từ lessonFilter
+    const courseId = $('#courseFilter').val();
+    const lessonId = $('#lessonFilter').val(); // <--- THÊM DÒNG NÀY
+    const searchContent = $('#searchInp').val();
+    const status = $('#statusFilter').val();
+    
+    const url = new URL(`${apiUrl}/manager-comment`);
+    url.searchParams.append('page', page);
+    url.searchParams.append('pageSize', pageSize);
+    url.searchParams.append('status', status);
+    
+    // 2. Gán courseId nếu không phải "all"
+    if(courseId !== 'all') url.searchParams.append('courseId', courseId);
+    
+    // 3. Gán lessonId nếu có giá trị và không phải "all"
+    if(lessonId && lessonId !== 'all') {
+        url.searchParams.append('lessonId', lessonId); 
+    }
+    
+    if(searchContent) url.searchParams.append('search', searchContent);
 
-            if (response.status === 401) {
-                Swal.fire('Hết hạn', 'Phiên đăng nhập đã hết, vui lòng login lại!', 'error');
-                return;
+    try {
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: { 
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
             }
+        });
 
-            const res = await response.json();
-            // Khớp với JSON bác gửi (data, totalCount, totalPages)
-            this.renderFeed(res.data);
-            this.showPaging(res.totalCount, res.totalPages, page);
-            this.currentPage = page;
-            $('#admin-total-records').text(res.totalCount);
-
-        } catch (error) {
-            console.error("Lỗi loadData:", error);
-            $('#commentFeed').html('<div class="text-center p-5 text-danger">Không thể kết nối đến hệ thống Backend!</div>');
+        if (response.status === 401) {
+            Swal.fire('Hết hạn', 'Phiên đăng nhập đã hết, vui lòng login lại!', 'error');
+            return;
         }
-    },
+
+        const res = await response.json();
+        
+        // Render dữ liệu ra Feed
+        this.renderFeed(res.data);
+        this.showPaging(res.totalCount, res.totalPages, page);
+        this.currentPage = page;
+        $('#admin-total-records').text(res.totalCount);
+
+    } catch (error) {
+        console.error("Lỗi loadData:", error);
+        $('#commentFeed').html('<div class="text-center p-5 text-danger">Không thể kết nối đến hệ thống Backend!</div>');
+    }
+},
 renderFeed: function (data) {
     let html = '';
-    
+    if (!data || data.length === 0) {
+        $('#commentFeed').html('<div class="text-center p-5 text-muted">Chưa có bình luận nào.</div>');
+        return;
+    }
+
     data.forEach(c => {
-        // 1. Chỉ giữ lại logic "Mờ": Nếu isActive = false thì cho mờ đi (dành cho Admin)
         const parentClass = !c.isActive ? 'is-inactive' : '';
+        // 1. Thêm viền vàng và bóng đổ nếu bình luận này đang được GHIM
+        const pinnedClass = c.isPinned ? 'border border-warning shadow' : '';
 
         html += `
-        <div class="thread-item shadow-sm ${parentClass}" id="thread-${c.id}">
+        <div class="thread-item ${pinnedClass} ${parentClass} p-3 mb-3 bg-white rounded" 
+             id="thread-${c.id}" 
+             data-lesson-id="${c.lessonId}"> 
+            
             <div class="d-flex align-items-start">
-                <img src="${c.userAvatar || 'https://via.placeholder.com/45'}" class="avatar-box me-3 border">
+                <img src="${c.userAvatar || 'https://via.placeholder.com/45'}" class="avatar-box me-3 border rounded-circle">
                 <div class="flex-grow-1">
                     <div class="d-flex justify-content-between">
                         <div>
-                            <span class="fw-bold">${c.userName}</span>
+                            <span class="fw-bold text-primary">${c.userName}</span>
+                            ${c.isAdmin ? '<span class="badge bg-danger ms-1" style="font-size:7px">ADMIN</span>' : ''}
+                            
                             <small class="text-muted ms-2">#ID-${c.id}</small>
                             ${c.isDeleted ? '<span class="badge bg-danger ms-2">Đã xóa</span>' : ''}
+                            
+                            ${c.isPinned ? '<i class="bi bi-pin-angle-fill text-warning ms-2" title="Đang được ghim"></i>' : ''}
                         </div>
+                        
                         <div class="d-flex gap-2">
+                            <button class="btn-tool ${c.isPinned ? 'text-warning' : 'text-muted'}" 
+                                    title="${c.isPinned ? 'Bỏ ghim' : 'Ghim lên đầu'}" 
+                                    onclick="AdminComment.togglePin(${c.id})">
+                                <i class="bi ${c.isPinned ? 'bi-pin-angle-fill' : 'bi-pin-angle'}"></i>
+                            </button>
+
+                            ${!c.isDeleted ? `
+                                <button class="btn-tool text-primary" title="Trả lời" onclick="AdminComment.showReplyForm(${c.id})">
+                                    <i class="bi bi-reply-all-fill"></i>
+                                </button>
+                            ` : ''}
+
                             <button class="btn-tool" title="Ẩn/Hiện" onclick="AdminComment.toggleStatus(${c.id})">
                                 <i class="bi ${c.isActive ? 'bi-eye-slash' : 'bi-eye'}"></i>
                             </button>
-                            
+
                             ${c.isDeleted 
-                                ? `<button class="btn-tool text-success" title="Khôi phục" onclick="AdminComment.restore(${c.id})">
-                                    <i class="bi bi-arrow-counterclockwise"></i>
-                                   </button>`
-                                : `<button class="btn-tool text-danger" title="Xóa" onclick="AdminComment.deleteComment(${c.id})">
-                                    <i class="bi bi-trash"></i>
-                                   </button>`
+                                ? `<button class="btn-tool text-success" onclick="AdminComment.restore(${c.id})"><i class="bi bi-arrow-counterclockwise"></i></button>`
+                                : `<button class="btn-tool text-danger" onclick="AdminComment.deleteComment(${c.id})"><i class="bi bi-trash"></i></button>`
                             }
                         </div>
                     </div>
-                    <div class="bubble-admin small my-2 text-dark">${c.content}</div>
                     
-                    <div class="reply-branch">
+                    <div class="bubble-admin small my-2 text-dark">${c.content}</div>
+
+                    <div id="reply-form-${c.id}" class="mt-2 mb-3 d-none">
+                        <div class="input-group input-group-sm shadow-sm">
+                            <input type="text" class="form-control" id="reply-input-${c.id}" placeholder="Admin phản hồi...">
+                            <button class="btn btn-primary px-3" onclick="AdminComment.sendReply(${c.id})">Gửi</button>
+                            <button class="btn btn-light border" onclick="AdminComment.hideReplyForm(${c.id})">Hủy</button>
+                        </div>
+                    </div>
+                    
+                    <div class="reply-branch border-start ps-3 mt-2">
                         ${c.replies.map(r => `
-                            <div class="d-flex mb-2 ${!r.isActive ? 'is-inactive' : ''}">
+                            <div class="d-flex mb-2 ${!r.isActive ? 'is-inactive' : ''}" id="thread-${r.id}">
                                 <div class="flex-grow-1">
-                                    <div class="small fw-bold">${r.userName} <span class="badge bg-danger ms-1" style="font-size:7px">ADMIN</span></div>
-                                    <div class="small text-secondary">${r.content}</div>
-                                    <div class="mt-1">
-                                        ${r.isDeleted 
-                                            ? `<span class="text-success cursor-pointer small fw-bold" onclick="AdminComment.restore(${r.id})">Khôi phục</span>`
-                                            : `<span class="text-danger cursor-pointer small fw-bold" onclick="AdminComment.deleteComment(${r.id})">Xóa</span>`
-                                        }
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="small fw-bold">
+                                          <span class="fw-bold text-primary">${r.userName}</span>
+                                            ${r.isAdmin ? '<span class="badge bg-danger ms-1" style="font-size:7px">ADMIN</span>' : ''}
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            <i class="bi ${r.isActive ? 'bi-eye-slash' : 'bi-eye'} cursor-pointer text-muted" onclick="AdminComment.toggleStatus(${r.id})"></i>
+                                            ${r.isDeleted 
+                                                ? `<i class="bi bi-arrow-counterclockwise cursor-pointer text-success" onclick="AdminComment.restore(${r.id})"></i>`
+                                                : `<i class="bi bi-trash cursor-pointer text-danger" onclick="AdminComment.deleteComment(${r.id})"></i>`
+                                            }
+                                        </div>
                                     </div>
+                                    <div class="small text-secondary">${r.content}</div>
                                 </div>
                             </div>
                         `).join('')}
@@ -134,8 +203,60 @@ renderFeed: function (data) {
             </div>
         </div>`;
     });
-    
-    $('#commentFeed').html(html || '<div class="text-center p-5 text-muted">Chưa có bình luận nào ở mục này.</div>');
+    $('#commentFeed').html(html);
+},
+sendReply: async function(parentId) {
+    const inputSelector = `#reply-input-${parentId}`;
+    const content = $(inputSelector).val().trim();
+
+    if (!content) {
+        return Swal.fire('Lưu ý', 'Nội dung không được để trống!', 'warning');
+    }
+
+    // Lấy lessonId từ data attribute của thread-item
+    const lessonId = $(`#thread-${parentId}`).attr('data-lesson-id');
+    const token = localStorage.getItem("jwt_token"); // Hoặc lấy từ config của bác
+
+    try {
+        const response = await fetch('https://localhost:7106/api/comment', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                content: content,
+                lessonId: parseInt(lessonId),
+                parentId: parentId
+            })
+        });
+        debugger
+        const res = await response.json();
+
+        if (response.ok) {
+            Toast.fire({ icon: 'success', title: 'Đã phản hồi thành công!' });
+            this.hideReplyForm(parentId);
+            
+            // Reload lại danh sách để hiện reply mới
+            this.loadData(this.currentPage); 
+        } else {
+            Swal.fire('Lỗi', res.message || 'Không thể gửi phản hồi', 'error');
+        }
+
+    } catch (error) {
+        console.error("Lỗi reply:", error);
+        Swal.fire('Lỗi', 'Backend đang bận hoặc sai URL bác ơi!', 'error');
+    }
+},
+
+showReplyForm: function(id) {
+    $(`#reply-form-${id}`).removeClass('d-none');
+    $(`#reply-input-${id}`).focus();
+},
+
+hideReplyForm: function(id) {
+    $(`#reply-form-${id}`).addClass('d-none');
+    $(`#reply-input-${id}`).val('');
 },
     // 3. PHÂN TRANG
     showPaging: function (totalCount, totalPages, currentPage) {
@@ -286,7 +407,26 @@ restore: function(id) {
         console.error("Lỗi khi gọi API Courses:", e); 
     }
 },
-
+loadLessons: async function(courseId) {
+    if (!courseId || courseId === 'all') {
+        $('#lessonFilter').html('<option value="all">-- Chọn bài học --</option>');
+        return;
+    }
+    try {
+        const response = await fetch(`https://localhost:7106/api/lesson/list-lesson/${courseId}`);
+        const res = await response.json();
+        
+        if (res.success && res.data) {
+            let html = '<option value="all">-- Tất cả bài học --</option>';
+            res.data.forEach(l => {
+                html += `<option value="${l.lessonId}">${l.lessonName}</option>`;
+            });
+            $('#lessonFilter').html(html);
+        }
+    } catch (e) {
+        console.error("Lỗi load bài học:", e);
+    }
+},
     openReplyModal: function(parentId, userName) {
         Swal.fire({
             title: `Phản hồi ${userName}`,
@@ -317,7 +457,96 @@ restore: function(id) {
             }
         });
     },
+    togglePin: async function (commentId = null) {
+    let lessonId;
 
+        if (commentId) {
+            // TRƯỜNG HỢP GHIM HÀNG CŨ: Bốc trực tiếp từ data attribute của thằng cha
+            lessonId = $(`#thread-${commentId}`).attr('data-lesson-id');
+        } else {
+            // TRƯỜNG HỢP ĐĂNG MỚI: Bốc từ Select Filter (Vì chưa có thẻ nào để bốc)
+            lessonId = $('#lessonFilter').val();
+        }
+
+        // Kiểm tra tính hợp lệ
+        if (!lessonId || lessonId === 'all' || isNaN(parseInt(lessonId))) {
+            Swal.fire('Lưu ý', 'Bác phải chọn một bài học cụ thể mới thực hiện ghim được!', 'warning');
+            return;
+        }
+
+    lessonId = parseInt(lessonId);
+
+    // KỊCH BẢN A: Admin đăng thông báo mới rồi ghim luôn
+    if (!commentId) {
+        const { value: text } = await Swal.fire({
+            title: '📌 Đăng thông báo ghim',
+            input: 'textarea',
+            inputLabel: 'Nội dung thông báo bài học',
+            inputPlaceholder: 'Nhập nội dung lưu ý quan trọng...',
+            showCancelButton: true,
+            confirmButtonText: 'Đăng & Ghim',
+            cancelButtonText: 'Hủy',
+            inputValidator: (value) => {
+                if (!value) return 'Không được để trống nội dung bác ơi!';
+            }
+        });
+
+        if (text) {
+            this.callPinApi({ content: text, lessonId: lessonId }, true);
+        }
+    } 
+    // KỊCH BẢN B: Ghim một bình luận cha có sẵn của User
+    else {
+        Swal.fire({
+            title: 'Xác nhận ghim?',
+            text: "Bình luận này sẽ được đẩy lên đầu danh sách bài học!",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Ghim ngay',
+            cancelButtonText: 'Để sau'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Gửi commentId và lessonId (isNew = false)
+                this.callPinApi({ commentId: commentId, lessonId: lessonId }, false);
+            }
+        });
+    }
+},
+
+// Hàm trung gian gọi API (Khớp với PinRequest ở Controller)
+callPinApi: async function (data, isNew) {
+    try {
+        const response = await fetch('https://localhost:7106/api/comment/pin-handler', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem("jwt_token")}` // Bác check lại chỗ lưu token nhé
+            },
+            body: JSON.stringify({
+            isNew: isNew,
+            commentId: data.commentId || null,
+            content: data.content || null,
+            lessonId: data.lessonId, // <--- Nó phải nằm ở ngoài cùng như này
+            courseId: data.courseId || null
+        })
+        });
+        debugger
+        const res = await response.json();
+
+        if (response.ok) {
+            Toast.fire({ icon: 'success', title: res.message || 'Thao tác thành công!' });
+            // Reload lại danh sách để thấy thằng vừa ghim nhảy lên đầu
+            this.loadData(this.currentPage); 
+        } else {
+            Swal.fire('Lỗi', res.message || 'Không thể thực hiện thao tác ghim', 'error');
+        }
+    } catch (error) {
+        console.error("Lỗi callPinApi:", error);
+        Toast.fire({ icon: 'error', title: 'Backend đang bận rồi bác Vinh ơi!' });
+    }
+},
     initChart: function() {
         const ctx = document.getElementById('miniChart').getContext('2d');
         new Chart(ctx, {
