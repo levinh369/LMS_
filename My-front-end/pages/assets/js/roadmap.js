@@ -414,7 +414,7 @@ getAllRoadMaps: async function() {
             </div><br>
         `;
         $('#roadmapDesc').html(descriptionHtml);
-        $('#roadmapThumb').attr('src', data.thumbnailUrl || '../../assets/img/default-roadmap.png');
+        $('#roadmapThumb').attr('src', data.thumbnailUrl || '../assets/img/default-roadmap.png');
        
 
         // 2. Gom nhóm theo PhaseName

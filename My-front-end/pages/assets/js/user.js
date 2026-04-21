@@ -14,7 +14,7 @@ const User = {
             if (res) {
                 // 1. Cập nhật Sidebar
                 $('#profile-name').text(res.fullName);
-                $('#profile-avatar').attr('src', res.avatar || '/assets/img/default-avatar.png');
+                $('#profile-avatar').attr('src', res.avatar || '../assets/img/default-avatar.png');
                 $('#profile-join-date').text(`Tham gia từ ${res.joinDate}`);
                 $('#stat-ongoing').text(res.ongoingCount);
                 $('#stat-completed').text(res.completedCount);
@@ -61,9 +61,9 @@ const User = {
         <div class="col-md-6 col-xl-4 mb-3">
             <div class="course-card">
                 <div class="thumb-wrap">
-                    <img src="${c.thumbnail || '/assets/img/default-course.png'}" 
+                    <img src="${c.thumbnail || '../assets/img/default-course.png'}" 
                          class="thumb-img" 
-                         onerror="this.src='/assets/img/default-course.png'">
+                         onerror="this.src='../assets/img/default-course.png'">
                 </div>
                 <div class="p-3">
                     ${isDone ? '<span class="badge-completed mb-2 d-inline-block"><i class="bi bi-check-circle-fill"></i> Hoàn thành</span>' : ''}
@@ -122,7 +122,7 @@ const User = {
                 if (res.avatar) {
                     $('#avatar-preview').attr('src', res.avatar);
                 } else {
-                    $('#avatar-preview').attr('src', '/assets/img/default-avatar.png');
+                    $('#avatar-preview').attr('src', '../assets/img/default-avatar.png');
                 }
                 if (res.hasPassword === false) {
                     // Ẩn ô nhập mật khẩu hiện tại (vì login Face lấy đâu ra pass cũ)

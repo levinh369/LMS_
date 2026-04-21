@@ -106,7 +106,7 @@ renderTable: function (data) {
             html += `
                 <tr>
                     <td class="ps-4">
-                        <img src="${item.thumbnailUrl || '/assets/img/default.png'}" class="thumbnail-img shadow-sm" style="width:70px; height:45px; object-fit:cover; border-radius:8px" alt="Thumbnail">
+                        <img src="${item.thumbnailUrl || '../assets/img/default.png'}" class="thumbnail-img shadow-sm" style="width:70px; height:45px; object-fit:cover; border-radius:8px" alt="Thumbnail">
                     </td>
                     <td>
                         <div class="fw-bold text-dark">${item.title}</div>

@@ -86,7 +86,7 @@ checkLoginStatus: function() {
             $('#nav-fullname, #nav-user-name, #nav-fullname-mobile').text(displayName);
 
             // Điền ảnh (Cả bên ngoài và bên trong dropdown)
-            const avatarUrl = user.avatar || "/assets/img/default-avatar.png";
+            const avatarUrl = user.avatar || "../assets/img/default-avatar.png";
             $('#nav-avatar, #nav-avatar-inside').attr('src', avatarUrl);
 
         } catch (e) {
@@ -150,7 +150,7 @@ logout: function() {
         if (response.success && response.data && response.data.length > 0) {
            let html = response.data.map(c => `
                 <a href="/pages/learn/learning.html?id=${c.courseId}" class="course-item-mini text-decoration-none">
-                    <img src="${c.thumbnailUrl || '/assets/img/default-course.png'}" onerror="this.src='/assets/img/default-course.png'">
+                    <img src="${c.thumbnailUrl || '../assets/img/default-course.png'}" onerror="this.src='../assets/img/default-course.png'">
                     <div class="info">
                         <div class="title" title="${c.title}">${c.title}</div>
                         
@@ -232,7 +232,7 @@ AuthHelper.renderItem = function(item) {
     // Chuyển Id thành URL chi tiết
     const detailUrl = `/pages/home/detail.html?id=${item.id}`;
     // ThumbnailUrl từ C# sẽ thành thumbnailUrl (viết thường chữ t)
-    const imgUrl = item.thumbnailUrl || '/assets/img/default-course.png';
+    const imgUrl = item.thumbnailUrl || '../assets/img/default-course.png';
 
     return `
         <a href="${detailUrl}" class="search-item d-flex align-items-center p-2 text-decoration-none text-dark">

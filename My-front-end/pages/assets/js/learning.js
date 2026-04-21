@@ -574,7 +574,7 @@ renderCommentItem: function (comment, replies, teacherId) {
 
         return `
             <div class="reply-item d-flex mb-3" id="comment-${r.id}">
-                <img src="${r.userAvatar || '/assets/img/default-avatar.png'}" class="avatar-sm me-2 border shadow-sm rounded-circle">
+                <img src="${r.userAvatar || '../assets/img/default-avatar.png'}" class="avatar-sm me-2 border shadow-sm rounded-circle">
                 <div class="flex-grow-1">
                     <div class="d-flex align-items-start">
                         <div class="bg-light p-2 rounded-3 d-inline-block" style="max-width: 90%;">
@@ -615,7 +615,7 @@ renderCommentItem: function (comment, replies, teacherId) {
         <div class="comment-item mb-4 border-bottom pb-3 ${pinnedClass}" id="comment-${comment.id}" 
              style="${isPinned ? 'background-color: #fffdf0; padding: 10px; border-radius: 8px;' : ''}">
             <div class="d-flex">
-                <img src="${comment.userAvatar || '/assets/img/default-avatar.png'}" class="avatar-md me-2 border shadow-sm rounded-circle">
+                <img src="${comment.userAvatar || '../assets/img/default-avatar.png'}" class="avatar-md me-2 border shadow-sm rounded-circle">
                 <div class="flex-grow-1">
                     
                     ${pinnedHeader}
@@ -982,7 +982,7 @@ renderUserListInModal: function (filterType) {
     }
 
     const html = filteredUsers.map(u => {
-        const avatar = u.userAvatar || u.UserAvatar || '/assets/img/default-avatar.png';
+        const avatar = u.userAvatar || u.UserAvatar || '../assets/img/default-avatar.png';
         const name = u.userFullName || u.UserFullName;
         const type = u.reactionType !== undefined ? u.reactionType : u.ReactionType;
         const profileUrl = `/Profile/Index/${u.userId || u.UserId}`;

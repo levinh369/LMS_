@@ -76,7 +76,7 @@ var Manager = {
                     <td class="ps-4 text-muted small">#${item.id}</td>
                     <td>
                         <div class="d-flex align-items-center">
-                            <img src="${item.avatarUrl || '/assets/img/default-avatar.png'}" class="user-avatar me-3" style="width:30px; height:30px; border-radius:50%">
+                            <img src="${item.avatarUrl || '../assets/img/default-avatar.png'}" class="user-avatar me-3" style="width:30px; height:30px; border-radius:50%">
                             <div class="fw-bold">${item.fullName}</div>
                         </div>
                     </td>
@@ -176,7 +176,7 @@ var Manager = {
             // Switch và Avatar bạn bảo chạy rồi thì giữ nguyên
             $('#modalIsActive').prop('checked', data.isActive);
             this.updateStatusLabel(data.isActive);
-            $('#userAvatarPreview').attr('src', data.avatarUrl || '/assets/img/default-avatar.png');
+            $('#userAvatarPreview').attr('src', data.avatarUrl || '../assets/img/default-avatar.png');
             $('#createdAtLabel').text(data.createdAt ? new Date(data.createdAt).toLocaleString('vi-VN') : '--/--/----');
         }
     } catch (error) {

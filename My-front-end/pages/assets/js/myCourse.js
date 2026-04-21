@@ -51,7 +51,7 @@ const CourseApp = {
             <div class="col-md-6 col-lg-4">
                 <div class="card course-card shadow-sm">
                     <div class="course-img-wrapper">
-                        <img src="${course.thumbnailUrl || '/assets/img/default-course.png'}" class="course-img">
+                        <img src="${course.thumbnailUrl || '../assets/img/default-course.png'}" class="course-img">
                     </div>
                     <div class="card-body d-flex flex-direction-column justify-content-between">
                         <div>

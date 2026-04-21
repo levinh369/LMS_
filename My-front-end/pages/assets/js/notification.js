@@ -241,7 +241,7 @@ handleRedirect: async function(notifId, url) {
 
     playEffects: function(msg, avatar, url, nType, rType, time) {
     // 1. Phát âm thanh
-    new Audio('/assets/sounds/notification.mp3').play().catch(() => {});
+    new Audio('../assets/sounds/notification.mp3').play().catch(() => {});
 
     if (typeof Swal === "undefined") return;
 
@@ -273,7 +273,7 @@ handleRedirect: async function(notifId, url) {
         html: `
             <div class="d-flex align-items-center text-start" style="cursor:pointer;">
                 <div style="position: relative; width: 42px; height: 42px; flex-shrink: 0;">
-                    <img src="${avatar || '/assets/img/default-avatar.png'}" class="rounded-circle border" style="width: 100%; height: 100%; object-fit: cover;">
+                    <img src="${avatar || '../assets/img/default-avatar.png'}" class="rounded-circle border" style="width: 100%; height: 100%; object-fit: cover;">
                     <div style="position: absolute; bottom: -2px; right: -2px; width: 20px; height: 20px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; border: 1.5px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.2);">
                         ${emoji}
                     </div>

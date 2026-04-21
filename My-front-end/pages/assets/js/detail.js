@@ -81,7 +81,7 @@ var Detail = {
     $('#courseLevel').text(levelMap[data.level] || 'Mọi cấp độ');
 
     // 3. Hình ảnh & Mô tả chi tiết
-    $('#courseThumbnail').attr('src', data.thumbnailUrl || '../../assets/img/default-course.png');
+    $('#courseThumbnail').attr('src', data.thumbnailUrl || '../assets/img/default-course.png');
     $('#courseDescription').html(data.description || 'Đang cập nhật nội dung...');
 
     // 4. Vẽ Benefits (Lợi ích khóa học)
