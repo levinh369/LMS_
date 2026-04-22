@@ -43,40 +43,40 @@ namespace LMS.Controllers
         [HttpGet("external-callback")]
         public async Task<IActionResult> ExternalCallback(string returnUrl = null)
         {
-            // 1. Xác thực dựa trên Cookie tạm thời
             var result = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
 
-            if (!result.Succeeded)
-                return Redirect("http://127.0.0.1:5500/pages/auth/login.html?error=external_auth_failed");
+            // Link mặc định nếu không có returnUrl (Sửa localhost thành link Vercel của ông)
+            string defaultVercelUrl = "https://lms-azure-mu.vercel.app/pages/auth/login-success.html";
 
-            // 2 & 3. Trích xuất thông tin (Giữ nguyên logic của Vinh)
+            if (!result.Succeeded)
+            {
+                // Chỗ này cũng phải sửa localhost thành Vercel
+                return Redirect("https://lms-azure-mu.vercel.app/pages/auth/login.html?error=external_auth_failed");
+            }
+
             var provider = result.Properties.Items[".AuthScheme"] ?? "Unknown";
             var email = result.Principal.FindFirstValue(ClaimTypes.Email);
             var name = result.Principal.FindFirstValue(ClaimTypes.Name);
             var externalId = result.Principal.FindFirstValue(ClaimTypes.NameIdentifier);
             var avatar = result.Principal.FindFirst("picture")?.Value ?? result.Principal.FindFirst("image")?.Value;
 
-            // 4 & 5. DB và JWT (Giữ nguyên logic của Vinh)
             var user = await userService.GetOrCreateExternalUserAsync(email, name, avatar, externalId, provider);
             var token = authService.GenerateJwtToken(user);
 
-            // 6. DỌN DẸP
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
 
             // --- LOGIC ĐIỀU HƯỚNG LINH HOẠT ---
-            // Nếu không có returnUrl thì về trang success mặc định
-            var finalBaseUrl = string.IsNullOrEmpty(returnUrl)
-                               ? "http://127.0.0.1:5500/pages/auth/login-success.html"
-                               : returnUrl;
+            // Nếu returnUrl gửi lên từ JS là localhost, nó sẽ dùng cái đó. 
+            // Nếu không có hoặc lỗi, nó dùng defaultVercelUrl.
+            var finalBaseUrl = string.IsNullOrEmpty(returnUrl) ? defaultVercelUrl : returnUrl;
 
-            // Kiểm tra xem URL gốc đã có dấu "?" chưa để nối thêm Token cho đúng
             string separator = finalBaseUrl.Contains("?") ? "&" : "?";
 
             var finalRedirectUrl = $"{finalBaseUrl}{separator}" +
                        $"token={token}" +
                        $"&userId={user.Id}" +
                        $"&username={Uri.EscapeDataString(user.FullName)}" +
-                       $"&email={Uri.EscapeDataString(user.Email ?? "")}" + // THÊM DÒNG NÀY
+                       $"&email={Uri.EscapeDataString(user.Email ?? "")}" +
                        $"&avatar={Uri.EscapeDataString(user.AvatarUrl ?? "")}" +
                        $"&role={user.RoleId}";
 
