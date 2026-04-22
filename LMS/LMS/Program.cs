@@ -57,10 +57,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://127.0.0.1:5500", "http://localhost:5500") // Port của Live Server
+        policy.SetIsOriginAllowed(origin => true) // Cho phép tất cả các nguồn truy cập
               .AllowAnyHeader()
               .AllowAnyMethod()
-               .AllowCredentials();
+              .AllowCredentials(); // Giữ cái này để dùng được SignalR/Hub
     });
 });
 builder.Services.AddAuthentication(options =>
