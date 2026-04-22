@@ -204,28 +204,34 @@ $.ajaxSetup({
         }
     },
     error: function (xhr, textStatus, errorThrown) {
-        // --- ĐOẠN SỬA Ở ĐÂY ---
-        // 'this' ở đây chính là object settings của ajax vừa gọi
-        // Nếu URL của request có chứa '/login' thì thoát ra, để hàm catch ở trang đó tự xử
-        if (this.url.includes('/login') || this.url.includes('/register')) {
+    // 1. Nếu là lỗi 401 (Hết hạn hoặc chưa có quyền)
+    if (xhr.status === 401) {
+        
+        // --- ĐOẠN KIỂM TRA MỚI ---
+        // Nếu đang ở trang login-success hoặc trang login thì KHÔNG báo lỗi
+        if (window.location.pathname.includes("login-success.html") || 
+            window.location.pathname.includes("login.html")) {
             return; 
         }
 
-        // Chỉ xử lý 401 (Hết hạn) cho các API khác
-        if (xhr.status === 401) {
-            console.warn("Backend báo: Token hết hạn hoặc không hợp lệ!");
-            
-            // Xóa sạch rác
-            localStorage.removeItem("jwt_token");
-            localStorage.removeItem("user_info");
-
-            // Chỉ alert và redirect nếu không phải đang ở trang login
-            if (!window.location.pathname.includes("login.html")) {
-                alert("Phiên đăng nhập hết hạn, mời bác đăng nhập lại!");
-                window.location.href = "/auth/login.html";
-            }
+        // 2. Kiểm tra xem Token trong máy có thật sự hết hạn chưa
+        const token = localStorage.getItem("jwt_token");
+        if (token && !AuthHelper.isTokenExpired(token)) {
+            // Nếu token vẫn còn hạn mà Backend báo 401, có thể là lỗi đồng bộ
+            // Cứ để yên cho người dùng dùng tiếp, không đá ra ngoài.
+            console.warn("Backend báo 401 nhưng Token local vẫn còn hạn. Bỏ qua.");
+            return;
         }
+
+        // 3. Nếu thật sự hết hạn thì mới xóa và đá về login
+        console.warn("Phiên đăng nhập thật sự hết hạn.");
+        localStorage.removeItem("jwt_token");
+        localStorage.removeItem("user_info");
+
+        alert("Phiên đăng nhập hết hạn, mời bác đăng nhập lại!");
+        window.location.href = "/auth/login.html";
     }
+}
 });
 // 1. Sửa lại hàm renderItem để khớp với DTO từ Backend C#
 AuthHelper.renderItem = function(item) {
