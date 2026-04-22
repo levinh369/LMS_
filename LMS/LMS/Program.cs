@@ -14,7 +14,15 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.AspNetCore.Http; // Thêm dòng này để nhận diện CookieSecurePolicy
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args
+});
+
+// Thêm dòng này ngay bên dưới để tắt "reloadOnChange" cho appsettings
+builder.Configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+                     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: false)
+                     .AddEnvironmentVariables();
 
 // Add services to the container.
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
