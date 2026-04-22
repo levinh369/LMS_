@@ -13,7 +13,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-
+using Microsoft.AspNetCore.Http; // Thêm dòng này để nhận diện CookieSecurePolicy
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -75,6 +75,8 @@ builder.Services.AddAuthentication(options =>
     options.ClientId = builder.Configuration["Authentication:Google:ClientId"];
     options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
     options.ClaimActions.MapJsonKey("picture", "picture");
+
+
 })
 .AddFacebook(options =>
 {
@@ -124,7 +126,11 @@ builder.Services.AddAuthentication(options =>
 });
 
 var app = builder.Build();
-
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor |
+                       Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto
+});
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
