@@ -47,7 +47,7 @@ function onPlayerStateChange(event) {
 
 var Learn = {
     config: {
-        apiUrl: "http://vinh369-001-site1.site4future.com/api/Course" 
+        apiUrl: "https://lms-1mj1.onrender.com/api/Course" 
     },
     lessonsCache: {},
     init: function() {
@@ -412,7 +412,7 @@ startHeartbeat: function(lessonId, type = 'youtube') {
     try {
         // 2. CHỖ HỚ 2: Phải gán biến 'const res' thì bên dưới mới có 'res.message'
         const res = await $.ajax({
-            url: 'http://vinh369-001-site1.site4future.com/api/comment',
+            url: 'https://lms-1mj1.onrender.com/api/comment',
             type: 'POST',
             contentType: 'application/json',
             headers: {
@@ -451,7 +451,7 @@ startHeartbeat: function(lessonId, type = 'youtube') {
     const token = localStorage.getItem("jwt_token");
     try {
         const res = await $.ajax({
-            url: `http://vinh369-001-site1.site4future.com/api/comment/lesson/${lessonId}`,
+            url: `https://lms-1mj1.onrender.com/api/comment/lesson/${lessonId}`,
             type: 'GET',
             headers: token ? { 'Authorization': `Bearer ${token}` } : {}
         });
@@ -708,7 +708,7 @@ saveEdit: async function(id) {
     try {
         const token = localStorage.getItem("jwt_token");
         await $.ajax({
-            url: `http://vinh369-001-site1.site4future.com/api/comment/update/${id}`,
+            url: `https://lms-1mj1.onrender.com/api/comment/update/${id}`,
             type: 'PUT',
             contentType: 'application/json',
             headers: { 'Authorization': `Bearer ${token}` },
@@ -753,7 +753,7 @@ deleteComment: async function(id) {
 
                 const token = localStorage.getItem("jwt_token");
                 const res = await $.ajax({
-                    url: `http://vinh369-001-site1.site4future.com/api/comment/delete/${id}`,
+                    url: `https://lms-1mj1.onrender.com/api/comment/delete/${id}`,
                     type: 'PUT', // Giữ nguyên PUT vì bác đang làm Soft Delete (Cập nhật IsDeleted)
                     contentType: 'application/json',
                     headers: { 'Authorization': `Bearer ${token}` },
@@ -917,7 +917,7 @@ handleReaction: async function(commentId, type, btn) {
         $btnLike.addClass('is-loading').css('opacity', '0.6');
 
         const res = await $.ajax({
-            url: `http://vinh369-001-site1.site4future.com/api/comment/handleLike/${commentId}`,
+            url: `https://lms-1mj1.onrender.com/api/comment/handleLike/${commentId}`,
             type: 'POST',
             contentType: 'application/json',
             headers: { 'Authorization': `Bearer ${token}` },
@@ -1019,7 +1019,7 @@ showReactionDetails: async function(commentId) {
         $body.html('<div class="text-center p-5"><div class="spinner-border text-primary"></div></div>');
 
         try {
-            const res = await $.get(`http://vinh369-001-site1.site4future.com/api/comment/getReactions/${commentId}`);
+            const res = await $.get(`https://lms-1mj1.onrender.com/api/comment/getReactions/${commentId}`);
             this.currentCommentReactions = res.data || res;
             this.renderReactionTabs(this.currentCommentReactions);
             // Mặc định hiện tất cả (Type = 0)

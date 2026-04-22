@@ -1,7 +1,7 @@
 
 var Auth = {
     config: {
-        apiUrl: "http://vinh369-001-site1.site4future.com/api/Auth"
+        apiUrl: "https://lms-1mj1.onrender.com/api/Auth"
     },
     
 login: async function(btn) {
@@ -122,7 +122,7 @@ loginWithSocial: function(provider) {
         ? `http://127.0.0.1:5500/Home/detail.html?id=${courseId}`
         : "http://127.0.0.1:5500/auth/login-success.html";
 
-    const backendUrl = `http://vinh369-001-site1.site4future.com/api/auth/external-login?provider=${provider}&returnUrl=${encodeURIComponent(returnUrl)}`;
+    const backendUrl = `https://lms-1mj1.onrender.com/api/auth/external-login?provider=${provider}&returnUrl=${encodeURIComponent(returnUrl)}`;
     window.location.href = backendUrl;
 }
    

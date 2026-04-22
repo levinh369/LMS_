@@ -13,7 +13,7 @@ const Toast = Swal.mixin({
 const AdminComment = {
     config: {
         pageSize: 5,
-        apiUrl: "http://vinh369-001-site1.site4future.com/api/comment", // Check kỹ port nhé bác
+        apiUrl: "https://lms-1mj1.onrender.com/api/comment", // Check kỹ port nhé bác
         token: localStorage.getItem('jwt_token') // Lấy token để authenticate
     },
     currentPage:null,
@@ -218,7 +218,7 @@ sendReply: async function(parentId) {
     const token = localStorage.getItem("jwt_token"); // Hoặc lấy từ config của bác
 
     try {
-        const response = await fetch('http://vinh369-001-site1.site4future.com/api/comment', {
+        const response = await fetch('https://lms-1mj1.onrender.com/api/comment', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -389,7 +389,7 @@ restore: function(id) {
 
   loadCourses: async function() {
     try {
-        const response = await fetch('http://vinh369-001-site1.site4future.com/api/course');
+        const response = await fetch('https://lms-1mj1.onrender.com/api/course');
         const res = await response.json();
         
         // Kiểm tra success và truy cập đúng vào mảng res.data
@@ -413,7 +413,7 @@ loadLessons: async function(courseId) {
         return;
     }
     try {
-        const response = await fetch(`http://vinh369-001-site1.site4future.com/api/lesson/list-lesson/${courseId}`);
+        const response = await fetch(`https://lms-1mj1.onrender.com/api/lesson/list-lesson/${courseId}`);
         const res = await response.json();
         
         if (res.success && res.data) {
@@ -518,7 +518,7 @@ loadLessons: async function(courseId) {
 // Hàm trung gian gọi API (Khớp với PinRequest ở Controller)
 callPinApi: async function (data, isNew) {
     try {
-        const response = await fetch('http://vinh369-001-site1.site4future.com/api/comment/pin-handler', {
+        const response = await fetch('https://lms-1mj1.onrender.com/api/comment/pin-handler', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

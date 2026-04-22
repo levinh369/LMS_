@@ -2,7 +2,7 @@ const chapter = {
     currentCourseId: 0, // Lưu ID khóa học đang chọn
     config: {
         pageSize: 10,
-        apiUrl: "http://vinh369-001-site1.site4future.com/api/chapter"
+        apiUrl: "https://lms-1mj1.onrender.com/api/chapter"
     },
     openModal: async function(courseId) {
         chapter.currentCourseId = courseId;

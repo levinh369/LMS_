@@ -140,7 +140,7 @@ logout: function() {
 
     try {
         const response = await $.ajax({
-            url: "http://vinh369-001-site1.site4future.com/api/Course/my-course", // URL API của ông
+            url: "https://lms-1mj1.onrender.com/api/Course/my-course", // URL API của ông
             type: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}` // Gửi token lên để Backend lấy UserId
@@ -263,7 +263,7 @@ $(document).on('input', '#mainSearchInput', function() {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(async () => {
         try {
-            const res = await $.get(`http://vinh369-001-site1.site4future.com/api/course/search?query=${encodeURIComponent(query)}`);
+            const res = await $.get(`https://lms-1mj1.onrender.com/api/course/search?query=${encodeURIComponent(query)}`);
             
             // Xử lý dữ liệu: Nếu Backend trả về trực tiếp mảng hoặc object có .data
             const results = Array.isArray(res) ? res : (res.data || []);

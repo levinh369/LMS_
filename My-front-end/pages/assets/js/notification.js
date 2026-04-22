@@ -8,7 +8,7 @@ window.NotificationApp = {
         const token = localStorage.getItem("jwt_token") || localStorage.getItem("token");
         
         this.connection = new signalR.HubConnectionBuilder()
-            .withUrl("http://vinh369-001-site1.site4future.com/notificationHub", {
+            .withUrl("https://lms-1mj1.onrender.com/notificationHub", {
                 accessTokenFactory: () => token
             })
             .withAutomaticReconnect()
@@ -56,7 +56,7 @@ fetchNotifications: function (isLoadMore = false) {
     }
 
     $.ajax({
-        url: `http://vinh369-001-site1.site4future.com/api/Notification/GetNotif?skip=${this.currentSkip}&limit=${this.limit}`,
+        url: `https://lms-1mj1.onrender.com/api/Notification/GetNotif?skip=${this.currentSkip}&limit=${this.limit}`,
         type: 'GET',
         headers: { "Authorization": "Bearer " + token },
         success: (res) => {
@@ -115,7 +115,7 @@ fetchNotifications: function (isLoadMore = false) {
         const token = localStorage.getItem("jwt_token");
         if (!token) return;
 
-        $.get("http://vinh369-001-site1.site4future.com/api/Notification/unread-count", (res) => {
+        $.get("https://lms-1mj1.onrender.com/api/Notification/unread-count", (res) => {
             this.updateBadgeCount(res.count || 0, false);
         });
     },
@@ -124,7 +124,7 @@ markAllRead: async function() {
     if (!token) return;
 
     try {
-        const response = await fetch(`http://vinh369-001-site1.site4future.com/api/notification/mark-all`, {
+        const response = await fetch(`https://lms-1mj1.onrender.com/api/notification/mark-all`, {
             method: 'POST', 
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -200,7 +200,7 @@ handleRedirect: async function(notifId, url) {
     
     // Đánh dấu đã đọc
     try {
-        fetch(`http://vinh369-001-site1.site4future.com/api/notification/mark-read/${notifId}`, {
+        fetch(`https://lms-1mj1.onrender.com/api/notification/mark-read/${notifId}`, {
             method: 'POST', 
             headers: { 'Authorization': `Bearer ${token}` }
         });

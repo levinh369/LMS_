@@ -9,7 +9,7 @@ const OrderApp = {
         const $noOrder = $('#noOrder');
 
         $.ajax({
-            url: "http://vinh369-001-site1.site4future.com/api/User/my-orders", // Thay bằng URL API thật của bác
+            url: "https://lms-1mj1.onrender.com/api/User/my-orders", // Thay bằng URL API thật của bác
             type: 'GET',
             headers: { "Authorization": "Bearer " + token },
             success: (res) => {

@@ -1,7 +1,7 @@
 var RoadMap = {
     currentPage : 0,
     config: {
-        apiUrl: "http://vinh369-001-site1.site4future.com/api/roadmap",
+        apiUrl: "https://lms-1mj1.onrender.com/api/roadmap",
         pageSize : 10
     },
     init: function() {
@@ -476,7 +476,7 @@ handleGoToDetail: async function(courseId) {
 
     try {
         const res = await $.ajax({
-            url: `http://vinh369-001-site1.site4future.com/api/course/course-detail/${courseId}`,
+            url: `https://lms-1mj1.onrender.com/api/course/course-detail/${courseId}`,
             type: 'GET',
             headers: { 'Authorization': `Bearer ${token}` } // QUAN TRỌNG: Phải có dòng này
         });
