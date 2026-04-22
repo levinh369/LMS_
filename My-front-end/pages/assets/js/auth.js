@@ -118,9 +118,13 @@ login: async function(btn) {
     },
 loginWithSocial: function(provider) {
     const courseId = new URLSearchParams(window.location.search).get('id');
+    
+    // SỬA CHỖ NÀY: Thay localhost thành link Vercel của ông
+    const frontendDomain = "https://lms-azure-mu.vercel.app"; 
+    
     let returnUrl = courseId 
-        ? `http://127.0.0.1:5500/Home/detail.html?id=${courseId}`
-        : "http://127.0.0.1:5500/auth/login-success.html";
+        ? `${frontendDomain}/Home/detail.html?id=${courseId}`
+        : `${frontendDomain}/auth/login-success.html`;
 
     const backendUrl = `https://lms-u2jn.onrender.com/api/auth/external-login?provider=${provider}&returnUrl=${encodeURIComponent(returnUrl)}`;
     window.location.href = backendUrl;
