@@ -841,9 +841,8 @@ showReplyInput: function(parentId, userName) {
 // Giả sử toàn bộ code nằm trong object Learn = { ... }
 // Bác thêm hàm này vào cùng cấp với renderCommentItem
 renderReactionSummary: function (item) {
-    // 1. Kiểm tra dữ liệu: Phải có tổng > 0 mới vẽ
     const total = item.totalReactions || item.TotalReactions || 0;
-    const commentId = item.id || item.Id; // Lấy ID để truyền vào hàm click
+    const commentId = item.id || item.Id;
     
     if (total === 0) return '';
 
@@ -856,7 +855,6 @@ renderReactionSummary: function (item) {
         6: { text: 'Phẫn nộ', emoji: '😡' }
     };
 
-    // 2. Tạo nội dung cho Tooltip khi Hover
     const stats = item.reactionStats || item.ReactionStats || [];
     const statsHtml = stats.map(s => {
         const type = s.type !== undefined ? s.type : s.Type;
@@ -865,7 +863,6 @@ renderReactionSummary: function (item) {
         return (config && count > 0) ? `<div class="stat-item"><span>${config.emoji}</span> <b>${count}</b></div>` : '';
     }).join('');
 
-    // 3. Lấy Top 3 icon đại diện
     const topTypes = item.topReactionTypes || item.TopReactionTypes || [];
     const iconsHtml = topTypes.map(type => {
         const config = reactionMap[type];
@@ -877,13 +874,9 @@ renderReactionSummary: function (item) {
             <div class="reaction-summary-wrapper" 
                  onclick="Learn.showReactionDetails(${commentId})" 
                  style="cursor: pointer;">
-                 
                 <div class="reaction-icons-stack">${iconsHtml}</div>
                 <span class="reaction-total-count">${total}</span>
-                
-                <div class="reaction-custom-tooltip">
-                    ${statsHtml}
-                </div>
+                <div class="reaction-custom-tooltip">${statsHtml}</div>
             </div>
         </div>`;
 },
@@ -910,37 +903,42 @@ handleReaction: async function(commentId, type, btn) {
         6: { icon: 'bi-emoji-angry-fill', color: 'text-danger', text: 'Phẫn nộ' }
     };
 
-    // --- BƯỚC 1: LƯU TRẠNG THÁI CŨ (BACKUP) ---
+    // --- BƯỚC 1: LƯU TRẠNG THÁI CŨ ĐỂ DỰ PHÒNG ---
     const oldBtnHtml = $btnLike.html();
     const oldBtnClass = $btnLike.attr('class');
     const $oldSummary = $actionRow.find('> .reaction-summary-pos');
     const oldSummaryHtml = $oldSummary.length ? $oldSummary[0].outerHTML : '';
 
-    // --- BƯỚC 2: CẬP NHẬT UI TỨC THÌ (OPTIMISTIC) ---
+    // --- BƯỚC 2: CẬP NHẬT GIAO DIỆN TỨC THÌ (OPTIMISTIC) ---
     const targetType = parseInt(type);
     const config = reactionConfig[targetType];
 
-    // 2.1 Cập nhật nút bấm
+    // 2.1 Cập nhật nút bấm ngay lập tức
     $btnLike.removeClass('text-primary text-danger text-warning text-muted').addClass(config.color);
     $btnLike.find('i').attr('class', `bi ${config.icon}`);
     if ($btnLike.find('.btn-text').length) $btnLike.find('.btn-text').text(config.text);
     $btnLike.addClass('is-loading');
 
-    // 2.2 Dự đoán và cập nhật dải số lượng (Summary)
-    // Lấy số lượng hiện tại từ UI
+    // 2.2 Vẽ lại dải Summary tức thì
     let currentTotal = parseInt($oldSummary.find('.reaction-total-count').text()) || 0;
     const isUnliking = targetType === 0;
-    
-    // Giả lập dữ liệu mới để render lại dải Summary ngay
     const optimisticTotal = isUnliking ? Math.max(0, currentTotal - 1) : (currentTotal + ($oldSummary.length ? 0 : 1));
-    
-    // Nếu có dải summary rồi thì cập nhật con số trước cho mượt
-    if ($oldSummary.length > 0) {
-        if (optimisticTotal === 0) {
-            $oldSummary.hide(); // Ẩn tạm thời nếu về 0
+
+    if (optimisticTotal === 0) {
+        $oldSummary.remove();
+    } else {
+        // Tạo HTML "ảo" để hiện lên luôn
+        const optimisticHtml = this.renderReactionSummary({
+            id: commentId,
+            totalReactions: optimisticTotal,
+            topReactionTypes: isUnliking ? [] : [targetType],
+            reactionStats: [] 
+        });
+        
+        if ($oldSummary.length > 0) {
+            $oldSummary.replaceWith(optimisticHtml);
         } else {
-            $oldSummary.find('.reaction-total-count').text(optimisticTotal);
-            $oldSummary.show();
+            $actionRow.find('.btn-action-text').last().after(optimisticHtml);
         }
     }
 
@@ -954,61 +952,74 @@ handleReaction: async function(commentId, type, btn) {
             data: JSON.stringify({ type: targetType }) 
         });
 
+        // --- BƯỚC 4: CẬP NHẬT CHÍNH XÁC TỪ SERVER ---
         const result = res.data || res;
-        
-        // --- BƯỚC 4: CẬP NHẬT CHÍNH XÁC TỪ SERVER (SILENT UPDATE) ---
-        const updatedData = {
+        const updatedHtml = this.renderReactionSummary({
             id: commentId,
             totalReactions: result.totalReactions || result.TotalReactions || 0,
             topReactionTypes: result.topReactionTypes || result.TopReactionTypes || [],
             reactionStats: result.reactionStats || result.ReactionStats || []
-        };
+        });
 
-        const newSummaryHtml = this.renderReactionSummary(updatedData);
         const $currentSummary = $actionRow.find('> .reaction-summary-pos');
-
         if ($currentSummary.length > 0) {
-            $currentSummary.replaceWith(newSummaryHtml);
-        } else if (newSummaryHtml !== '') {
-            $actionRow.find('.btn-action-text').after(newSummaryHtml);
+            $currentSummary.replaceWith(updatedHtml);
+        } else if (updatedHtml !== '') {
+            $actionRow.find('.btn-action-text').last().after(updatedHtml);
         }
 
     } catch (error) {
         // --- BƯỚC 5: ROLLBACK NẾU LỖI ---
         $btnLike.attr('class', oldBtnClass).html(oldBtnHtml);
         if (oldSummaryHtml) {
-            if ($actionRow.find('> .reaction-summary-pos').length) {
-                $actionRow.find('> .reaction-summary-pos').replaceWith(oldSummaryHtml);
-            } else {
-                $actionRow.find('.btn-action-text').after(oldSummaryHtml);
-            }
+            const $now = $actionRow.find('> .reaction-summary-pos');
+            if ($now.length) $now.replaceWith(oldSummaryHtml);
+            else $actionRow.find('.btn-action-text').last().after(oldSummaryHtml);
         } else {
             $actionRow.find('> .reaction-summary-pos').remove();
         }
-        console.error("Lỗi Reaction:", error);
+        console.error("Lỗi API:", error);
     } finally {
         $btnLike.removeClass('is-loading');
     }
 },
-// Nhắc lại hàm showReactionDetails để bác thấy cách nó gọi nhau:
 showReactionDetails: async function(commentId) {
     const $modal = $('#reactionModal');
-        const $tabs = $('#reactionTabs');
-        const $body = $('#reactionModalBody');
+    const $body = $('#reactionModalBody');
+    $modal.modal('show');
+    $body.html('<div class="text-center p-5"><div class="spinner-border text-primary"></div></div>');
 
-        $modal.modal('show');
-        $tabs.html(''); // Xóa tabs cũ
-        $body.html('<div class="text-center p-5"><div class="spinner-border text-primary"></div></div>');
+    try {
+        const res = await $.get(`https://lms-u2jn.onrender.com/api/comment/getReactions/${commentId}`);
+        this.currentCommentReactions = res.data || res;
+        this.renderReactionTabs(this.currentCommentReactions);
+        this.renderUserListInModal(0); // Mặc định hiện tất cả
+    } catch (error) {
+        $body.html('<p class="text-center p-3 text-danger">Lỗi tải dữ liệu!</p>');
+    }
+},
 
-        try {
-            const res = await $.get(`https://lms-u2jn.onrender.com/api/comment/getReactions/${commentId}`);
-            this.currentCommentReactions = res.data || res;
-            this.renderReactionTabs(this.currentCommentReactions);
-            // Mặc định hiện tất cả (Type = 0)
-            this.renderUserListInModal(0);
-        } catch (error) {
-            $body.html('<p class="text-center p-3 text-danger">Lỗi tải dữ liệu!</p>');
-        }
+renderUserListInModal: function (filterType) {
+    const $body = $('#reactionModalBody');
+    const emojiMap = { 1: '👍', 2: '❤️', 3: '😂', 4: '😮', 5: '😢', 6: '😡' };
+    const filteredUsers = filterType == 0 
+        ? this.currentCommentReactions 
+        : this.currentCommentReactions.filter(u => (u.reactionType || u.ReactionType) == filterType);
+
+    if (filteredUsers.length === 0) {
+        $body.html('<div class="text-center p-4 text-muted">Không có ai.</div>');
+        return;
+    }
+
+    const html = filteredUsers.map(u => `
+        <div class="user-item d-flex align-items-center p-3">
+            <img src="${u.userAvatar || '../assets/img/default-avatar.png'}" class="rounded-circle border" style="width: 42px; height: 42px; object-fit: cover;">
+            <div class="ms-3 flex-grow-1">
+                <div class="fw-bold">${u.userFullName}</div>
+            </div>
+            <span style="font-size: 20px;">${emojiMap[u.reactionType || u.ReactionType]}</span>
+        </div>`).join('');
+    $body.html(html);
 },
 renderReactionTabs : function(users) {
     const emojiMap = { 0: 'Tất cả', 1: '👍', 2: '❤️', 3: '😂', 4: '😮', 5: '😢', 6: '😡' };
