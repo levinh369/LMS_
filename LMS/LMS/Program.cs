@@ -132,25 +132,37 @@ builder.Services.AddAuthentication(options =>
 });
 
 var app = builder.Build();
+
+// 1. Phải đặt đầu tiên để xử lý Header từ Proxy của Render
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
     ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor |
                        Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto
 });
-// Configure the HTTP request pipeline.
+
+// 2. Cấu hình Swagger cho môi trường Dev
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// 3. Tạm thời COMMENT dòng này nếu lỗi CORS vẫn bị (do Render đã có HTTPS sẵn)
+// app.UseHttpsRedirection();
+
+// 4. Kích hoạt Routing - CỰC KỲ QUAN TRỌNG (Phải đứng trước CORS)
+app.UseRouting();
+
+// 5. Kích hoạt CORS ngay sau Routing và trước Auth
 app.UseCors("AllowFrontend");
+
+// 6. Xác thực và Phân quyền
 app.UseAuthentication();
 app.UseAuthorization();
-app.MapHub<NotificationHub>("/notificationHub");
 
+// 7. Map các Endpoint (Hub và Controller)
 app.MapControllers();
+app.MapHub<NotificationHub>("/notificationHub");
 
 app.Run();
 //

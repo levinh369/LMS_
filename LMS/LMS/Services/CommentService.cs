@@ -34,7 +34,7 @@ namespace LMS.Services
                     LessonId = dto.LessonId,
                     ParentId = dto.ParentId, // Nếu là cha thì null, nếu là con thì có ID
                     UserId = userId,
-                    CreatedAt = DateTime.Now,
+                    CreatedAt = DateTime.UtcNow.AddHours(7),
                     IsActive = true,
                 };
 
@@ -81,7 +81,7 @@ namespace LMS.Services
                     UserId = adminId,
                     ParentId = null, 
                     IsPinned = true,
-                    CreatedAt = DateTime.Now,
+                    CreatedAt = DateTime.UtcNow.AddHours(7),
                     IsActive = true
                 };
 

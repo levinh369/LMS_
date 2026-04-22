@@ -30,8 +30,8 @@ namespace LMS.Services
             {
                 UserId = userId,
                 CourseId = dto.CourseId,
-                CreatedAt = DateTime.Now,
-                UpdatedAt = DateTime.Now, // Khởi tạo UpdatedAt luôn
+                CreatedAt = DateTime.UtcNow.AddHours(7),
+                UpdatedAt = DateTime.UtcNow.AddHours(7), // Khởi tạo UpdatedAt luôn
                 IsActive = true,          // Mặc định là kích hoạt ngay
                 IsDeleted = false         // Chưa xóa
             };

@@ -25,7 +25,7 @@ namespace LMS.Services
                 Name = dto.Name,
                 Description = dto.Description,
                 IsActive = dto.IsActive,
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow.AddHours(7),
             };
             await categoryRepository.AddAsync(category);
         }

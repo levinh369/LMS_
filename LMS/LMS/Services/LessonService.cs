@@ -52,8 +52,8 @@ namespace LMS.Services
                 ChapterId = dto.ChapterId,
                 VideoId = dto.VideoId,
                 CourseModelId = chapter.CourseId,
-                CreatedAt = DateTime.Now,
-                UpdatedAt = DateTime.Now,
+                CreatedAt = DateTime.UtcNow.AddHours(7),
+                UpdatedAt = DateTime.UtcNow.AddHours(7),
                 IsDeleted = false
             };
 
@@ -188,7 +188,7 @@ namespace LMS.Services
 
                     OrderIndex = nextOrderIndex++,
                     IsActive = true,
-                    CreatedAt = DateTime.Now,
+                    CreatedAt = DateTime.UtcNow.AddHours(7),
                     IsPreview = dto.IsPreview,
                     Duration = dto.Duration,
                     CourseModelId = dto.CourseModelId

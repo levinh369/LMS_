@@ -44,7 +44,7 @@ namespace LMS.Services
                 Title = dto.Title,
                 CourseId = dto.CourseId,
                 OrderIndex = dto.OrderIndex,
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow.AddHours(7),
                 IsActive = dto.IsActive,
             };
             await chapterRepository.AddAsync(chapter);

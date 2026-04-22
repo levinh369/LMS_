@@ -67,7 +67,7 @@ namespace LMS.Services
                     Message = message,
                     Type = type,
                     RedirectUrl = url,
-                    CreatedAt = DateTime.Now,
+                    CreatedAt = DateTime.UtcNow.AddHours(7),
                     IsRead = false
                 };
                 await _notifRepo.AddAsync(notif);

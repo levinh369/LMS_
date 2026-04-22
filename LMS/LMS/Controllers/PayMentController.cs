@@ -31,7 +31,18 @@ public class PaymentController : ControllerBase
         if (userIdClaim == null) return Unauthorized("Bác chưa đăng nhập!");
         int userId = int.Parse(userIdClaim.Value);
 
-        OrderModel order; // Khai báo ở ngoài để bên dưới có thể dùng chung
+        OrderModel order;
+
+        // Xử lý múi giờ linh hoạt cho cả Windows và Linux (Render)
+        DateTime nowInVietnam;
+        try
+        {
+            nowInVietnam = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"));
+        }
+        catch
+        {
+            nowInVietnam = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Ho_Chi_Minh"));
+        }
 
         // 2. Xử lý logic tạo mới hoặc lấy lại đơn cũ
         if (request.OrderId == 0)
@@ -39,7 +50,6 @@ public class PaymentController : ControllerBase
             var course = await _context.Courses.FindAsync(request.CourseId);
             if (course == null) return NotFound("Không thấy khóa học này.");
 
-            // Kiểm tra xem đã mua chưa (Tránh spam đơn hàng)
             var exists = await _context.Orders.AnyAsync(o => o.UserId == userId && o.CourseId == request.CourseId && o.Status == OrderStatusEnum.Success);
             if (exists) return BadRequest(new { message = "Bác đã sở hữu khóa học này rồi!" });
 
@@ -50,20 +60,18 @@ public class PaymentController : ControllerBase
                 Amount = (decimal)course.Price,
                 OrderDescription = $"Thanh toan khoa hoc: {course.Title}",
                 Status = OrderStatusEnum.Pending,
-                CreatedAt = DateTime.Now
+                CreatedAt = nowInVietnam
             };
             _context.Orders.Add(order);
             await _context.SaveChangesAsync();
         }
         else
         {
-            // Thanh toán lại cho đơn hàng cũ (Nút "Thanh toán ngay" ở trang Order)
             order = await _context.Orders.FindAsync(request.OrderId);
             if (order == null || order.UserId != userId) return NotFound("Đơn hàng không hợp lệ.");
             if (order.Status == OrderStatusEnum.Success) return BadRequest(new { message = "Đơn này thanh toán rồi bác ơi!" });
 
-            // Cập nhật lại ngày tạo để không bị hết hạn request VNPay
-            order.CreatedAt = DateTime.Now;
+            order.CreatedAt = nowInVietnam;
             await _context.SaveChangesAsync();
         }
 
@@ -78,11 +86,12 @@ public class PaymentController : ControllerBase
         vnpay.AddRequestData("vnp_Command", "pay");
         vnpay.AddRequestData("vnp_TmnCode", tmnCode);
 
-        // VNPay yêu cầu số tiền nhân 100 và KHÔNG ĐƯỢC CÓ DẤU PHẨY (dùng định dạng số nguyên)
         long vnpAmount = (long)(order.Amount * 100);
         vnpay.AddRequestData("vnp_Amount", vnpAmount.ToString());
 
+        // CHỈ ĐỂ 1 DÒNG NÀY THÔI
         vnpay.AddRequestData("vnp_CreateDate", order.CreatedAt.ToString("yyyyMMddHHmmss"));
+
         vnpay.AddRequestData("vnp_CurrCode", "VND");
         vnpay.AddRequestData("vnp_IpAddr", HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1");
         vnpay.AddRequestData("vnp_Locale", "vn");

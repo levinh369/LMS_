@@ -118,7 +118,7 @@ namespace LMS.Services
                         {
                             UserId = newUser.Id,
                             CourseId = dto.CourseId.Value,
-                            CreatedAt = DateTime.UtcNow,
+                            CreatedAt = DateTime.UtcNow.AddHours(7),
                             IsActive = true,
 
                         };

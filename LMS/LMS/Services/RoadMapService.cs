@@ -50,8 +50,8 @@ namespace LMS.Services
                 IsActive = dto.IsActive,
                 Description = dto.Description,
                 ThumbnailUrl = imageUrl,
-                CreatedAt = DateTime.Now,
-                UpdatedAt = DateTime.Now,
+                CreatedAt = DateTime.UtcNow.AddHours(7),
+                UpdatedAt = DateTime.UtcNow.AddHours(7),
             };
             await roadMapRepository.AddAsync(roadMap);
         }
