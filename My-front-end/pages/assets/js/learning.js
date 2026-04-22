@@ -910,22 +910,39 @@ handleReaction: async function(commentId, type, btn) {
         6: { icon: 'bi-emoji-angry-fill', color: 'text-danger', text: 'Phẫn nộ' }
     };
 
-    // --- BƯỚC 1: LƯU TRẠNG THÁI CŨ ĐỂ BACKUP ---
-    const oldHtml = $btnLike.html();
-    const oldClass = $btnLike.attr('class');
+    // --- BƯỚC 1: LƯU TRẠNG THÁI CŨ (BACKUP) ---
+    const oldBtnHtml = $btnLike.html();
+    const oldBtnClass = $btnLike.attr('class');
+    const $oldSummary = $actionRow.find('> .reaction-summary-pos');
+    const oldSummaryHtml = $oldSummary.length ? $oldSummary[0].outerHTML : '';
 
-    // --- BƯỚC 2: CẬP NHẬT GIAO DIỆN NGAY LẬP TỨC (OPTIMISTIC) ---
+    // --- BƯỚC 2: CẬP NHẬT UI TỨC THÌ (OPTIMISTIC) ---
     const targetType = parseInt(type);
     const config = reactionConfig[targetType];
 
+    // 2.1 Cập nhật nút bấm
     $btnLike.removeClass('text-primary text-danger text-warning text-muted').addClass(config.color);
     $btnLike.find('i').attr('class', `bi ${config.icon}`);
-    if ($btnLike.find('.btn-text').length) {
-        $btnLike.find('.btn-text').text(config.text);
-    }
-    
-    // Khóa tạm thời để tránh bấm liên tục (nhưng không làm mờ nút để tạo cảm giác mượt)
+    if ($btnLike.find('.btn-text').length) $btnLike.find('.btn-text').text(config.text);
     $btnLike.addClass('is-loading');
+
+    // 2.2 Dự đoán và cập nhật dải số lượng (Summary)
+    // Lấy số lượng hiện tại từ UI
+    let currentTotal = parseInt($oldSummary.find('.reaction-total-count').text()) || 0;
+    const isUnliking = targetType === 0;
+    
+    // Giả lập dữ liệu mới để render lại dải Summary ngay
+    const optimisticTotal = isUnliking ? Math.max(0, currentTotal - 1) : (currentTotal + ($oldSummary.length ? 0 : 1));
+    
+    // Nếu có dải summary rồi thì cập nhật con số trước cho mượt
+    if ($oldSummary.length > 0) {
+        if (optimisticTotal === 0) {
+            $oldSummary.hide(); // Ẩn tạm thời nếu về 0
+        } else {
+            $oldSummary.find('.reaction-total-count').text(optimisticTotal);
+            $oldSummary.show();
+        }
+    }
 
     try {
         // --- BƯỚC 3: GỌI API NGẦM ---
@@ -939,7 +956,7 @@ handleReaction: async function(commentId, type, btn) {
 
         const result = res.data || res;
         
-        // Cập nhật lại dải Total dựa trên kết quả thật từ Server
+        // --- BƯỚC 4: CẬP NHẬT CHÍNH XÁC TỪ SERVER (SILENT UPDATE) ---
         const updatedData = {
             id: commentId,
             totalReactions: result.totalReactions || result.TotalReactions || 0,
@@ -947,67 +964,32 @@ handleReaction: async function(commentId, type, btn) {
             reactionStats: result.reactionStats || result.ReactionStats || []
         };
 
-        const $summaryContainer = $actionRow.find('> .reaction-summary-pos');
         const newSummaryHtml = this.renderReactionSummary(updatedData);
+        const $currentSummary = $actionRow.find('> .reaction-summary-pos');
 
-        if ($summaryContainer.length > 0) {
-            $summaryContainer.replaceWith(newSummaryHtml);
+        if ($currentSummary.length > 0) {
+            $currentSummary.replaceWith(newSummaryHtml);
         } else if (newSummaryHtml !== '') {
             $actionRow.find('.btn-action-text').after(newSummaryHtml);
         }
 
     } catch (error) {
-        // --- BƯỚC 4: NẾU LỖI THÌ HOÀN TÁC (ROLLBACK) ---
-        $btnLike.attr('class', oldClass);
-        $btnLike.html(oldHtml);
-        console.error("Lỗi API Reaction:", error);
-        Toast.fire({ icon: 'error', title: 'Không thể thực hiện tương tác!' });
+        // --- BƯỚC 5: ROLLBACK NẾU LỖI ---
+        $btnLike.attr('class', oldBtnClass).html(oldBtnHtml);
+        if (oldSummaryHtml) {
+            if ($actionRow.find('> .reaction-summary-pos').length) {
+                $actionRow.find('> .reaction-summary-pos').replaceWith(oldSummaryHtml);
+            } else {
+                $actionRow.find('.btn-action-text').after(oldSummaryHtml);
+            }
+        } else {
+            $actionRow.find('> .reaction-summary-pos').remove();
+        }
+        console.error("Lỗi Reaction:", error);
     } finally {
         $btnLike.removeClass('is-loading');
     }
 },
-// Bác dán hàm này vào cùng cấp với showReactionDetails
-renderUserListInModal: function (filterType) {
-   const $body = $('#reactionModalBody');
-    const emojiMap = { 1: '👍', 2: '❤️', 3: '😂', 4: '😮', 5: '😢', 6: '😡' };
-
-    // Lọc dữ liệu: 0 là lấy hết, còn lại lấy đúng Type
-    const filteredUsers = filterType == 0 
-        ? this.currentCommentReactions 
-        : this.currentCommentReactions.filter(u => (u.reactionType || u.ReactionType) == filterType);
-
-    if (filteredUsers.length === 0) {
-        $body.html('<div class="text-center p-4 text-muted">Không có ai.</div>');
-        return;
-    }
-
-    const html = filteredUsers.map(u => {
-        const avatar = u.userAvatar || u.UserAvatar || '../assets/img/default-avatar.png';
-        const name = u.userFullName || u.UserFullName;
-        const type = u.reactionType !== undefined ? u.reactionType : u.ReactionType;
-        const profileUrl = `/Profile/Index/${u.userId || u.UserId}`;
-
-        return `
-            <div class="user-item d-flex align-items-center p-3 border-bottom-0">
-                <a href="${profileUrl}" target="_blank" class="d-flex align-items-center text-decoration-none text-dark flex-grow-1">
-                    <div class="position-relative">
-                        <img src="${avatar}" class="rounded-circle border" style="width: 42px; height: 42px; object-fit: cover;">
-                        <span class="position-absolute bottom-0 end-0 bg-white rounded-circle shadow-sm d-flex align-items-center justify-content-center" 
-                              style="width: 18px; height: 18px; font-size: 10px; border: 1px solid #eee;">
-                            ${emojiMap[type]}
-                        </span>
-                    </div>
-                    <div class="ms-3">
-                        <div class="fw-bold" style="font-size: 14px;">${name}</div>
-                        <small class="text-muted" style="font-size: 11px;">Xem trang cá nhân</small>
-                    </div>
-                </a>
-            </div>`;
-    }).join('');
-
-    $body.html(html);
-},
-
 // Nhắc lại hàm showReactionDetails để bác thấy cách nó gọi nhau:
 showReactionDetails: async function(commentId) {
     const $modal = $('#reactionModal');
