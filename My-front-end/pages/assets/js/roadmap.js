@@ -470,7 +470,7 @@ handleGoToDetail: async function(courseId) {
         debugger
     const token = localStorage.getItem("jwt_token");
     if (!token) {
-        window.location.href = "/pages/home/detail.html?id=" + courseId;
+        window.location.href = "/home/detail.html?id=" + courseId;
         return;
     }
 
@@ -484,15 +484,15 @@ handleGoToDetail: async function(courseId) {
         
         if (data.isEnrolled) {
             console.log("Đã mua, vào học thôi!");
-            window.location.href = "/pages/learn/learning.html?id=" + courseId;
+            window.location.href = "/learn/learning.html?id=" + courseId;
         } else {
             console.log("Chưa mua, xem giới thiệu đã.");
-            window.location.href = "/pages/home/detail.html?id=" + courseId;
+            window.location.href = "/home/detail.html?id=" + courseId;
         }
     } catch (error) {
         console.error("Lỗi API hoặc Token hết hạn:", error);
         // Nếu lỗi (401 chẳng hạn), cứ cho xem Detail như khách vãng lai
-        window.location.href = "/pages/home/detail.html?id=" + courseId;
+        window.location.href = "/home/detail.html?id=" + courseId;
     }
 }
 }

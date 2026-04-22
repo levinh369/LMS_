@@ -203,7 +203,7 @@ MapsToLesson: async function(chapterId){
         toastr.error("Không tìm thấy mã chương!");
         return;
     }
-    window.location.href = `/pages/lesson/index.html?chapterId=${chapterId}`;
+    window.location.href = `/lesson/index.html?chapterId=${chapterId}`;
     
 },
 renderLessonTable: function(lessons) {

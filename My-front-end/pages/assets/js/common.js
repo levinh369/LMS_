@@ -114,7 +114,7 @@ showGuestUI: function($guest, $user) {
 // Hàm này CHỈ gọi khi người dùng bấm vào nút "Đăng xuất"
 logout: function() {
     AuthHelper.clearAuthSilently();
-    window.location.href = "/pages/auth/login.html";
+    window.location.href = "/auth/login.html";
 },
     initMyCoursesEvents: function() {
         $(document).on('click', '#btnMyCourses', function(e) {
@@ -149,7 +149,7 @@ logout: function() {
 
         if (response.success && response.data && response.data.length > 0) {
            let html = response.data.map(c => `
-                <a href="/pages/learn/learning.html?id=${c.courseId}" class="course-item-mini text-decoration-none">
+                <a href="/learn/learning.html?id=${c.courseId}" class="course-item-mini text-decoration-none">
                     <img src="${c.thumbnailUrl || '../assets/img/default-course.png'}" onerror="this.src='../assets/img/default-course.png'">
                     <div class="info">
                         <div class="title" title="${c.title}">${c.title}</div>
@@ -222,7 +222,7 @@ $.ajaxSetup({
             // Chỉ alert và redirect nếu không phải đang ở trang login
             if (!window.location.pathname.includes("login.html")) {
                 alert("Phiên đăng nhập hết hạn, mời bác đăng nhập lại!");
-                window.location.href = "/pages/auth/login.html";
+                window.location.href = "/auth/login.html";
             }
         }
     }
@@ -230,7 +230,7 @@ $.ajaxSetup({
 // 1. Sửa lại hàm renderItem để khớp với DTO từ Backend C#
 AuthHelper.renderItem = function(item) {
     // Chuyển Id thành URL chi tiết
-    const detailUrl = `/pages/home/detail.html?id=${item.id}`;
+    const detailUrl = `/home/detail.html?id=${item.id}`;
     // ThumbnailUrl từ C# sẽ thành thumbnailUrl (viết thường chữ t)
     const imgUrl = item.thumbnailUrl || '../assets/img/default-course.png';
 
@@ -296,7 +296,7 @@ $(document).on('click', function (e) {
 // TRONG FILE common.js
 $(document).ready(function() {
     // 1. Nạp Header - Chỉ nạp 1 lần duy nhất
-    $("#header-placeholder").load("/pages/shared/header.html", function() {
+    $("#header-placeholder").load("/shared/header.html", function() {
         console.log("🚩 Hệ thống: Header đã load xong.");
 
         // 2. Kiểm tra trạng thái đăng nhập
@@ -320,7 +320,7 @@ $(document).ready(function() {
     });
 
     // 5. Nạp Footer
-    $("#footer-placeholder").load("/pages/shared/footer.html", function() {
+    $("#footer-placeholder").load("/shared/footer.html", function() {
         console.log("🚩 Hệ thống: Footer đã load xong.");
     });
 });

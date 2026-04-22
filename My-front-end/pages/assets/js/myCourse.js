@@ -80,7 +80,7 @@ const CourseApp = {
                                 </div>
                             </div>
                             
-                            <a href="/pages/learn/learning.html?id=${course.courseId}" class="btn-start">
+                            <a href="/learn/learning.html?id=${course.courseId}" class="btn-start">
                                 ${btnText}
                             </a>
                         </div>

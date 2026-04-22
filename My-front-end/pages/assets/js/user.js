@@ -79,7 +79,7 @@ const User = {
                         <div class="progress mb-3" style="height: 6px;">
                             <div class="progress-bar" style="width: ${c.progress}%; background: #f05123;"></div>
                         </div>
-                        <button class="btn-action" onclick="location.href='/pages/learn/learning.html?id=${c.courseId}'">Học tiếp ngay</button>
+                        <button class="btn-action" onclick="location.href='/learn/learning.html?id=${c.courseId}'">Học tiếp ngay</button>
                     ` : `
                         <div class="d-grid mt-2">
                             <button class="btn btn-sm btn-dark rounded-pill fw-600">Xem chứng chỉ</button>
@@ -248,7 +248,7 @@ updateProfile: async function() {
             title: 'Ngon lành! Cập nhật thành công.'
         }).then(() => {
             // Đợi Toast chạy xong (hoặc gần xong) thì bay về Home
-            window.location.href = "/pages/index.html";
+            window.location.href = "/index.html";
         });
 
     } catch (err) {

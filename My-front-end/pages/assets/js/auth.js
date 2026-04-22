@@ -45,14 +45,14 @@ login: async function(btn) {
                     // const enrollResult = await Enrollment.add(courseId);
                     
                     // Dù thành công hay đã đăng ký (isSuccess false), ta đều cho vào trang học
-                    window.location.href = `/pages/learn/learning.html?id=${courseId}`;
+                    window.location.href = `/learn/learning.html?id=${courseId}`;
                 } catch (e) {
                     // Nếu lỗi nặng quá thì vẫn cố cho vào trang học để trang đó tự check tiếp
-                    window.location.href = `/pages/learn/learning.html?id=${courseId}`;
+                    window.location.href = `/learn/learning.html?id=${courseId}`;
                 }
             } else {
                 // Đăng nhập bình thường thì về trang chủ
-                window.location.href = "/pages/index.html";
+                window.location.href = "/index.html";
             }
         });
 
@@ -103,9 +103,9 @@ login: async function(btn) {
             }).then(() => {
                 const courseId = registerData.CourseId;
                 if (courseId && courseId !== 0 && courseId !== "0") {
-                    window.location.href = `/pages/learn/learning.html?id=${courseId}`;
+                    window.location.href = `/learn/learning.html?id=${courseId}`;
                 } else {
-                    window.location.href = "/pages/index.html";
+                    window.location.href = "/index.html";
                 }
             });
         } catch (error) {
@@ -119,8 +119,8 @@ login: async function(btn) {
 loginWithSocial: function(provider) {
     const courseId = new URLSearchParams(window.location.search).get('id');
     let returnUrl = courseId 
-        ? `http://127.0.0.1:5500/pages/Home/detail.html?id=${courseId}`
-        : "http://127.0.0.1:5500/pages/auth/login-success.html";
+        ? `http://127.0.0.1:5500/Home/detail.html?id=${courseId}`
+        : "http://127.0.0.1:5500/auth/login-success.html";
 
     const backendUrl = `http://vinh369-001-site1.site4future.com/api/auth/external-login?provider=${provider}&returnUrl=${encodeURIComponent(returnUrl)}`;
     window.location.href = backendUrl;

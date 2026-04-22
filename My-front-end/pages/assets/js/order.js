@@ -45,7 +45,7 @@ const OrderApp = {
 
         const actionButtons = isSuccess
             ? `<button class="btn btn-detail btn-sm" onclick="OrderApp.viewInvoice('${order.orderCode}')">Xem hóa đơn</button>
-               <a href="/pages/learn/learning.html?id=${order.courseId}" class="btn btn-learn btn-sm">Vào học ngay</a>`
+               <a href="/learn/learning.html?id=${order.courseId}" class="btn btn-learn btn-sm">Vào học ngay</a>`
             : `<button class="btn btn-detail btn-sm text-danger border-danger">Hủy đơn</button>
                <button onclick="Detail.handlePayment(${order.courseId},${order.orderId})" class="btn btn-warning btn-sm fw-bold rounded-3 px-4 shadow-sm">Thanh toán ngay</button>`;
 

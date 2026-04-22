@@ -205,7 +205,7 @@ handlePayment: function (courseId, orderId = 0) {
                 
                 // Logic thông minh: Nếu đã mua rồi thì đẩy vào học luôn
                 if (message.includes("đã được đăng ký") || message.includes("đã mua") || message.includes("đã sở hữu")) {
-                    window.location.href = `/pages/learn/index.html?id=${courseId}`;
+                    window.location.href = `/learn/index.html?id=${courseId}`;
                 } else {
                     Swal.fire('Lỗi thanh toán', message, 'error');
                 }
@@ -317,7 +317,7 @@ handleEnroll: function() {
                 timer: 3000,
                 showConfirmButton: false
             }).then(() => {
-                window.location.href = `/pages/learn/learning.html?id=${courseId}`;
+                window.location.href = `/learn/learning.html?id=${courseId}`;
             });
         } 
     } catch (xhr) {
@@ -326,7 +326,7 @@ handleEnroll: function() {
         const message = errorData ? errorData.message : "Không kết nối được server!";
         
         if (message.includes("đã được đăng ký")) {
-            window.location.href = `/pages/learn/learning.html?id=${courseId}`;
+            window.location.href = `/learn/learning.html?id=${courseId}`;
         } else {
             Swal.fire('Thất bại', message, 'error');
         }
@@ -367,7 +367,7 @@ renderEnrollButton: async function() {
         // TRƯỜNG HỢP 1: ĐÃ SỞ HỮU (Mua rồi hoặc Free đã đăng ký)
         if (isPurchased) {
             container.html(`
-                <a href="/pages/learn/learning.html?id=${courseId}" 
+                <a href="/learn/learning.html?id=${courseId}" 
                    class="btn btn-success w-100 rounded-pill py-3 fw-bold shadow-sm animate__animated animate__fadeIn">
                     <i class="bi bi-play-circle-fill me-2"></i> TIẾP TỤC HỌC
                 </a>

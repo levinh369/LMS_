@@ -45,7 +45,7 @@ renderRoadmaps: function(roadmaps) {
         roadmaps.forEach(item => {
            html += `
     <div class="col-md-6 col-lg-3">
-        <a href="/pages/road_map/road-map-detail.html?id=${item.id}" class="roadmap-card shadow-sm">
+        <a href="/road_map/road-map-detail.html?id=${item.id}" class="roadmap-card shadow-sm">
             <div class="roadmap-icon">
                 <i class="bi bi-signpost-split-fill"></i>
             </div>
@@ -242,7 +242,7 @@ openLogin: function() {
     modal.show();
 },
 handleGoToDetail: async function(courseId) {
-    window.location.href = `/pages/home/detail.html?id=${courseId}`;
+    window.location.href = `/home/detail.html?id=${courseId}`;
 }
 }
 $(document).ready(function() {
