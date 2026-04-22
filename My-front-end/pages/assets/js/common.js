@@ -230,7 +230,7 @@ $.ajaxSetup({
 // 1. Sửa lại hàm renderItem để khớp với DTO từ Backend C#
 AuthHelper.renderItem = function(item) {
     // Chuyển Id thành URL chi tiết
-    const detailUrl = `/home/detail.html?id=${item.id}`;
+    const detailUrl = `/Home/detail.html?id=${item.id}`;
     // ThumbnailUrl từ C# sẽ thành thumbnailUrl (viết thường chữ t)
     const imgUrl = item.thumbnailUrl || '../assets/img/default-course.png';
 

@@ -242,7 +242,7 @@ openLogin: function() {
     modal.show();
 },
 handleGoToDetail: async function(courseId) {
-    window.location.href = `/home/detail.html?id=${courseId}`;
+    window.location.href = `/Home/detail.html?id=${courseId}`;
 }
 }
 $(document).ready(function() {
