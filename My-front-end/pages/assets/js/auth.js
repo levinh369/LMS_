@@ -5,9 +5,13 @@ var Auth = {
     },
     
 login: async function(btn) {
-    const $form = $(btn).closest('form');
+    const $btn = $(btn);
+    const $form = $btn.closest('form');
     const $errorDiv = $form.find('.login-error');
     
+    // 1. Tránh click liên tục khi đang tải
+    if ($btn.hasClass('is-loading')) return;
+
     // Reset trạng thái báo lỗi
     $errorDiv.hide().text("");
 
@@ -15,7 +19,12 @@ login: async function(btn) {
         email: $form.find('#loginEmail').val(),
         password: $form.find('#loginPassword').val()
     };
-    debugger
+
+    // 2. HIỆU ỨNG LOADING: Đổi nội dung nút bấm
+    const oldBtnHtml = $btn.html();
+    $btn.addClass('is-loading').prop('disabled', true);
+    $btn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang xác thực...');
+
     try {
         const response = await $.ajax({
             url: `${Auth.config.apiUrl}/login`,
@@ -24,44 +33,33 @@ login: async function(btn) {
             data: JSON.stringify(loginData),
         });
 
-        // 1. Lưu thông tin đăng nhập (Token, User)
+        // Lưu thông tin đăng nhập
         AuthHelper.saveAuth(response); 
 
-        // 2. Lấy CourseId từ URL (nếu có)
         const urlParams = new URLSearchParams(window.location.search);
         const courseId = urlParams.get('id');
-        // 3. Thông báo và xử lý chuyển hướng
+
         Swal.fire({
             icon: 'success',
             title: 'Đăng nhập thành công!',
             text: courseId ? 'Đang tự động ghi danh cho bạn...' : 'Chào mừng bạn quay lại!',
             timer: 1500,
             showConfirmButton: false
-        }).then(async () => {
+        }).then(() => {
             if (courseId) {
-                // TỰ ĐỘNG GỌI HÀM ADD ENROLLMENT
-                try {
-                   
-                    // const enrollResult = await Enrollment.add(courseId);
-                    
-                    // Dù thành công hay đã đăng ký (isSuccess false), ta đều cho vào trang học
-                    window.location.href = `/learn/learning.html?id=${courseId}`;
-                } catch (e) {
-                    // Nếu lỗi nặng quá thì vẫn cố cho vào trang học để trang đó tự check tiếp
-                    window.location.href = `/learn/learning.html?id=${courseId}`;
-                }
+                window.location.href = `/learn/learning.html?id=${courseId}`;
             } else {
-                // Đăng nhập bình thường thì về trang chủ
                 window.location.href = "/index.html";
             }
         });
 
     } catch (error) {
-        // Xử lý lỗi đăng nhập (như cũ)
+        // 3. KẾT THÚC LOADING NẾU LỖI
+        $btn.removeClass('is-loading').prop('disabled', false).html(oldBtnHtml);
+
         const errorMsg = error.responseJSON?.message || "Sai tài khoản hoặc mật khẩu";
         $errorDiv.text(errorMsg).fadeIn(); 
         
-        // Hiệu ứng rung form cho "ngầu"
         $form.closest('.modal-content').addClass('animate__animated animate__shakeX');
         setTimeout(() => {
             $form.closest('.modal-content').removeClass('animate__animated animate__shakeX');
