@@ -16,31 +16,50 @@ var Detail = {
         }
     },
   detail: async function (id) {
-        try {
-            const token = localStorage.getItem("jwt_token"); 
-            const headers = { 'Content-Type': 'application/json' };
-            if (token) headers['Authorization'] = `Bearer ${token}`;
+    // 1. Hiện loading trước khi gọi
+    Detail.showLoading(true); 
 
-            const response = await fetch(`${Detail.config.apiUrl}/course-detail/${id}`, {
-                method: 'GET',
-                headers: headers
-            });
+    try {
+        const token = localStorage.getItem("jwt_token"); 
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
 
-            const res = await response.json();
-            if (res.success) {
-                const detailData = res.data || res.Data;
-                Detail.currentLessons = detailData.chapters.flatMap(c => c.lessons);
-                
-                // 1. Vẽ thông tin khóa học trước
-                Detail.renderDetail(detailData);
-                
-                // 2. Kiểm tra và vẽ nút bấm phù hợp (Đăng ký / Vào học)
-                Detail.renderEnrollButton(); 
-            }
-        } catch (error) {
-            console.error("Lỗi:", error);
+        const response = await fetch(`${Detail.config.apiUrl}/course-detail/${id}`, {
+            method: 'GET',
+            headers: headers
+        });
+
+        const res = await response.json();
+        if (res.success) {
+            const detailData = res.data || res.Data;
+            Detail.currentLessons = detailData.chapters.flatMap(c => c.lessons);
+            
+            Detail.renderDetail(detailData);
+            Detail.renderEnrollButton(); 
         }
-    },
+    } catch (error) {
+        console.error("Lỗi:", error);
+    } finally {
+        // 2. Ẩn loading dù thành công hay thất bại
+        Detail.showLoading(false); 
+    }
+},
+
+// Hàm hỗ trợ hiện/ẩn loading
+showLoading: function(isShow) {
+    if (isShow) {
+        // Nếu dùng Bootstrap thì dán cái này vào body
+        const loader = `
+            <div id="page-loader" class="loading-overlay">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Đang tải...</span>
+                </div>
+            </div>`;
+        $('body').append(loader);
+    } else {
+        $('#page-loader').fadeOut(300, function() { $(this).remove(); });
+    }
+},
    renderDetail: function(data) {
     // 1. Thông tin cơ bản & Header
     $('#courseTitle').text(data.title);

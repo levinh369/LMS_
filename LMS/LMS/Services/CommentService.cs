@@ -49,7 +49,7 @@ namespace LMS.Services
                     if (parentComment != null && parentComment.UserId != userId)
                     {
                         string message = $"<b>{userName}</b> đã trả lời bình luận của bạn.";
-                        string url = $"/pages/learn/learning.html?id={parentComment.Lesson.CourseModelId}&lessonId={dto.LessonId}#comment-{comment.Id}";
+                        string url = $"/learn/learning.html?id={parentComment.Lesson.CourseModelId}&lessonId={dto.LessonId}#comment-{comment.Id}";
 
                         await notificationService.SendNotificationAsync(
                             parentComment.UserId,
@@ -106,7 +106,7 @@ namespace LMS.Services
                     {
                         string message = $"📌 <b>{adminName}</b> đã ghim bình luận của bạn lên đầu bài học.";
                         var courseId = comment.Lesson?.Chapter?.CourseId ?? 0;
-                        string url = $"/pages/learn/learning.html?id={courseId}&lessonId={request.LessonId}#comment-{comment.Id}";
+                        string url = $"/learn/learning.html?id={courseId}&lessonId={request.LessonId}#comment-{comment.Id}";
 
                         await notificationService.SendNotificationAsync(
                             comment.UserId,
@@ -231,7 +231,7 @@ namespace LMS.Services
                         _ => "đã tương tác với"
                     };
                     string message = $"<b>{userName}</b> {reactionText} bình luận của bạn.";
-                    string url = $"/pages/learn/learning.html?id={comment.Lesson.CourseModelId}&lessonId={comment.LessonId}#comment-{comment.Id}";
+                    string url = $"/learn/learning.html?id={comment.Lesson.CourseModelId}&lessonId={comment.LessonId}#comment-{comment.Id}";
 
                     // GỌI HÀM REAL-TIME CỦA BÁC
                     await notificationService.SendNotificationAsync(

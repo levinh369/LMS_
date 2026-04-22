@@ -889,10 +889,8 @@ renderReactionSummary: function (item) {
 },
 handleReaction: async function(commentId, type, btn) {
     const $this = $(btn);
-    // 1. Tìm hàng chứa các nút tương tác hiện tại (d-flex)
-    const $actionRow = $this.closest('.d-flex'); 
-    // 2. Tìm nút Like chính trong cụm đó
     const $btnLike = $this.closest('.reaction-container').find('.like-btn');
+    const $actionRow = $this.closest('.d-flex');
     
     if ($btnLike.length === 0 || $btnLike.hasClass('is-loading')) return;
 
@@ -912,31 +910,36 @@ handleReaction: async function(commentId, type, btn) {
         6: { icon: 'bi-emoji-angry-fill', color: 'text-danger', text: 'Phẫn nộ' }
     };
 
-    try {
-        // Hiệu ứng loading cho nút
-        $btnLike.addClass('is-loading').css('opacity', '0.6');
+    // --- BƯỚC 1: LƯU TRẠNG THÁI CŨ ĐỂ BACKUP ---
+    const oldHtml = $btnLike.html();
+    const oldClass = $btnLike.attr('class');
 
+    // --- BƯỚC 2: CẬP NHẬT GIAO DIỆN NGAY LẬP TỨC (OPTIMISTIC) ---
+    const targetType = parseInt(type);
+    const config = reactionConfig[targetType];
+
+    $btnLike.removeClass('text-primary text-danger text-warning text-muted').addClass(config.color);
+    $btnLike.find('i').attr('class', `bi ${config.icon}`);
+    if ($btnLike.find('.btn-text').length) {
+        $btnLike.find('.btn-text').text(config.text);
+    }
+    
+    // Khóa tạm thời để tránh bấm liên tục (nhưng không làm mờ nút để tạo cảm giác mượt)
+    $btnLike.addClass('is-loading');
+
+    try {
+        // --- BƯỚC 3: GỌI API NGẦM ---
         const res = await $.ajax({
             url: `https://lms-u2jn.onrender.com/api/comment/handleLike/${commentId}`,
             type: 'POST',
             contentType: 'application/json',
             headers: { 'Authorization': `Bearer ${token}` },
-            data: JSON.stringify({ type: parseInt(type) }) 
+            data: JSON.stringify({ type: targetType }) 
         });
 
         const result = res.data || res;
         
-        // --- 1. CẬP NHẬT TRẠNG THÁI NÚT BẤM ---
-        const rType = (result.reactionType !== undefined) ? result.reactionType : result.ReactionType;
-        const config = reactionConfig[rType || 0];
-
-        $btnLike.removeClass('text-primary text-danger text-warning text-muted').addClass(config.color);
-        $btnLike.find('i').attr('class', `bi ${config.icon}`);
-        if ($btnLike.find('.btn-text').length) {
-            $btnLike.find('.btn-text').text(config.text);
-        }
-
-        // --- 2. CẬP NHẬT DẢI TOTAL (CHỈ CHO COMMENT NÀY) ---
+        // Cập nhật lại dải Total dựa trên kết quả thật từ Server
         const updatedData = {
             id: commentId,
             totalReactions: result.totalReactions || result.TotalReactions || 0,
@@ -944,26 +947,23 @@ handleReaction: async function(commentId, type, btn) {
             reactionStats: result.reactionStats || result.ReactionStats || []
         };
 
-        // CHỈ TÌM thẻ .reaction-summary-pos là con trực tiếp của hàng nút bấm này
-       const $summaryContainer = $actionRow.find('> .reaction-summary-pos');
-
-        // Gọi hàm render để lấy HTML mới
+        const $summaryContainer = $actionRow.find('> .reaction-summary-pos');
         const newSummaryHtml = this.renderReactionSummary(updatedData);
 
         if ($summaryContainer.length > 0) {
-            // Nếu có rồi thì thay thế
             $summaryContainer.replaceWith(newSummaryHtml);
         } else if (newSummaryHtml !== '') {
-            // Nếu chưa có (like đầu tiên) thì chèn sau nút trả lời
             $actionRow.find('.btn-action-text').after(newSummaryHtml);
         }
 
     } catch (error) {
+        // --- BƯỚC 4: NẾU LỖI THÌ HOÀN TÁC (ROLLBACK) ---
+        $btnLike.attr('class', oldClass);
+        $btnLike.html(oldHtml);
         console.error("Lỗi API Reaction:", error);
-        Toast.fire({ icon: 'error', title: 'Có lỗi xảy ra, thử lại sau!' });
+        Toast.fire({ icon: 'error', title: 'Không thể thực hiện tương tác!' });
     } finally {
-        // Mở khóa nút
-        $btnLike.removeClass('is-loading').css('opacity', '1');
+        $btnLike.removeClass('is-loading');
     }
 },
 // Bác dán hàm này vào cùng cấp với showReactionDetails

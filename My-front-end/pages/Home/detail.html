@@ -15,6 +15,16 @@
         .curriculum-item { cursor: pointer; border-left: 3px solid transparent; transition: 0.2s; }
         .curriculum-item:hover { background-color: #f8f9fa; border-left: 3px solid #0d6efd; }
         #courseThumbnail { width: 100%; height: 200px; object-fit: cover; }
+        .loading-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 9999;
+        }
+        .spinner-border {
+            width: 3rem; height: 3rem;
+        }
     </style>
 </head>
 <body>
