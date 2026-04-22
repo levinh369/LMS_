@@ -59,7 +59,7 @@ const Dashboard = {
 
         // URL này phải khớp với Route trong Controller .NET của bác
         $.ajax({
-            url: `https://lms-1mj1.onrender.com/api/Dashboard/statistics?fromDate=${fromDate}&toDate=${toDate}`,
+            url: `https://lms-u2jn.onrender.com/api/Dashboard/statistics?fromDate=${fromDate}&toDate=${toDate}`,
             type: 'GET',
             success: function(res) {
                 // 1. Cập nhật các thẻ số (Cards)

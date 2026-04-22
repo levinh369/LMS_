@@ -8,7 +8,7 @@ window.NotificationApp = {
         const token = localStorage.getItem("jwt_token") || localStorage.getItem("token");
         
         this.connection = new signalR.HubConnectionBuilder()
-            .withUrl("https://lms-1mj1.onrender.com/notificationHub", {
+            .withUrl("https://lms-u2jn.onrender.com/notificationHub", {
                 accessTokenFactory: () => token
             })
             .withAutomaticReconnect()
@@ -56,7 +56,7 @@ fetchNotifications: function (isLoadMore = false) {
     }
 
     $.ajax({
-        url: `https://lms-1mj1.onrender.com/api/Notification/GetNotif?skip=${this.currentSkip}&limit=${this.limit}`,
+        url: `https://lms-u2jn.onrender.com/api/Notification/GetNotif?skip=${this.currentSkip}&limit=${this.limit}`,
         type: 'GET',
         headers: { "Authorization": "Bearer " + token },
         success: (res) => {
@@ -115,7 +115,7 @@ fetchNotifications: function (isLoadMore = false) {
         const token = localStorage.getItem("jwt_token");
         if (!token) return;
 
-        $.get("https://lms-1mj1.onrender.com/api/Notification/unread-count", (res) => {
+        $.get("https://lms-u2jn.onrender.com/api/Notification/unread-count", (res) => {
             this.updateBadgeCount(res.count || 0, false);
         });
     },
@@ -124,7 +124,7 @@ markAllRead: async function() {
     if (!token) return;
 
     try {
-        const response = await fetch(`https://lms-1mj1.onrender.com/api/notification/mark-all`, {
+        const response = await fetch(`https://lms-u2jn.onrender.com/api/notification/mark-all`, {
             method: 'POST', 
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -200,7 +200,7 @@ handleRedirect: async function(notifId, url) {
     
     // Đánh dấu đã đọc
     try {
-        fetch(`https://lms-1mj1.onrender.com/api/notification/mark-read/${notifId}`, {
+        fetch(`https://lms-u2jn.onrender.com/api/notification/mark-read/${notifId}`, {
             method: 'POST', 
             headers: { 'Authorization': `Bearer ${token}` }
         });

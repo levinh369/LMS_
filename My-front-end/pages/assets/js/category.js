@@ -1,7 +1,7 @@
 var Category = {
     config: {
         pageSize: 10,
-        apiUrl: "https://lms-1mj1.onrender.com/api/category"
+        apiUrl: "https://lms-u2jn.onrender.com/api/category"
     },
 
     // Hàm khởi tạo - Gọi khi trang load xong

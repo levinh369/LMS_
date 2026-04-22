@@ -3,7 +3,7 @@ const Enrollment = {
         const token = localStorage.getItem("jwt_token");
         // Dùng return $.ajax để nó trả về một Promise
         return $.ajax({
-            url: 'https://lms-1mj1.onrender.com/api/enroll/register',
+            url: 'https://lms-u2jn.onrender.com/api/enroll/register',
             type: 'POST',
             contentType: 'application/json',
             headers: {

@@ -4,7 +4,7 @@ var Course = {
     editDetails: [],
     config: {
         pageSize: 10,
-        apiUrl: "https://lms-1mj1.onrender.com/api/course"
+        apiUrl: "https://lms-u2jn.onrender.com/api/course"
     },
     CourseLevel : {
         0: "Người mới bắt đầu",
@@ -170,7 +170,7 @@ renderTable: function (data) {
 
     try {
         console.log("Gọi API lấy danh mục...");
-        const response = await fetch(`https://lms-1mj1.onrender.com/api/Category`);
+        const response = await fetch(`https://lms-u2jn.onrender.com/api/Category`);
         const result = await response.json(); 
         Course.categories = result.data || []; 
         let filterHtml = '<option value="">Tất cả danh mục</option>';

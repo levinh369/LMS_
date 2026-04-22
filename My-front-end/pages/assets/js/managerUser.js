@@ -14,7 +14,7 @@ const Toast = Swal.mixin({
 var Manager = {
     config: {
         pageSize: 10,
-        apiUrl: "https://lms-1mj1.onrender.com/api/user"
+        apiUrl: "https://lms-u2jn.onrender.com/api/user"
     },
 
     init: function () {
