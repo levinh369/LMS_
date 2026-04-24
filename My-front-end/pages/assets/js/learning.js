@@ -384,65 +384,81 @@ startHeartbeat: function(lessonId, type = 'youtube') {
             }
         });
     },
-    postComment: async function(parentId = null) {
-    // 1. CHỖ HỚ 1: Phải chọn đúng ô nhập (Ô chính hoặc ô Reply)
+   showReplyInput: function(rootId, userName, replyToUserId) {
+    const $replyBox = $(`#reply-box-${rootId}`);
+    if ($replyBox.html() !== "") { $replyBox.empty(); return; }
+    $('[id^="reply-box-"]').empty();
+
+    const html = `
+        <div class="ms-4 mt-2 mb-3">
+            <textarea id="replyInput-${rootId}" 
+                      data-reply-to-id="${replyToUserId}"
+                      data-reply-to-name="${userName}"
+                      class="form-control form-control-sm bg-light mb-2" 
+                      rows="2" placeholder="Trả lời ${userName}..."></textarea>
+            <div class="text-end">
+                <button onclick="$('#reply-box-${rootId}').empty()" class="btn btn-sm btn-link text-muted">Hủy</button>
+                <button onclick="Learn.postComment(${rootId})" class="btn btn-sm btn-primary px-3 rounded-pill">Gửi</button>
+            </div>
+        </div>`;
+    $replyBox.html(html);
+    $(`#replyInput-${rootId}`).focus();
+},
+
+postComment: async function(parentId = null) {
     const selector = parentId ? `#replyInput-${parentId}` : '#commentInput';
-    const content = $(selector).val().trim();
+    const $input = $(selector);
+    const content = $input.val().trim();
     
-    if (!content) {
-        Toast.fire({ icon: 'warning', title: 'Nội dung không được để trống!' });
-        return;
-    }
+    // Tìm nút bấm tương ứng để xử lý loading
+    // Nếu là reply thì tìm nút trong reply-box, nếu là comment chính thì tìm nút 'Bình luận'
+    const $btn = parentId 
+        ? $(`#reply-box-${parentId} button`).last() 
+        : $('.comment-section button').first();
 
-    const token = localStorage.getItem("jwt_token");
-    if (!token) {
-        Toast.fire({ icon: 'warning', title: 'Bạn cần đăng nhập!' });
-        return;
-    }
-
-    // Đảm bảo lấy đúng currentLessonId (dùng this nếu nó nằm trong object Learn)
-    const lessonId = this.currentLessonId || currentLessonId;
+    if (!content) return;
 
     const dto = {
         content: content,
-        lessonId: parseInt(lessonId),
-        parentId: parentId
+        lessonId: parseInt(this.currentLessonId),
+        courseId: parseInt(new URLSearchParams(window.location.search).get("id")),
+        parentId: parentId,
+        replyToUserId: $input.data('reply-to-id') || null,
+        replyToUserName: $input.data('reply-to-name') || null
     };
 
+    // --- BẮT ĐẦU LOADING ---
+    const originalBtnHtml = $btn.html(); // Lưu lại chữ "Gửi" hoặc "Bình luận"
+    $btn.prop('disabled', true); // Khóa nút không cho bấm tiếp
+    $btn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang gửi...'); // Hiện icon xoay
+
     try {
-        // 2. CHỖ HỚ 2: Phải gán biến 'const res' thì bên dưới mới có 'res.message'
-        const res = await $.ajax({
+        await $.ajax({
             url: 'https://lms-u2jn.onrender.com/api/comment',
             type: 'POST',
             contentType: 'application/json',
-            headers: {
-                "Authorization": "Bearer " + token
-            },
+            headers: { "Authorization": "Bearer " + localStorage.getItem("jwt_token") },
             data: JSON.stringify(dto)
         });
 
-        // Hiện thông báo từ Backend trả về
-        Toast.fire({
-            icon: 'success',
-            title: res.message 
-        });
-
-        // 3. CHỖ HỚ 3: Xử lý UI sau khi xong
-        $(selector).val(''); // Xóa nội dung ô vừa nhập
+        Toast.fire({ icon: 'success', title: "Thành công!" });
+        
+        // Reset ô nhập và đóng reply box
+        $input.val('');
         if (parentId) {
-            $(`#reply-box-${parentId}`).empty(); // Đóng ô reply nếu là trả lời
+            $(`#reply-box-${parentId}`).empty();
         }
         
-        // Nạp lại danh sách bình luận
-        this.loadComments(lessonId);
+        // Nạp lại danh sách
+        this.loadComments(this.currentLessonId);
 
     } catch (err) {
-        // Thay alert bằng Toast cho chuyên nghiệp
-        const errorMsg = err.responseJSON?.message || "Cần đăng nhập để bình luận!";
-        Toast.fire({
-            icon: 'error',
-            title: errorMsg
-        });
+        Toast.fire({ icon: 'error', title: "Lỗi: " + (err.responseJSON?.message || "Không thể gửi") });
+    } finally {
+        // --- KẾT THÚC LOADING ---
+        // Trả lại trạng thái nút ban đầu dù thành công hay thất bại
+        $btn.prop('disabled', false);
+        $btn.html(originalBtnHtml);
     }
 },
    loadComments: async function (lessonId) {
@@ -512,7 +528,7 @@ renderCommentItem: function (comment, replies, teacherId) {
     const myId = (rawUserId && rawUserId !== "undefined" && rawUserId !== "null") ? String(rawUserId).trim() : "";
     const instructorId = String(teacherId || "").trim();
 
-    // 1. Cấu hình Reaction Map
+    // 1. Cấu hình Reaction Map (Dùng cho cả cha và con)
     const reactionMap = {
         0: { icon: 'bi-hand-thumbs-up', color: 'text-muted', text: 'Thích' },
         1: { icon: 'bi-hand-thumbs-up-fill', color: 'text-primary', text: 'Thích' },
@@ -523,7 +539,7 @@ renderCommentItem: function (comment, replies, teacherId) {
         6: { icon: 'bi-emoji-angry-fill', color: 'text-danger', text: 'Phẫn nộ' }
     };
 
-    // 2. Hàm tạo Menu 3 chấm (Chỉnh sửa/Xóa)
+    // 2. Hàm tạo Menu 3 chấm (Chỉ hiện nếu là bình luận của mình)
     const createActionMenu = (item, isMe) => {
         if (!isMe) return ''; 
         return `
@@ -538,10 +554,9 @@ renderCommentItem: function (comment, replies, teacherId) {
             </div>`;
     };
 
-    // 3. Hàm tạo cụm Reaction
+    // 3. Hàm tạo cụm nút Reaction (Like/Haha/Love...)
     const createReactionBtn = (item) => {
-        const type = item.reactionType !== undefined ? item.reactionType : 
-                     (item.ReactionType !== undefined ? item.ReactionType : 0);
+        const type = item.reactionType ?? item.ReactionType ?? 0;
         const isLiked = item.isLiked || item.IsLiked || false;
         const currentType = (type === 0 && isLiked) ? 1 : type;
         const config = reactionMap[currentType] || reactionMap[0];
@@ -569,6 +584,8 @@ renderCommentItem: function (comment, replies, teacherId) {
     let repliesHtml = (replies || []).map(r => {
         const isMe = String(r.userId || "").trim() === myId;
         const isInst = String(r.userId || "").trim() === instructorId;
+        
+        // Lấy tên người được rep từ cột mới trong DB
         const replyTo = r.replyToUserName || r.ReplyToUserName;
         const mentionHtml = replyTo ? `<span class="text-primary fw-bold me-1">@${replyTo}</span>` : '';
 
@@ -590,22 +607,19 @@ renderCommentItem: function (comment, replies, teacherId) {
                         ${createActionMenu(r, isMe)}
                     </div>
                     <div class="mt-1 ms-2 d-flex align-items-center gap-3">
-                        <span class="time-text" style="font-size: 9px; color:#8a8d91;">${this.timeSince(r.createdAt)}</span>
+                        <span class="time-text" style="font-size: 9px;">${this.timeSince(r.createdAt)}</span>
                         ${createReactionBtn(r)}
-                        <button onclick="Learn.showReplyInput(${comment.id}, '${r.userFullName}')" class="btn-action-text" style="font-size: 11px; background:none; border:none; font-weight:bold; color:#65676b;">Trả lời</button>
+                        <button onclick="Learn.showReplyInput(${comment.id}, '${r.userFullName}', ${r.userId})" class="btn-action-text" style="font-size: 11px; background:none; border:none; font-weight:bold; color:#65676b;">Trả lời</button>
                         ${this.renderReactionSummary ? this.renderReactionSummary(r) : ''} 
                     </div>
                 </div>
             </div>`;
     }).join('');
 
-    // 5. Logic xử lý Ghim (Pin)
+    // 5. Logic xử lý Ghim (Pin) và định dạng Cha
     const isPinned = comment.isPinned || comment.IsPinned || false;
     const pinnedClass = isPinned ? 'is-pinned shadow-sm border-warning' : '';
-    const pinnedHeader = isPinned ? 
-        `<div class="pinned-label text-warning fw-bold mb-1" style="font-size: 11px;">
-            <i class="bi bi-pin-angle-fill"></i> Thông báo từ quản trị viên
-         </div>` : '';
+    const pinnedHeader = isPinned ? `<div class="pinned-label text-warning fw-bold mb-1" style="font-size: 11px;"><i class="bi bi-pin-angle-fill"></i> Thông báo từ quản trị viên</div>` : '';
 
     const isParentMe = String(comment.userId || "").trim() === myId;
     const isParentInst = String(comment.userId || "").trim() === instructorId;
@@ -617,26 +631,22 @@ renderCommentItem: function (comment, replies, teacherId) {
             <div class="d-flex">
                 <img src="${comment.userAvatar || '../assets/img/default-avatar.png'}" class="avatar-md me-2 border shadow-sm rounded-circle">
                 <div class="flex-grow-1">
-                    
                     ${pinnedHeader}
-
                     <div class="d-flex align-items-start">
                         <div class="bg-light p-3 rounded-3 shadow-sm d-inline-block" style="max-width: 90%;">
                             <div class="d-flex align-items-center gap-2 mb-1">
                                 <span class="fw-bold" style="font-size: 13px;">${comment.userFullName}</span>
                                 ${isParentInst ? '<span class="badge bg-danger" style="font-size: 9px;">Giảng viên</span>' : ''}
                                 ${isParentMe ? '<small class="text-primary fw-bold" style="font-size: 10px;">(Bạn)</small>' : ''}
-                                ${isPinned ? '<i class="bi bi-pin-angle-fill text-warning" title="Đã ghim"></i>' : ''}
                             </div>
                             <p class="mb-0 text-secondary" id="content-${comment.id}" style="font-size: 13px;">${comment.content}</p>
                         </div>
                         ${createActionMenu(comment, isParentMe)}
                     </div>
-                    
                     <div class="mt-2 ms-2 d-flex align-items-center gap-3">
-                        <span class="time-text" style="font-size: 11px; color:#8a8d91;">${this.timeSince(comment.createdAt)}</span>
+                        <span class="time-text" style="font-size: 11px;">${this.timeSince(comment.createdAt)}</span>
                         ${createReactionBtn(comment)}
-                        <button onclick="Learn.showReplyInput(${comment.id}, '${comment.userFullName}')" class="btn-action-text" style="font-size: 12px; background:none; border:none; font-weight:bold; color:#65676b;">Trả lời</button>
+                        <button onclick="Learn.showReplyInput(${comment.id}, '${comment.userFullName}', ${comment.userId})" class="btn-action-text" style="font-size: 12px; background:none; border:none; font-weight:bold; color:#65676b;">Trả lời</button>
                         ${this.renderReactionSummary ? this.renderReactionSummary(comment) : ''}
                     </div>
                     
@@ -777,27 +787,7 @@ deleteComment: async function(id) {
         }
     });
 },
-showReplyInput: function(parentId, userName) {
-    const $replyBox = $(`#reply-box-${parentId}`);
-    if ($replyBox.html() !== "") {
-        $replyBox.empty();
-        return;
-    }
-    $('[id^="reply-box-"]').empty();
 
-    const html = `
-        <div class="ms-4 mt-2 mb-3 animate__animated animate__fadeIn">
-            <textarea id="replyInput-${parentId}" class="form-control form-control-sm bg-light mb-2 shadow-sm" 
-                      rows="2" placeholder="Trả lời ${userName}..."></textarea>
-            <div class="text-end">
-                <button onclick="$('#reply-box-${parentId}').empty()" class="btn btn-sm btn-link text-muted text-decoration-none">Hủy</button>
-                <button onclick="Learn.postComment(${parentId})" class="btn btn-sm btn-primary px-3 rounded-pill fw-bold">Gửi</button>
-            </div>
-        </div>
-    `;
-    $replyBox.html(html);
-    $(`#replyInput-${parentId}`).focus();
-},
     // Hàm phụ trợ tính thời gian (Vừa xong, 5 phút trước...)
     timeSince: function (date) {
         const seconds = Math.floor((new Date() - new Date(date)) / 1000);

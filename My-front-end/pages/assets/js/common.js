@@ -302,7 +302,7 @@ $(document).on('click', function (e) {
 // TRONG FILE common.js
 $(document).ready(function() {
     // 1. Nạp Header - Chỉ nạp 1 lần duy nhất
-    $("#header-placeholder").load("/shared/header.html", function() {
+    $("#header-placeholder").load("/pages/shared/header.html", function() {
         console.log("🚩 Hệ thống: Header đã load xong.");
 
         // 2. Kiểm tra trạng thái đăng nhập
@@ -326,7 +326,7 @@ $(document).ready(function() {
     });
 
     // 5. Nạp Footer
-    $("#footer-placeholder").load("/shared/footer.html", function() {
+    $("#footer-placeholder").load("pages/shared/footer.html", function() {
         console.log("🚩 Hệ thống: Footer đã load xong.");
     });
 });

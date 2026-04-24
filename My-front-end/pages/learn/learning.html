@@ -412,22 +412,94 @@
     align-items: center;
     gap: 4px;
 }
+/* --- TỐI ƯU CHO ĐIỆN THOẠI --- */
+@media (max-width: 991.98px) {
+    body {
+        overflow-y: auto; /* Cho phép cuộn trang tổng thể */
+        height: auto;
+    }
+
+    .main-wrapper {
+        flex-direction: column; /* Chuyển Video lên trên, Sidebar xuống dưới */
+        height: auto;
+    }
+
+    /* Video luôn dính trên cùng khi cuộn */
+    .video-wrapper {
+        position: sticky;
+        top: 0;
+        z-index: 1020;
+    }
+
+    .video-container {
+        overflow-y: visible;
+        height: auto;
+    }
+
+    /* Sidebar chuyển thành danh sách bài học ở dưới */
+    .lesson-sidebar {
+        width: 100%;
+        height: auto;
+        border-left: none;
+        border-top: 1px solid #dee2e6;
+    }
+
+    .chapter-container {
+        height: 500px; /* Giới hạn chiều cao danh sách bài học để không cuộn quá dài */
+        overflow-y: auto;
+    }
+
+    /* Header ẩn bớt chữ để đỡ chật */
+    #topCourseTitle {
+        font-size: 0.9rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 150px;
+    }
+
+    /* Tab bình luận: Tràn viền mobile */
+    .video-info {
+        padding: 15px;
+    }
+    
+    /* Bong bóng chat nhỏ lại cho mobile */
+    .comment-bubble-wrapper {
+        max-width: 100%;
+    }
+}
+
+/* Fix lỗi Modal cảm xúc trên mobile */
+@media (max-width: 576px) {
+    .modal-dialog {
+        margin: 10px;
+    }
+    .reaction-box {
+        gap: 5px;
+        padding: 5px;
+    }
+    .reaction-icon {
+        font-size: 20px;
+    }
+}
     </style>
 </head>
 <body>
 <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
     <div class="container-fluid">
-        <a class="navbar-brand fw-bold" href="/">
-            <i class="bi bi-chevron-left me-2"></i>LMS ACADEMY
+        <a class="navbar-brand fw-bold" href="/" style="font-size: 1rem;">
+            <i class="bi bi-chevron-left me-1"></i>LMS
         </a>
-        <span class="navbar-text text-white fw-bold d-none d-md-block" id="topCourseTitle">
-            Đang tải khóa học...
+        <span class="navbar-text text-white fw-bold d-none d-sm-inline-block" id="topCourseTitle">
+            Đang tải...
         </span>
         <div class="ms-auto d-flex align-items-center">
-            <div class="progress d-none d-md-flex me-3" style="width: 100px; height: 8px;">
-                <div id="progressBar" class="progress-bar bg-success" role="progressbar" style="width: 0%"></div>
+            <div class="d-flex flex-column align-items-end">
+                <div class="progress me-2" style="width: 80px; height: 6px;">
+                    <div id="progressBar" class="progress-bar bg-success" role="progressbar" style="width: 0%"></div>
+                </div>
+                <span class="text-white-50" style="font-size: 10px;" id="completionStatus">0/0 bài học</span>
             </div>
-            <span class="text-white-50 small" id="completionStatus">0/0 bài học</span>
         </div>
     </div>
 </nav>

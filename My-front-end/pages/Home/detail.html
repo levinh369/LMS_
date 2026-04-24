@@ -25,6 +25,72 @@
         .spinner-border {
             width: 3rem; height: 3rem;
         }
+        /* Tối ưu Sidebar trên Mobile */
+@media (max-width: 991.98px) {
+    .sticky-sidebar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        top: auto; /* Bỏ cái top: 80px cũ */
+        width: 100%;
+        z-index: 1050;
+        border-radius: 20px 20px 0 0 !important; /* Bo góc trên */
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.15) !important;
+    }
+
+    .preview-card {
+        border-radius: 20px 20px 0 0 !important;
+    }
+
+    /* Ẩn bớt các chi tiết phụ để tiết kiệm không gian trên mobile */
+    .preview-card .card-img-top, 
+    .preview-card .list-unstyled, 
+    .preview-card .fw-bold.mb-3 {
+        display: none; 
+    }
+
+    /* Cho nút Đăng ký và Giá nằm cùng 1 hàng trên mobile */
+    .preview-card .card-body {
+        padding: 15px !important;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 15px;
+    }
+
+    .preview-card .mb-4.text-center {
+        margin-bottom: 0 !important;
+        text-align: left !important;
+    }
+
+    .preview-card #enroll-container {
+        flex-grow: 1;
+    }
+
+    .btn-enroll {
+        margin-bottom: 0 !important;
+        padding: 10px !important;
+    }
+
+    /* Thêm padding dưới cùng cho body để không bị thanh công cụ che nội dung */
+    body {
+        padding-bottom: 100px;
+    }
+}
+
+/* Tối ưu Header và Typography */
+@media (max-width: 576px) {
+    .course-header { padding: 25px 0; }
+    h1#courseTitle { font-size: 1.5rem !important; }
+    .course-header .lead { font-size: 1rem !important; }
+}
+
+/* Tối ưu Modal Video trên Mobile */
+@media (max-width: 991px) {
+    #videoModal .col-lg-4 {
+        max-height: 300px !important;
+    }
+}
     </style>
 </head>
 <body>

@@ -5,18 +5,12 @@ namespace LMS.DTOs.Request
 {
     public class CommentRequestDTO
     {
-        public int CommentId    { get; set; }
-        [StringLength(2000, ErrorMessage = "Bình luận không được quá 2000 ký tự")]
         public string Content { get; set; }
-
-        [Required]
         public int LessonId { get; set; }
-
-        // Dùng cho trường hợp trả lời (Reply)
-        // Nếu gửi null hoặc 0 => Bình luận gốc
-        // Nếu có giá trị => Trả lời cho bình luận đó
-        public int? ParentId { get; set; }
         public int CourseId { get; set; }
+        public int? ParentId { get; set; } // Luôn là ID thằng cha gốc
+        public int? ReplyToUserId { get; set; } // Thêm cái này
+        public string? ReplyToUserName { get; set; }
 
     }
     public class ReactionRequest

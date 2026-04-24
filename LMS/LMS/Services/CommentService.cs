@@ -26,13 +26,13 @@ namespace LMS.Services
             try
             {
                 if (string.IsNullOrWhiteSpace(dto.Content)) return false;
-
-                // 1. Tạo Model chung (Dùng cho cả Cha và Con)
                 var comment = new CommentModel
                 {
                     Content = dto.Content,
                     LessonId = dto.LessonId,
-                    ParentId = dto.ParentId, // Nếu là cha thì null, nếu là con thì có ID
+                    ParentId = dto.ParentId, // ID thằng cha gốc để gom nhóm
+                    ReplyToUserId = dto.ReplyToUserId, // Người bị trả lời trực tiếp
+                    ReplyToUserName = dto.ReplyToUserName, // Tên người bị trả lời trực tiếp
                     UserId = userId,
                     CreatedAt = DateTime.UtcNow.AddHours(7),
                     IsActive = true,
@@ -40,20 +40,16 @@ namespace LMS.Services
 
                 await _commentRepository.AddAsync(comment);
 
-                // 2. LOGIC THÔNG BÁO (Chỉ chạy khi là Reply)
-                if (dto.ParentId.HasValue && dto.ParentId.Value > 0)
+                if (dto.ReplyToUserId.HasValue && dto.ReplyToUserId.Value > 0)
                 {
-                    var parentComment = await _commentRepository.GetCommentByIdAsync(dto.ParentId.Value);
-
-                    // Chỉ bắn tbao nếu người reply không phải là chủ comment (tránh tự luyến)
-                    if (parentComment != null && parentComment.UserId != userId)
+                    if (dto.ReplyToUserId.Value != userId)
                     {
                         string message = $"<b>{userName}</b> đã trả lời bình luận của bạn.";
-                        string url = $"/learn/learning.html?id={parentComment.Lesson.CourseModelId}&lessonId={dto.LessonId}#comment-{comment.Id}";
+                        string url = $"/learn/learning.html?id={dto.CourseId}&lessonId={dto.LessonId}#comment-{comment.Id}";
 
                         await notificationService.SendNotificationAsync(
-                            parentComment.UserId,
-                            userId,
+                            dto.ReplyToUserId.Value, 
+                            userId,                
                             message,
                             NotificationTypeEnum.CommentReply,
                             url,
@@ -61,7 +57,6 @@ namespace LMS.Services
                         );
                     }
                 }
-                // Nếu ParentId là null -> Không làm gì (hoặc báo cho giảng viên nếu muốn)
 
                 return true;
             }

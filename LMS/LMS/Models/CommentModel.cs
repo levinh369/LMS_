@@ -28,9 +28,8 @@ namespace LMS.Models
 
         public bool IsPinned { get; set; } = false;
         public ICollection<CommentLikeModel> Likes { get; set; } = new List<CommentLikeModel>();
-
-        // 2. Trường này bác giữ lại để "hiển thị nhanh" (Denormalization)
-        // Mỗi khi thêm/xóa 1 bản ghi ở bảng CommentLikes, bác cập nhật lại số này
+        public int? ReplyToUserId { get; set; } // ID người bị rep trực tiếp
+        public string? ReplyToUserName { get; set; } // Tên người bị rep để hiện @Mention
         public int LikeCount { get; set; } = 0;
         [NotMapped] // Quan trọng: EF Core sẽ bỏ qua trường này khi tạo bảng
         public bool IsLiked { get; set; } = false;
