@@ -17,6 +17,7 @@
         public int ReplyCount { get; set; }
         public int ReactionType { get; set; }
         public int TotalReactions { get; set; }
+        public int ReplyToUserId { get; set; }
         public List<ReactionStatDTO> ReactionStats { get; set; } = new();
 
         // 6. Danh sách 3 icon đứng đầu (Gửi sẵn từ Backend để FE chỉ việc hiện)

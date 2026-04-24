@@ -172,7 +172,7 @@ namespace LMS.Services
                 TotalReactions = c.TotalReactions,
                 LikeCount = c.LikeCount,
                 IsLiked = c.IsLiked,
-                ReplyToUserName = c.ParentComment?.User?.FullName,
+                ReplyToUserName = c.ParentComment.ReplyToUserName ?? "Người dùng",
                 ReactionType = c.UserReaction != null ? (int)c.UserReaction : 0,
                 ReactionStats = c.ReactionStats,
                 TopReactionTypes = c.ReactionStats

@@ -124,7 +124,8 @@ updateHeaderProgress: function(completed, total) {
 },
 changeVideo: async function(newLessonId) {
     console.log("Đang chuyển sang bài học:", newLessonId);
-
+    this.isCommentLoaded = false;
+    debugger
     // 1. CHỐT HẠ BÀI CŨ (Bọc trong try catch để tránh treo hàm)
     if (currentLessonId !== 0 && currentLessonId !== newLessonId) {
         try {
@@ -149,7 +150,7 @@ changeVideo: async function(newLessonId) {
     }
 
     // 2. CẬP NHẬT ID MỚI NGAY LẬP TỨC
-    currentLessonId = newLessonId; // Gán luôn ở đây cho chắc ăn!
+    this.currentLessonId = newLessonId; // Gán luôn ở đây cho chắc ăn!
 
     // 3. CHUẨN BỊ MỞ BÀI MỚI
     const newLesson = Learn.lessonsCache[newLessonId];
@@ -417,7 +418,7 @@ postComment: async function(parentId = null) {
         : $('.comment-section button').first();
 
     if (!content) return;
-
+    debugger
     const dto = {
         content: content,
         lessonId: parseInt(this.currentLessonId),
@@ -490,8 +491,7 @@ postComment: async function(parentId = null) {
 
         // Đổ HTML vào danh sách
         $list.html(html);
-        this.isCommentLoaded = true;
-        // --- QUAN TRỌNG: Gọi hàm cuộn và bôi vàng sau khi list đã xuất hiện trên DOM ---
+        
         this.handleCommentAnchor();
 
     } catch (err) {
@@ -528,7 +528,6 @@ renderCommentItem: function (comment, replies, teacherId) {
     const myId = (rawUserId && rawUserId !== "undefined" && rawUserId !== "null") ? String(rawUserId).trim() : "";
     const instructorId = String(teacherId || "").trim();
 
-    // 1. Cấu hình Reaction Map (Dùng cho cả cha và con)
     const reactionMap = {
         0: { icon: 'bi-hand-thumbs-up', color: 'text-muted', text: 'Thích' },
         1: { icon: 'bi-hand-thumbs-up-fill', color: 'text-primary', text: 'Thích' },
@@ -539,7 +538,6 @@ renderCommentItem: function (comment, replies, teacherId) {
         6: { icon: 'bi-emoji-angry-fill', color: 'text-danger', text: 'Phẫn nộ' }
     };
 
-    // 2. Hàm tạo Menu 3 chấm (Chỉ hiện nếu là bình luận của mình)
     const createActionMenu = (item, isMe) => {
         if (!isMe) return ''; 
         return `
@@ -554,7 +552,6 @@ renderCommentItem: function (comment, replies, teacherId) {
             </div>`;
     };
 
-    // 3. Hàm tạo cụm nút Reaction (Like/Haha/Love...)
     const createReactionBtn = (item) => {
         const type = item.reactionType ?? item.ReactionType ?? 0;
         const isLiked = item.isLiked || item.IsLiked || false;
@@ -580,13 +577,17 @@ renderCommentItem: function (comment, replies, teacherId) {
             </div>`;
     };
 
-    // 4. Render danh sách Reply (Comment con)
+    // 4. Render danh sách Reply (Comment con) - FIX CHỖ NÀY
     let repliesHtml = (replies || []).map(r => {
         const isMe = String(r.userId || "").trim() === myId;
         const isInst = String(r.userId || "").trim() === instructorId;
         
-        // Lấy tên người được rep từ cột mới trong DB
+        // LOGIC FIX: Chỉ hiện @mention nếu người được rep KHÁC với chủ bài đăng (thằng cha)
+        // Hoặc đơn giản là luôn hiện đúng cái ReplyToUserName lưu trong DB
         const replyTo = r.replyToUserName || r.ReplyToUserName;
+        
+        // Nếu thằng con đang trả lời một thằng con khác, ta hiện @TênThằngConĐó
+        // Nếu thằng con trả lời thằng cha, ta có thể hiện hoặc không (tùy Vinh, ở đây tôi cho hiện luôn cho chuẩn)
         const mentionHtml = replyTo ? `<span class="text-primary fw-bold me-1">@${replyTo}</span>` : '';
 
         return `
@@ -609,14 +610,14 @@ renderCommentItem: function (comment, replies, teacherId) {
                     <div class="mt-1 ms-2 d-flex align-items-center gap-3">
                         <span class="time-text" style="font-size: 9px;">${this.timeSince(r.createdAt)}</span>
                         ${createReactionBtn(r)}
-                        <button onclick="Learn.showReplyInput(${comment.id}, '${r.userFullName}', ${r.userId})" class="btn-action-text" style="font-size: 11px; background:none; border:none; font-weight:bold; color:#65676b;">Trả lời</button>
+                        <button onclick="Learn.showReplyInput(${comment.id}, '${r.userFullName}', ${r.userId})" 
+                                class="btn-action-text" style="font-size: 11px; background:none; border:none; font-weight:bold; color:#65676b;">Trả lời</button>
                         ${this.renderReactionSummary ? this.renderReactionSummary(r) : ''} 
                     </div>
                 </div>
             </div>`;
     }).join('');
 
-    // 5. Logic xử lý Ghim (Pin) và định dạng Cha
     const isPinned = comment.isPinned || comment.IsPinned || false;
     const pinnedClass = isPinned ? 'is-pinned shadow-sm border-warning' : '';
     const pinnedHeader = isPinned ? `<div class="pinned-label text-warning fw-bold mb-1" style="font-size: 11px;"><i class="bi bi-pin-angle-fill"></i> Thông báo từ quản trị viên</div>` : '';
@@ -624,7 +625,6 @@ renderCommentItem: function (comment, replies, teacherId) {
     const isParentMe = String(comment.userId || "").trim() === myId;
     const isParentInst = String(comment.userId || "").trim() === instructorId;
 
-    // 6. Render Comment Cha
     return `
         <div class="comment-item mb-4 border-bottom pb-3 ${pinnedClass}" id="comment-${comment.id}" 
              style="${isPinned ? 'background-color: #fffdf0; padding: 10px; border-radius: 8px;' : ''}">
@@ -646,7 +646,8 @@ renderCommentItem: function (comment, replies, teacherId) {
                     <div class="mt-2 ms-2 d-flex align-items-center gap-3">
                         <span class="time-text" style="font-size: 11px;">${this.timeSince(comment.createdAt)}</span>
                         ${createReactionBtn(comment)}
-                        <button onclick="Learn.showReplyInput(${comment.id}, '${comment.userFullName}', ${comment.userId})" class="btn-action-text" style="font-size: 12px; background:none; border:none; font-weight:bold; color:#65676b;">Trả lời</button>
+                        <button onclick="Learn.showReplyInput(${comment.id}, '${comment.userFullName}', ${comment.userId})" 
+                                class="btn-action-text" style="font-size: 12px; background:none; border:none; font-weight:bold; color:#65676b;">Trả lời</button>
                         ${this.renderReactionSummary ? this.renderReactionSummary(comment) : ''}
                     </div>
                     
