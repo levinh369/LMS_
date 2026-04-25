@@ -1,6 +1,7 @@
 
 var Detail = {
     currentLessons: [], // Sẽ chứa danh sách phẳng của tất cả bài học để hiện trong Modal
+    currentTeacherId: 0,
     config: {
         apiUrl: "https://lms-u2jn.onrender.com/api/course"
     },
@@ -33,7 +34,7 @@ var Detail = {
         if (res.success) {
             const detailData = res.data || res.Data;
             Detail.currentLessons = detailData.chapters.flatMap(c => c.lessons);
-            
+            Detail.currentTeacherId = detailData.instructorId || detailData.InstructorId;
             Detail.renderDetail(detailData);
             Detail.renderEnrollButton(); 
         }
@@ -182,7 +183,7 @@ showLoading: function(isShow) {
             $('#videoPreviewTrigger').off('click').on('click', () => Detail.openVideo(firstPreview.videoId));
         }
     },
-handlePayment: function (courseId, orderId = 0) {
+handlePayment: function (courseId, orderId = 0, teacherId) {
     // 1. Kiểm tra ID (nếu mua mới thì cần courseId, nếu thanh toán lại thì cần orderId)
     if (!courseId && !orderId) {
         Swal.fire('Lỗi', 'Thông tin thanh toán không hợp lệ', 'warning');
@@ -198,7 +199,8 @@ handlePayment: function (courseId, orderId = 0) {
         // 3. Chuẩn bị dữ liệu gửi đi (khớp với PaymentRequest DTO bên C#)
         const paymentData = {
             courseId: parseInt(courseId) || 0,
-            orderId: parseInt(orderId) || 0
+            orderId: parseInt(orderId) || 0,
+            teacherId: parseInt(teacherId) || 0
         };
 
         // 4. Gọi API
@@ -310,7 +312,7 @@ formatLessonTime: function(seconds) {
     // padStart(2, '0') giúp số 5 biến thành 05
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 },
-handleEnroll: function() {
+handleEnroll: function(teacherId) {
     debugger
     const courseId = new URLSearchParams(window.location.search).get('id');
     
@@ -320,13 +322,13 @@ handleEnroll: function() {
     }
 
     // Gác cổng: Chưa login thì bắt login xong mới chạy tiếp callback bên trong
-   AuthHelper.handleAuthRequired(async function() {
+    AuthHelper.handleAuthRequired(async function() {
     Swal.showLoading();
 
     try {
         // Gọi API qua jQuery Ajax
         debugger
-        const result = await Enrollment.add(courseId); 
+        const result = await Enrollment.add(courseId, teacherId); 
 
         // Nếu Backend của bác trả về { success: true, ... }
         if (result.success || result.isSuccess) {
@@ -402,7 +404,7 @@ renderEnrollButton: async function() {
             // Khóa học mất phí
             container.html(`
                 <button type="button" 
-                        onclick="Detail.handlePayment(${courseId},0)" 
+                        onclick="Detail.handlePayment(${courseId},0,${this.currentTeacherId})" 
                         class="btn btn-danger w-100 rounded-pill py-3 fw-bold shadow-sm animate__animated animate__pulse animate__infinite">
                     <i class="bi bi-cart-check-fill me-2"></i> MUA KHÓA HỌC NGAY
                 </button>
@@ -411,7 +413,7 @@ renderEnrollButton: async function() {
             // Khóa học miễn phí
             container.html(`
                 <button type="button" 
-                        onclick="Detail.handleEnroll(${courseId})" 
+                        onclick="Detail.handleEnroll(${this.currentTeacherId})" 
                         class="btn btn-primary w-100 rounded-pill py-3 fw-bold shadow-sm">
                     ĐĂNG KÝ HỌC MIỄN PHÍ
                 </button>

@@ -1,5 +1,5 @@
 const Enrollment = {
-    add: function(courseId) {
+    add: function(courseId, teacherId) {
         const token = localStorage.getItem("jwt_token");
         // Dùng return $.ajax để nó trả về một Promise
         return $.ajax({
@@ -9,8 +9,10 @@ const Enrollment = {
             headers: {
             "Authorization": "Bearer " + token 
         },
-            data: JSON.stringify({ courseId: parseInt(courseId) })
-            // KHÔNG cần ghi Header ở đây nữa vì $.ajaxSetup đã lo rồi
+           data: JSON.stringify({ 
+                courseId: parseInt(courseId),
+                teacherId: parseInt(teacherId) 
+            })
         });
     }
 };

@@ -4,7 +4,7 @@ $(document).ready(function () {
 
 function loadAdminLayout() {
     // 1. Nạp Banner (Dùng chung cho các trang Admin)
-    $("#sidebar-placeholder").load("/shared/banner.html", function () {
+    $("#sidebar-placeholder").load("/pages/shared/banner.html", function () {
         const path = window.location.pathname;
         let pageTitle = "Hệ thống quản lý";
         let breadcrumb = "Admin";

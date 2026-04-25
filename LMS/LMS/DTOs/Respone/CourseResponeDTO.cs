@@ -1,4 +1,5 @@
 ﻿using LMS.Enums;
+using Microsoft.EntityFrameworkCore.Metadata.Conventions;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace LMS.DTOs.Respone
@@ -26,6 +27,7 @@ namespace LMS.DTOs.Respone
         public List<CourseResponeDetailDTO> CourseDetails { get; set; }
         public int CompletedLessons { get; set; }
         public string? InstructorName {  get; set; }
+        public int? InstructorId { get; set; }
         public double ProgressPercent { get; set; }
         public DateTime? LastLearnedDate { get; set; }
         public string LastLearnedFriendly { get; set; } = "Chưa bắt đầu";

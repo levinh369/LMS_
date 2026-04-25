@@ -58,8 +58,9 @@ public class PaymentController : ControllerBase
                 UserId = userId,
                 CourseId = request.CourseId,
                 Amount = (decimal)course.Price,
-                OrderDescription = $"Thanh toan khoa hoc: {course.Title}",
+                OrderDescription = $"Thanh toán khóa học: {course.Title}",
                 Status = OrderStatusEnum.Pending,
+                teacherId = request.teacherId,
                 CreatedAt = nowInVietnam
             };
             _context.Orders.Add(order);
@@ -110,6 +111,7 @@ public class PaymentController : ControllerBase
     {
         public int CourseId { get; set; }
         public int OrderId { get; set; }
+        public int teacherId {  get; set; }
     }
 
     [HttpGet("vnpay-callback")]

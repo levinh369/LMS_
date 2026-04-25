@@ -331,6 +331,7 @@ namespace LMS.Services
                 TotalLessons = course.Chapters.Sum(ch => ch.Lessons.Count),
                 totalChapters = course.Chapters.Count(),
                 InstructorName = course.Teacher?.FullName ?? " Giảng viên LMS",
+                InstructorId = course.Teacher?.Id,
                 InstructorUrl = course.Teacher?.AvatarUrl ?? "/images/default-avatar.png",
                 IsEnrolled = userId.HasValue && course.Enrollments.Any(e => e.UserId == userId.Value && e.IsActive),
                 Level = course.Level,

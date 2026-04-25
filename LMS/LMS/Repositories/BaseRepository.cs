@@ -17,7 +17,7 @@ namespace LMS.Repositories
 
         public async Task AddAsync(T entity)
         {
-            entity.CreatedAt = DateTime.UtcNow;
+            entity.CreatedAt = DateTime.UtcNow.AddHours(7);
             entity.IsDeleted = false;
             await _context.Set<T>().AddAsync(entity);
             await _context.SaveChangesAsync();
@@ -26,7 +26,7 @@ namespace LMS.Repositories
         public async Task ChangeStatus(T entity)
         {
             entity.IsActive = !entity.IsActive;
-            entity.UpdatedAt = DateTime.Now;
+            entity.UpdatedAt = DateTime.UtcNow.AddHours(7);
             await _context.SaveChangesAsync();
         }
 

@@ -1,5 +1,6 @@
 ﻿using LMS.DTOs.Request;
 using LMS.DTOs.Respone;
+using LMS.Enums;
 using LMS.Models;
 using LMS.Repositories;
 using LMS.Repositories.Interfaces;
@@ -10,10 +11,11 @@ namespace LMS.Services
     public class EnrollService : IEnrollmentService
     {
         private IEnrollRepository enrollRepository;
-        public EnrollService(IEnrollRepository enrollRepository)
+        private INotificationRepository notificationRepository;
+        public EnrollService(IEnrollRepository enrollRepository, INotificationRepository notificationRepository)
         {
             this.enrollRepository = enrollRepository;
-          
+            this.notificationRepository = notificationRepository;
         }
         public async Task<EnrollResponseDTO> AddEnrollAsync(int userId, EnrollRequestDTO dto)
         {
@@ -35,11 +37,19 @@ namespace LMS.Services
                 IsActive = true,          // Mặc định là kích hoạt ngay
                 IsDeleted = false         // Chưa xóa
             };
+            var notification = new NotificationModel
+            {
+                UserId = dto.TeacherId, // Người nhận là giảng viên
+                SenderId = userId,      // Người gửi là học viên vừa đăng ký
+                Message = $"Học viên vừa tham gia khóa học của bạn.",
+                Type = NotificationTypeEnum.NewEnrollment,
+                RedirectUrl = $"/instructor/courses/{dto.CourseId}/students",
+                IsRead = false,
+                CreatedAt = DateTime.Now
+            };
 
-            // 3. Lưu vào database thông qua Repository
+            await notificationRepository.AddAsync(notification);
             await enrollRepository.AddAsync(enroll);
-
-            // 4. Trả về DTO để Frontend có dữ liệu mà "vèo" vào trang học
             return new EnrollResponseDTO
             {
                 CourseId = enroll.CourseId,

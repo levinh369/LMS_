@@ -154,45 +154,65 @@ markAllRead: async function() {
 
     // 5. Hàm dùng chung để tạo HTML (Giúp đồng bộ giao diện)
 generateNotifHtml: function(data) {
-    const avatar = data.senderAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.senderName || 'U')}&background=random&color=fff`;
-        const typeIconMap = {
-        1: "💬", // CommentReply: Luôn hiện icon chat
-    };
-    debugger
-    // 2. Map cho loại cảm xúc (ReactionTypeEnum)
-    const reactionEmojiMap = {
-        1: "👍", // Like
-        2: "❤️", // Love
-        3: "😆", // Haha
-        4: "😮", // Wow
-        5: "😢", // Sad
-        6: "😡"  // Angry
-};const emoji = (data.type === 2) 
-    ? (reactionEmojiMap[data.reactionType] || "👍") 
-    : (typeIconMap[data.type] || "🔔");
+    const typeInt = parseInt(data.type);
     const isRead = data.isRead === true;
-    const friendlyTime = this.timeAgo(data.createdAt);
+    
+    // 1. Cấu hình giao diện cho từng loại thông báo (Dựa trên Enum của bác)
+    const config = {
+        1: { emoji: "💬", color: "#0866ff", label: "Phản hồi" },    // CommentReply
+        2: { emoji: "❤️", color: "#e41e3f", label: "Cảm xúc" },    // LikeComment (Emoji động bên dưới)
+        3: { emoji: "📌", color: "#673ab7", label: "Ghim" },       // CommentPinned
+        4: { emoji: "🎓", color: "#28a745", label: "Học viên mới" }, // NewEnrollment
+        5: { emoji: "❓", color: "#fd7e14", label: "Câu hỏi mới" }, // NewComment
+        6: { emoji: "✅", color: "#198754", label: "Đã duyệt" },   // CourseApproved
+        7: { emoji: "⏳", color: "#00bcd4", label: "Chờ duyệt" }    // CoursePendingReview
+    };
+
+    // 2. Xử lý Emoji cho Reaction (Type 2)
+    const reactionEmojiMap = { 1: "👍", 2: "❤️", 3: "😆", 4: "😮", 5: "😢", 6: "😡" };
+    
+    let emoji = "🔔";
+    let themeColor = "#65676b";
+    
+    if (typeInt === 2) {
+        emoji = reactionEmojiMap[data.reactionType] || "👍";
+        themeColor = "#e41e3f";
+    } else if (config[typeInt]) {
+        emoji = config[typeInt].emoji;
+        themeColor = config[typeInt].color;
+    }
+
+    // 3. Phân loại màu nền (Thông báo quan trọng thì màu khác)
+    // Loại 4, 6, 7 là những loại cần xử lý ngay
+    const isPriority = [4, 6, 7].includes(typeInt);
+    const bgColor = isRead ? '#fff' : (isPriority ? '#fff4f4' : '#f0f7ff');
 
     return `
         <div class="unread-item d-flex align-items-center" 
-             onclick="NotificationApp.handleRedirect(${data.id}, '${data.redirectUrl || '#'}')" 
+             onclick="NotificationApp.handleRedirect(${data.id}, '${data.redirectUrl || '#'}', ${typeInt})" 
              style="cursor:pointer; padding: 12px 15px; border-bottom: 1px solid #eee; 
-             ${isRead ? 'background-color: #fff;' : 'background-color: #f0f7ff; border-left: 4px solid #0866ff;'}">
+             background-color: ${bgColor}; border-left: 4px solid ${isRead ? 'transparent' : themeColor}">
             
-            <div class="notif-avatar-wrapper">
-                <img src="${avatar}">
-                <div class="reaction-badge-overlay">${emoji}</div>
+            <div class="notif-avatar-wrapper" style="position: relative; flex-shrink: 0;">
+                <img src="${data.senderAvatar || 'https://ui-avatars.com/api/?name=U'}" 
+                     style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 1px solid #ddd;">
+                <div style="position: absolute; bottom: -2px; right: -2px; background: #fff; 
+                     border-radius: 50%; width: 22px; height: 22px; display: flex; 
+                     align-items: center; justify-content: center; font-size: 12px; 
+                     box-shadow: 0 2px 4px rgba(0,0,0,0.2); border: 1.5px solid #fff;">
+                    ${emoji}
+                </div>
             </div>
             
             <div class="ms-3 flex-grow-1">
-                <div style="color: ${isRead ? '#65676b' : '#050505'}; font-size: 14px; font-weight: ${isRead ? '400' : '500'};">
+                <div style="color: ${isRead ? '#65676b' : '#050505'}; font-size: 14px; font-weight: ${isRead ? '400' : '600'}; line-height: 1.3;">
                     ${data.message}
                 </div>
-                <div style="color: #0866ff; font-size: 11px; font-weight: 600;">
-                    ${friendlyTime}
+                <div style="color: ${themeColor}; font-size: 11px; font-weight: 700; margin-top: 3px;">
+                    ${this.timeAgo(data.createdAt)}
                 </div>
             </div>
-            ${!isRead ? '<div class="notif-unread-dot"></div>' : ''}
+            ${!isRead ? '<div style="width: 10px; height: 10px; background: #0866ff; border-radius: 50%; margin-left: 10px;"></div>' : ''}
         </div>`;
 },
 handleRedirect: async function(notifId, url) {
