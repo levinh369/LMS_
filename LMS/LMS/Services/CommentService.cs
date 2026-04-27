@@ -15,24 +15,27 @@ namespace LMS.Services
         private readonly ICommentRepository _commentRepository;
         private readonly INotificationService notificationService;
         private readonly IUserRepository _userRepository;
-        public CommentService(ICommentRepository commentRepository, INotificationService notificationService, IUserRepository userRepository)
+        private readonly ICourseRepository _courseRepository;
+        public CommentService(ICommentRepository commentRepository, INotificationService notificationService, IUserRepository userRepository, ICourseRepository courseRepository)
         { 
             _commentRepository = commentRepository;
             this.notificationService = notificationService;
             _userRepository = userRepository;
+            _courseRepository = courseRepository;
         }
         public async Task<bool> AddAsync(CommentRequestDTO dto, int userId, string userName)
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(dto.Content)) return false;
+
                 var comment = new CommentModel
                 {
                     Content = dto.Content,
                     LessonId = dto.LessonId,
-                    ParentId = dto.ParentId, // ID thằng cha gốc để gom nhóm
-                    ReplyToUserId = dto.ReplyToUserId, // Người bị trả lời trực tiếp
-                    ReplyToUserName = dto.ReplyToUserName, // Tên người bị trả lời trực tiếp
+                    ParentId = dto.ParentId,
+                    ReplyToUserId = dto.ReplyToUserId,
+                    ReplyToUserName = dto.ReplyToUserName,
                     UserId = userId,
                     CreatedAt = DateTime.UtcNow.AddHours(7),
                     IsActive = true,
@@ -40,18 +43,40 @@ namespace LMS.Services
 
                 await _commentRepository.AddAsync(comment);
 
+                // 1. Lấy thông tin khóa học để tìm TeacherId
+                var course = await _courseRepository.GetByIdAsync(dto.CourseId);
+                if (course == null) return true; // Comment vẫn thành công nhưng không bắn thông báo
+
+                string url = $"/learn/learning.html?id={dto.CourseId}&lessonId={dto.LessonId}#comment-{comment.Id}";
+
+                // --- LUỒNG 1: BÁO CHO GIẢNG VIÊN ---
+                // Chỉ gửi nếu người comment KHÔNG PHẢI là giảng viên
+                if (course.TeacherId != userId)
+                {
+                    string teacherMsg = $"Học viên <b>{userName}</b> đã thảo luận trong khóa học <b>{course.Title}</b>.";
+                    await notificationService.SendNotificationAsync(
+                        course.TeacherId.Value,
+                        userId,
+                        teacherMsg,
+                        NotificationTypeEnum.NewComment, // Dùng type 5 (NewComment)
+                        url,
+                        null
+                    );
+                }
+
+                // --- LUỒNG 2: BÁO CHO NGƯỜI BỊ TRẢ LỜI ---
                 if (dto.ReplyToUserId.HasValue && dto.ReplyToUserId.Value > 0)
                 {
-                    if (dto.ReplyToUserId.Value != userId)
+                    // Chỉ gửi nếu người bị trả lời KHÔNG PHẢI là chính mình
+                    // VÀ người bị trả lời KHÔNG PHẢI là giảng viên (đã gửi ở trên rồi để tránh lặp)
+                    if (dto.ReplyToUserId.Value != userId && dto.ReplyToUserId.Value != course.TeacherId)
                     {
-                        string message = $"<b>{userName}</b> đã trả lời bình luận của bạn.";
-                        string url = $"/learn/learning.html?id={dto.CourseId}&lessonId={dto.LessonId}#comment-{comment.Id}";
-
+                        string replyMsg = $"<b>{userName}</b> đã trả lời bình luận của bạn.";
                         await notificationService.SendNotificationAsync(
-                            dto.ReplyToUserId.Value, 
-                            userId,                
-                            message,
-                            NotificationTypeEnum.CommentReply,
+                            dto.ReplyToUserId.Value,
+                            userId,
+                            replyMsg,
+                            NotificationTypeEnum.CommentReply, // Dùng type 1 (CommentReply)
                             url,
                             null
                         );
