@@ -1,7 +1,14 @@
 const Enrollment = {
     add: function(courseId, teacherId) {
         const token = localStorage.getItem("jwt_token");
-        // Dùng return $.ajax để nó trả về một Promise
+        const userInfoStr = localStorage.getItem("user_info");
+        let studentName = "Học viên";
+        if (userInfoStr) {
+            // 2. Parse chuỗi JSON thành object
+            const userInfo = JSON.parse(userInfoStr);
+            // 3. Lấy trường username (theo như trong ảnh bác gửi)
+            studentName = userInfo.username || "Học viên";
+        }
         return $.ajax({
             url: 'https://lms-u2jn.onrender.com/api/enroll/register',
             type: 'POST',
@@ -11,7 +18,8 @@ const Enrollment = {
         },
            data: JSON.stringify({ 
                 courseId: parseInt(courseId),
-                teacherId: parseInt(teacherId) 
+                teacherId: parseInt(teacherId),
+                studentName: studentName
             })
         });
     }
