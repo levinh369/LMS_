@@ -138,10 +138,11 @@ public class PaymentController : ControllerBase
 
         if (isSignatureValid)
         {
-            var order = await _context.Orders.FindAsync(orderId);
+            var order = await _context.Orders
+            .Include(o => o.User)   
+            .Include(o => o.Course)  
+            .FirstOrDefaultAsync(o => o.Id == orderId);
             if (order == null) return NotFound("Đơn hàng không tồn tại.");
-
-            // Kiểm tra xem đơn hàng đã được xử lý chưa (đề phòng VNPay gọi IPN nhiều lần)
             if (order.Status != OrderStatusEnum.Pending)
             {
                 return Redirect($"http://127.0.0.1:5500/pages/course/detail.html?id={order.CourseId}");
@@ -153,7 +154,12 @@ public class PaymentController : ControllerBase
                 order.Status = OrderStatusEnum.Success;
                 order.VnpayTranNo = vnp_TransactionNo;
 
-                var enrollDto = new EnrollRequestDTO { CourseId = order.CourseId };
+                var enrollDto = new EnrollRequestDTO
+                {
+                    CourseId = order.CourseId,
+                    TeacherId = order.Course.TeacherId ?? 0, // Lấy từ Course đã Include ở trên
+                    StudentName = order.User?.FullName ?? "Học viên mới"
+                };
                 await _enrollmentService.AddEnrollAsync(order.UserId, enrollDto);
                 await _context.SaveChangesAsync();
 

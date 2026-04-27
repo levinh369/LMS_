@@ -39,10 +39,7 @@ namespace LMS.Services
                 IsDeleted = false
             };
             await enrollRepository.AddAsync(enroll);
-
-            // 3. Bắn thông báo (Vừa lưu DB vừa đẩy SignalR)
-            // Dùng Service này là ĐỦ, không cần gọi Repository lẻ nữa
-            string message = "Học viên vừa tham gia khóa học của bạn.";
+            string message = $"Học viên <b>{dto.StudentName}</b> vừa tham gia khóa học của bạn.";
             string url = $"/instructor/courses/{dto.CourseId}/students";
 
             await notificationService.SendNotificationAsync(
