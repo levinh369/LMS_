@@ -51,7 +51,7 @@ const Dashboard = {
     loadData: function() {
         const fromDate = $("#dateFrom").val();
         const toDate = $("#dateTo").val();
-
+        const token = localStorage.getItem("jwt_token");
         Swal.fire({
             title: 'Đang trích xuất dữ liệu...',
             didOpen: () => { Swal.showLoading() }
@@ -61,6 +61,9 @@ const Dashboard = {
         $.ajax({
             url: `https://lms-u2jn.onrender.com/api/Dashboard/statistics?fromDate=${fromDate}&toDate=${toDate}`,
             type: 'GET',
+            headers: {
+            "Authorization": "Bearer " + token
+        },
             success: function(res) {
                 // 1. Cập nhật các thẻ số (Cards)
                 $("#txt-revenue").text(res.totalRevenue.toLocaleString() + "đ");

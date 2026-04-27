@@ -15,6 +15,7 @@ window.NotificationApp = {
             .build();
 
         this.connection.on("ReceiveNotification", (data) => {
+            
             console.log("🔔 SignalR nhận tin:", data);
             this.renderNotification(data);
         });
@@ -111,14 +112,31 @@ fetchNotifications: function (isLoadMore = false) {
     });
 },
     // 4. Lấy SỐ LƯỢNG chưa đọc (Khi load trang)
-    getUnreadCount: function() {
-        const token = localStorage.getItem("jwt_token");
-        if (!token) return;
+  getUnreadCount: function() {
+    const token = localStorage.getItem("jwt_token") || localStorage.getItem("token");
+    if (!token) {
+        console.warn("🚩 Không tìm thấy Token, bỏ qua lấy số thông báo.");
+        return;
+    }
 
-        $.get("https://lms-u2jn.onrender.com/api/Notification/unread-count", (res) => {
-            this.updateBadgeCount(res.count || 0, false);
-        });
-    },
+    $.ajax({
+        url: "https://lms-u2jn.onrender.com/api/Notification/unread-count",
+        type: "GET",
+        headers: { 
+            "Authorization": "Bearer " + token // Đây là chìa khóa để hết lỗi 401
+        },
+        success: (res) => {
+            // Kiểm tra res.count hoặc res.Data.count tùy theo Backend trả về
+            const count = typeof res === 'number' ? res : (res.count || res.Data?.count || 0);
+            this.updateBadgeCount(count, false);
+        },
+        error: (xhr) => {
+            if(xhr.status === 401) {
+                console.error("🚩 Token hết hạn hoặc không hợp lệ (401).");
+            }
+        }
+    });
+},
 markAllRead: async function() {
     const token = localStorage.getItem("jwt_token");
     if (!token) return;

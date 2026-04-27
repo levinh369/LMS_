@@ -12,10 +12,12 @@ namespace LMS.Services
     {
         private IEnrollRepository enrollRepository;
         private INotificationRepository notificationRepository;
-        public EnrollService(IEnrollRepository enrollRepository, INotificationRepository notificationRepository)
+        private readonly INotificationService notificationService;
+        public EnrollService(IEnrollRepository enrollRepository, INotificationRepository notificationRepository, INotificationService notificationService)
         {
             this.enrollRepository = enrollRepository;
             this.notificationRepository = notificationRepository;
+            this.notificationService = notificationService;
         }
         public async Task<EnrollResponseDTO> AddEnrollAsync(int userId, EnrollRequestDTO dto)
         {
@@ -23,33 +25,35 @@ namespace LMS.Services
             var exist = await enrollRepository.IsEnrolledAsync(userId, dto.CourseId);
             if (exist)
             {
-                // Thay vì throw Exception chung chung, bác nên dùng Custom Exception hoặc trả về Result Pattern
                 throw new Exception("Khóa học đã được đăng ký rồi!");
             }
 
-            // 2. Khởi tạo Model (Bổ sung các trường bác đã định nghĩa trong DB)
+            // 2. Khởi tạo và lưu Enrollment trước
             var enroll = new EnrollmentModel
             {
                 UserId = userId,
                 CourseId = dto.CourseId,
                 CreatedAt = DateTime.UtcNow.AddHours(7),
-                UpdatedAt = DateTime.UtcNow.AddHours(7), // Khởi tạo UpdatedAt luôn
-                IsActive = true,          // Mặc định là kích hoạt ngay
-                IsDeleted = false         // Chưa xóa
+                UpdatedAt = DateTime.UtcNow.AddHours(7),
+                IsActive = true,
+                IsDeleted = false
             };
-            var notification = new NotificationModel
-            {
-                UserId = dto.TeacherId, // Người nhận là giảng viên
-                SenderId = userId,      // Người gửi là học viên vừa đăng ký
-                Message = $"Học viên vừa tham gia khóa học của bạn.",
-                Type = NotificationTypeEnum.NewEnrollment,
-                RedirectUrl = $"/instructor/courses/{dto.CourseId}/students",
-                IsRead = false,
-                CreatedAt = DateTime.Now
-            };
-
-            await notificationRepository.AddAsync(notification);
             await enrollRepository.AddAsync(enroll);
+
+            // 3. Bắn thông báo (Vừa lưu DB vừa đẩy SignalR)
+            // Dùng Service này là ĐỦ, không cần gọi Repository lẻ nữa
+            string message = "Học viên vừa tham gia khóa học của bạn.";
+            string url = $"/instructor/courses/{dto.CourseId}/students";
+
+            await notificationService.SendNotificationAsync(
+                dto.TeacherId,                // Người nhận (Giảng viên)
+                userId,                       // Người gửi (Học viên)
+                message,
+                NotificationTypeEnum.NewEnrollment,
+                url,
+                null                          // Không có reaction
+            );
+
             return new EnrollResponseDTO
             {
                 CourseId = enroll.CourseId,
@@ -58,7 +62,6 @@ namespace LMS.Services
                 Message = "Ghi danh thành công! Chào mừng bác vào lớp."
             };
         }
-
         public Task<IEnumerable<EnrollResponseDTO>> GetMyEnrollmentsAsync(int userId)
         {
             throw new NotImplementedException();
