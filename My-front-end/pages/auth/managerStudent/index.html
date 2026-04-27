@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ thống Quản lý Học viên - LMS Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --premium: #ffc107; --free: #6c757d; --primary-cms: #4e73df; }
+        body { background-color: #f4f7fc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .main-card { border: none; border-radius: 15px; box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15); }
+        .avatar-img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #eee; }
+        .badge-premium { background-color: var(--premium); color: #000; font-weight: 600; font-size: 0.75rem; }
+        .badge-free { background-color: var(--free); color: #fff; font-size: 0.75rem; }
+        .new-row { background-color: #f0f7ff !important; border-left: 4px solid var(--primary-cms); }
+        .progress { border-radius: 10px; background-color: #eaecf4; }
+        .modal-content { border-radius: 15px; border: none; }
+        .list-group-item { border-left: none; border-right: none; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+<div class="container py-5">
+    <div class="main-card card">
+        <div class="card-header bg-white py-4 d-flex justify-content-between align-items-center border-bottom-0">
+            <div>
+                <h4 class="fw-bold text-dark mb-1">Danh sách học viên</h4>
+                <p class="text-muted mb-0">Khóa học: <span class="text-primary fw-bold">Lập trình .NET Core & SignalR Real-time</span></p>
+            </div>
+            <div class="badge bg-primary px-3 py-2" style="font-size: 1rem;">
+                Tổng: <span id="totalCount">0</span> học viên
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="ps-4">Thông tin học viên</th>
+                            <th>Ngày tham gia</th>
+                            <th>Loại gói</th>
+                            <th>Thanh toán</th>
+                            <th>Tiến độ</th>
+                            <th class="text-center">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentBody">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="progressModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Tiến độ học tập: <span id="modalStudentName" class="text-primary">...</span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-3 mb-4 text-center">
+                    <div class="col-4">
+                        <div class="p-3 bg-light rounded-3">
+                            <div class="h4 mb-0 text-primary" id="modalPercent">0%</div>
+                            <small class="text-muted">Hoàn thành</small>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="p-3 bg-light rounded-3">
+                            <div class="h4 mb-0 text-success" id="modalLessons">0/0</div>
+                            <small class="text-muted">Bài học</small>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="p-3 bg-light rounded-3">
+                            <div class="h4 mb-0 text-warning" id="modalQuiz">0.0</div>
+                            <small class="text-muted">Điểm Quiz</small>
+                        </div>
+                    </div>
+                </div>
+
+                <h6 class="fw-bold mb-3"><i class="fas fa-list-ul me-2"></i>Chi tiết lộ trình bài học</h6>
+                <div class="list-group list-group-flush border rounded-3 overflow-hidden" id="lessonDetails">
+                    </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-primary" onclick="alert('Đã gửi email nhắc nhở học tập qua MailKit!')">
+                    <i class="fas fa-paper-plane me-2"></i>Nhắc nhở học tập
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // 1. DỮ LIỆU MẪU (Dựa trên thông tin bác cung cấp)
+    const studentsData = [
+        {
+            id: 1,
+            username: "koke", // Thằng vừa nổ thông báo
+            email: "12@gmail.com",
+            avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=koke",
+            date: "27/04/2026",
+            isPremium: true,
+            vnpayId: "VNP14592031",
+            price: "500,000đ",
+            progress: 15,
+            isNew: true,
+            quizScore: 8.5,
+            lessonsDone: 3,
+            lessonsTotal: 20
+        },
+        {
+            id: 2,
+            username: "NguyenVanA",
+            email: "vana@gmail.com",
+            avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=A",
+            date: "25/04/2026",
+            isPremium: false,
+            vnpayId: null,
+            price: "0đ",
+            progress: 60,
+            isNew: false,
+            quizScore: 7.0,
+            lessonsDone: 12,
+            lessonsTotal: 20
+        }
+    ];
+
+    const lessonsData = [
+        { title: "Giới thiệu về ASP.NET Core", status: "completed", type: "Video" },
+        { title: "Cấu trúc Repository Pattern", status: "completed", type: "Video" },
+        { title: "Bài tập Quiz: Dependency Injection", status: "completed", type: "Quiz" },
+        { title: "Kết nối SQL Server với EF Core", status: "processing", type: "Video" },
+        { title: "Xây dựng Real-time với SignalR", status: "locked", type: "Video" }
+    ];
+
+    // 2. HÀM RENDER DANH SÁCH
+    function initTable() {
+        const body = document.getElementById('studentBody');
+        document.getElementById('totalCount').innerText = studentsData.length;
+        
+        body.innerHTML = studentsData.map(s => `
+            <tr class="${s.isNew ? 'new-row' : ''}">
+                <td class="ps-4">
+                    <div class="d-flex align-items-center">
+                        <img src="${s.avatar}" class="avatar-img me-3">
+                        <div>
+                            <div class="fw-bold text-dark">${s.username}</div>
+                            <div class="small text-muted">${s.email}</div>
+                        </div>
+                    </div>
+                </td>
+                <td>${s.date}</td>
+                <td><span class="badge ${s.isPremium ? 'badge-premium' : 'badge-free'}">${s.isPremium ? 'PREMIUM' : 'FREE'}</span></td>
+                <td>
+                    ${s.isPremium ? `<div class="text-success small fw-bold">${s.vnpayId}</div><div>${s.price}</div>` : '<span class="text-muted italic small">N/A</span>'}
+                </td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="progress flex-grow-1 me-2" style="height: 6px;">
+                            <div class="progress-bar bg-primary" style="width: ${s.progress}%"></div>
+                        </div>
+                        <small class="fw-bold">${s.progress}%</small>
+                    </div>
+                </td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-outline-primary me-1" onclick="showDetail(${s.id})">Xem tiến độ</button>
+                    ${s.isPremium ? `<button class="btn btn-sm btn-dark" onclick="sendVipMail('${s.email}')">Gửi tài liệu VIP</button>` : ''}
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    // 3. HÀM HIỂN THỊ CHI TIẾT (MODAL)
+    function showDetail(id) {
+        const student = studentsData.find(s => s.id === id);
+        if(!student) return;
+
+        document.getElementById('modalStudentName').innerText = student.username;
+        document.getElementById('modalPercent').innerText = student.progress + "%";
+        document.getElementById('modalLessons').innerText = `${student.lessonsDone}/${student.lessonsTotal}`;
+        document.getElementById('modalQuiz').innerText = student.quizScore;
+
+        const lessonList = document.getElementById('lessonDetails');
+        lessonList.innerHTML = lessonsData.map(l => {
+            let icon = '<i class="far fa-circle text-muted me-3"></i>';
+            let badge = '<span class="badge bg-light text-muted">Chưa xem</span>';
+            
+            if(l.status === 'completed') {
+                icon = '<i class="fas fa-check-circle text-success me-3"></i>';
+                badge = '<span class="badge bg-success-subtle text-success">Hoàn thành</span>';
+            } else if(l.status === 'processing') {
+                icon = '<i class="fas fa-play-circle text-primary me-3"></i>';
+                badge = '<span class="badge bg-primary-subtle text-primary">Đang học</span>';
+            }
+
+            return `
+                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                    <div class="d-flex align-items-center">
+                        ${icon}
+                        <span>${l.title} <small class="text-muted">(${l.type})</small></span>
+                    </div>
+                    ${badge}
+                </div>
+            `;
+        }).join('');
+
+        const myModal = new bootstrap.Modal(document.getElementById('progressModal'));
+        myModal.show();
+    }
+
+    function sendVipMail(email) {
+        alert("Hệ thống MailKit đang đóng gói tài liệu...\nĐã gửi link Cloudinary vào email: " + email);
+    }
+
+    window.onload = initTable;
+</script>
+</body>
+</html>
