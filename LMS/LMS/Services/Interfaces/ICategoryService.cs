@@ -15,5 +15,11 @@ namespace LMS.Services.Interfaces
         Task<CategoryModel> GetByIdOrThrowAsync(int id);
         Task<(List<CategoryModel> Data, int Total)> GetCategoryListAsync(
         int page, int pageSize, string keySearch, DateTime? fromDate, DateTime? toDate, int isActive);
+        Task RestoreAsync(int id);      
+        Task HardDeleteAsync(int id);  
+
+        Task<(List<CategoryResponeDTO> Data, int Total)> GetDeletedCategoryListAsync(
+            int page, int pageSize, string keySearch);
+
     }
 }

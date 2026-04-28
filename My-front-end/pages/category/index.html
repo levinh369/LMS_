@@ -35,6 +35,36 @@
     
     /* Padding cho container tránh dính Header/Footer */
     .main-content { min-height: 80vh; padding-top: 2rem; padding-bottom: 2rem; }
+    /* Tạo hiệu ứng đổ bóng nhẹ cho các ô input */
+.shadow-sm-soft {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.03) !important;
+}
+
+/* Tùy chỉnh màu sắc nút cho hiện đại */
+.btn-primary {
+    background-color: #4e73df;
+    border-color: #4e73df;
+}
+
+.btn-success {
+    background-color: #1cc88a;
+    border-color: #1cc88a;
+}
+
+/* Hiệu ứng khi hover vào nút Thùng rác */
+.btn-outline-danger:hover {
+    background-color: #fff5f5;
+    color: #e74a3b;
+    border-color: #e74a3b;
+}
+
+/* Đảm bảo Label luôn đẹp */
+.form-label {
+    margin-bottom: 0.4rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+}
 </style>
 
 <div id="sidebar-placeholder"></div>
@@ -47,49 +77,61 @@
         </div>
     </div>
 
-    <div class="card shadow-sm">
-        <div class="card-body p-4">
-            <div class="row g-3">
-                <div class="col-lg-3 col-md-6">
-                    <label class="form-label fw-semibold text-muted small">Từ khóa</label>
-                    <div class="input-group">
-                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
-                        <input type="text" id="keySearch" class="form-control border-start-0" placeholder="Tên danh mục...">
-                    </div>
+    <div class="card shadow-sm border-0">
+    <div class="card-body p-4">
+        <div class="row g-3">
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label fw-bold text-dark small">Từ khóa</label>
+                <div class="input-group shadow-sm-soft">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" id="keySearch" class="form-control border-start-0" placeholder="Tên danh mục...">
                 </div>
+            </div>
 
-                <div class="col-lg-2 col-md-3 col-6">
-                    <label class="form-label fw-semibold text-muted small">Từ ngày</label>
-                    <input type="date" id="fromDate" class="form-control">
-                </div>
-                <div class="col-lg-2 col-md-3 col-6">
-                    <label class="form-label fw-semibold text-muted small">Đến ngày</label>
-                    <input type="date" id="toDate" class="form-control">
-                </div>
+            <div class="col-lg-2 col-md-3 col-6">
+                <label class="form-label fw-bold text-dark small">Từ ngày</label>
+                <input type="date" id="fromDate" class="form-control">
+            </div>
 
-                <div class="col-lg-2 col-md-6">
-                    <label class="form-label fw-semibold text-muted small">Trạng thái</label>
-                    <select id="isActive" class="form-select">
-                        <option value="-1">Tất cả</option>
-                        <option value="1">Hoạt động</option>
-                        <option value="0">Khóa</option>
-                    </select>
-                </div>
+            <div class="col-lg-2 col-md-3 col-6">
+                <label class="form-label fw-bold text-dark small">Đến ngày</label>
+                <input type="date" id="toDate" class="form-control">
+            </div>
 
-                <div class="col-lg-3 col-md-6 d-flex align-items-end gap-2">
-                    <button onclick="Category.loadData(1)" class="btn btn-filter flex-grow-1" title="Lọc dữ liệu">
-                        <i class="bi bi-funnel"></i> Lọc
-                    </button>
-                    <button onclick="Category.resetSearch()" class="btn btn-reset" title="Làm mới">
-                        <i class="bi bi-arrow-clockwise"></i>
-                    </button>
-                    <button onclick="Category.openCreateModal()" class="btn btn-add flex-grow-1">
-                        <i class="bi bi-plus-lg"></i> Thêm
-                    </button>
-                </div>
+            <div class="col-lg-2 col-md-6">
+                <label class="form-label fw-bold text-dark small">Trạng thái</label>
+                <select id="isActive" class="form-select">
+                    <option value="-1">Tất cả</option>
+                    <option value="1">Hoạt động</option>
+                    <option value="0">Khóa</option>
+                </select>
+            </div>
+
+            <div class="col-lg-3 col-md-6 d-flex align-items-end gap-2">
+                <button onclick="Category.loadData(1)" class="btn btn-primary w-100 fw-semibold">
+                    <i class="bi bi-funnel-fill me-1"></i> Lọc
+                </button>
+                <button onclick="Category.resetSearch()" class="btn btn-light border" title="Làm mới">
+                    <i class="bi bi-arrow-clockwise"></i>
+                </button>
+            </div>
+        </div>
+
+        <hr class="my-4 opacity-25">
+
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 fw-bold text-dark">Danh sách danh mục</h5>
+            <div class="d-flex gap-2">
+                <button onclick="location.href='/Admin/Category/Trash'" class="btn btn-outline-danger d-flex align-items-center" title="Thùng rác">
+                    <i class="bi bi-trash3 me-1"></i> <span class="d-none d-sm-inline">Thùng rác</span>
+                </button>
+                <button onclick="Category.openCreateModal()" class="btn btn-success d-flex align-items-center fw-semibold px-4">
+                    <i class="bi bi-plus-lg me-2"></i> Thêm mới
+                </button>
             </div>
         </div>
     </div>
+</div>
 
     <div class="card shadow-sm">
         <div class="card-body p-0">

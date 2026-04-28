@@ -1,8 +1,10 @@
 ﻿using LMS.DTOs.Request;
 using LMS.DTOs.Respone;
 using LMS.Models;
+using LMS.Repositories;
 using LMS.Repositories.Interfaces;
 using LMS.Services.Interfaces;
+using System.Linq.Expressions;
 
 namespace LMS.Services
 {
@@ -86,6 +88,43 @@ namespace LMS.Services
                 CreatedAt = c.CreatedAt,
             }).ToList();
             return (modelList, total);
+        }
+
+        public async Task<(List<CategoryResponeDTO> Data, int Total)> GetDeletedCategoryListAsync(int page, int pageSize, string keySearch)
+        {
+            Expression<Func<CategoryModel, bool>> filter = x =>
+                string.IsNullOrEmpty(keySearch) || x.Name.Contains(keySearch);
+
+            // 2. Gọi Repo lấy Entity
+            var (entities, total) = await categoryRepository.GetDeletedListAsync(filter, page, pageSize);
+
+            // 3. Map sang DTO
+            var dtoList = entities.Select(c => new CategoryResponeDTO
+            {
+                Id = c.Id,
+                Name = c.Name,
+                Description = c.Description,
+                IsActive = c.IsActive,
+                CreateAt = c.CreatedAt
+            }).ToList();
+
+            return (dtoList, total);
+        }
+
+        public async Task HardDeleteAsync(int id)
+        {
+            var entity = await categoryRepository.GetByIdAsync(id);
+            if (entity == null)
+                throw new Exception("Danh mục khóa học không tồn tại");
+            await categoryRepository.HardDeleteAsync(entity);
+        }
+
+        public async Task RestoreAsync(int id)
+        {
+            var entity = await categoryRepository.GetByIdAsync(id);
+            if (entity == null)
+                throw new Exception("Danh mục khóa học không tồn tại");
+            await categoryRepository.RestoreAsync(entity);
         }
 
         public async Task UpdateAsync(int id, CategoryRequestDTO dto)

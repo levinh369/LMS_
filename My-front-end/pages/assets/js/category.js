@@ -104,9 +104,32 @@ var Category = {
         $('#category-table-body').html(html);
     },
 
-    renderPagination: function (total, currentPage) {
-        // Logic render phân trang của bạn ở đây...
-    },
+    showPaging: function (totalCount, totalPages, currentPage) {
+    $('#total-records').text(totalCount);
+    if (totalPages <= 1) {
+        $('#paging-ul').empty();
+        $('#paging-ul').removeData("twbs-pagination");
+        $('#paging-ul').unbind("page");
+        return;
+    }
+    $('#paging-ul').twbsPagination('destroy');
+
+    // 4. Khởi tạo phân trang
+    $('#paging-ul').twbsPagination({
+        totalPages: totalPages,
+        visiblePages: 5,
+        startPage: currentPage,
+        first: '<i class="bi bi-chevron-double-left"></i>', // Dùng Bootstrap Icon cho đồng bộ
+        prev: '<i class="bi bi-chevron-left"></i>',
+        next: '<i class="bi bi-chevron-right"></i>',
+        last: '<i class="bi bi-chevron-double-right"></i>',
+        onPageClick: function (event, page) {
+            if (page !== currentPage) {
+                Course.loadData(page); // Gọi lại hàm load dữ liệu của bạn
+            }
+        }
+    });
+},
     openCreateModal: function(){
         $('#frmCategory')[0].reset();
         $('#categoryModal').modal('show');
@@ -253,6 +276,146 @@ showPaging: function (totalCount, totalPages, currentPage) {
             }
         }
     });
+},
+trash: {
+    init: function() {
+        this.loadData(1);
+    },
+
+    loadData: async function(page) {
+        const keySearch = document.getElementById('keySearchTrash')?.value || '';
+        const pageSize = Category.config.pageSize || 10;
+        const url = `${Category.config.apiUrl}/list-deleted?page=${page}&pageSize=${pageSize}&keySearch=${encodeURIComponent(keySearch)}`;
+
+        try {
+            const response = await fetch(url);
+            const res = await response.json();
+
+            if (res.success || res.Success) {
+                this.renderTable(res.data || res.Data);
+                this.showPaging(res.total || res.Total, page);
+            }
+        } catch (error) {
+            console.error("Lỗi loadData:", error);
+        }
+    },
+
+    renderTable: function(data) {
+        const tbody = document.getElementById('trash-table-body');
+        if (!tbody) return;
+
+        let html = '';
+        if (!data || data.length === 0) {
+            html = `<tr><td colspan="4" class="text-center py-5 text-muted">Thùng rác trống</td></tr>`;
+        } else {
+            data.forEach(item => {
+                html += `
+                <tr>
+                    <td class="ps-4 fw-bold text-dark">${item.name}</td>
+                    <td><span class="deleted-date">${new Date(item.createAt || item.createdAt).toLocaleDateString('vi-VN')}</span></td>
+                    <td><small class="text-muted">${item.description || '...'}</small></td>
+                    <td class="text-center">
+                        <div class="d-flex justify-content-center gap-2">
+                            <button class="btn-action-restore" onclick="Category.trash.restore(${item.id})" title="Khôi phục">
+                                <i class="bi bi-arrow-counterclockwise"></i>
+                            </button>
+                            <button class="btn-action-hard-delete" onclick="Category.trash.hardDelete(${item.id})" title="Xóa vĩnh viễn">
+                                <i class="bi bi-trash3-fill"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>`;
+            });
+        }
+        tbody.innerHTML = html;
+    },
+
+    // --- SỬ DỤNG SWEETALERT2 CHO KHÔI PHỤC ---
+    restore: function(id) {
+        Swal.fire({
+            title: 'Khôi phục danh mục?',
+            text: "Danh mục này sẽ xuất hiện lại ở danh sách chính!",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#198754',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Đúng, khôi phục ngay!',
+            cancelButtonText: 'Hủy'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    const response = await fetch(`${Category.config.apiUrl}/restore/${id}`, { method: 'POST' });
+                    const res = await response.json();
+
+                    if (res.success || res.Success) {
+                        Swal.fire('Thành công!', 'Danh mục đã được khôi phục.', 'success');
+                        this.loadData(1);
+                    } else {
+                        Swal.fire('Lỗi!', res.message || 'Không thể khôi phục.', 'error');
+                    }
+                } catch (error) {
+                    Swal.fire('Lỗi!', 'Kết nối server thất bại.', 'error');
+                }
+            }
+        });
+    },
+
+    // --- SỬ DỤNG SWEETALERT2 CHO XÓA VĨNH VIỄN ---
+    hardDelete: function(id) {
+        Swal.fire({
+            title: 'Xóa vĩnh viễn?',
+            text: "Hành động này không thể hoàn tác! Toàn bộ dữ liệu sẽ mất sạch.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Tôi hiểu, cứ xóa đi!',
+            cancelButtonText: 'Quay lại'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    const response = await fetch(`${Category.config.apiUrl}/hard-delete/${id}`, { method: 'DELETE' });
+                    const res = await response.json();
+
+                    if (res.success || res.Success) {
+                        Swal.fire('Đã xóa!', 'Dữ liệu đã xóa vĩnh viễn.', 'success');
+                        this.loadData(1);
+                    } else {
+                        Swal.fire('Thất bại!', res.message || 'Có lỗi xảy ra hoặc ràng buộc dữ liệu.', 'error');
+                    }
+                } catch (error) {
+                    Swal.fire('Lỗi!', 'Không thể thực hiện yêu cầu.', 'error');
+                }
+            }
+        });
+    },
+
+    showPaging: function (totalCount, totalPages, currentPage) {
+    $('#total-records').text(totalCount);
+    if (totalPages <= 1) {
+        $('#paging-ul').empty();
+        $('#paging-ul').removeData("twbs-pagination");
+        $('#paging-ul').unbind("page");
+        return;
+    }
+    $('#paging-ul').twbsPagination('destroy');
+
+    // 4. Khởi tạo phân trang
+    $('#paging-ul').twbsPagination({
+        totalPages: totalPages,
+        visiblePages: 5,
+        startPage: currentPage,
+        first: '<i class="bi bi-chevron-double-left"></i>', // Dùng Bootstrap Icon cho đồng bộ
+        prev: '<i class="bi bi-chevron-left"></i>',
+        next: '<i class="bi bi-chevron-right"></i>',
+        last: '<i class="bi bi-chevron-double-right"></i>',
+        onPageClick: function (event, page) {
+            if (page !== currentPage) {
+                Course.loadData(page); // Gọi lại hàm load dữ liệu của bạn
+            }
+        }
+    });
+},
 }
 };
 
