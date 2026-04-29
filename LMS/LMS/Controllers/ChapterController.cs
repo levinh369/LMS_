@@ -138,7 +138,7 @@ namespace LMS.Controllers
         {
             try
             {
-                await courseService.HardDeleteAsync(id);
+                await chapterService.HardDeleteAsync(id);
                 return Ok(new { Success = true, Message = "Đã xóa vĩnh viễn chương học" });
             }
             catch (Exception ex)

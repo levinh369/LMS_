@@ -15,14 +15,13 @@ namespace LMS.Services.Interfaces
         Task CreateAsync(ChapterRequestDTO dto);
         Task<ChapterModel> GetByIdOrThrowAsync(int id);
         Task<(List<ChapterResponseDTO> Data, int Total)> GetChaperListAsync(
-        int page, int pageSize, string keySearch, DateTime? fromDate, DateTime? toDate, int isActive);
+            int page, int pageSize, string keySearch, DateTime? fromDate, DateTime? toDate, int isActive);
         Task<bool> ReorderChaptersAsync(int courseId, List<int> chapterId);
+
+        // --- Phần dành cho Thùng rác ---
         Task RestoreAsync(int id);
         Task HardDeleteAsync(int id);
-
         Task<(List<ChapterResponseDTO> Data, int Total)> GetDeletedChapterListAsync(
             int page, int pageSize, string keySearch);
     }
-
-
 }
