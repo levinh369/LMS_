@@ -24,5 +24,5 @@ namespace LMS.Services.Interfaces
             int page, int pageSize, string keySearch);
     }
 
-}
+
 }
