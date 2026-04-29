@@ -7,6 +7,7 @@ using LMS.Repositories;
 using LMS.Repositories.Interfaces;
 using LMS.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 
 namespace LMS.Services
 {
@@ -490,6 +491,48 @@ namespace LMS.Services
         {
 
             return await userProgressRepository.GetResumeLessonIdAsync(userId, courseId);
+        }
+        public async Task<(List<CourseResponeDTO> Data, int Total)> GetDeletedCourseListAsync(int page, int pageSize, string keySearch)
+        {
+            Expression<Func<CourseModel, bool>> filter = x =>
+                string.IsNullOrEmpty(keySearch) || x.Title.Contains(keySearch);
+
+            // 2. Gọi Repo lấy Entity
+            var (entities, total) = await courseRepository.GetDeletedListAsync(
+                filter,
+                page,
+                pageSize,
+                x => x.Category 
+            );
+
+            // 3. Map sang DTO
+            var dtoList = entities.Select(c => new CourseResponeDTO
+            {
+                CourseId = c.Id,
+                Title = c.Title,
+                Description = c.Description,
+                CategoryName = c.Category != null ? c.Category.Name : "Chưa phân loại", 
+                UpdatedAt = c.UpdatedAt,
+
+            }).ToList();
+
+            return (dtoList, total);
+        }
+
+        public async Task HardDeleteAsync(int id)
+        {
+            var entity = await courseRepository.GetByIdAsync(id);
+            if (entity == null)
+                throw new Exception("Khóa học không tồn tại");
+            await courseRepository.HardDeleteAsync(entity);
+        }
+
+        public async Task RestoreAsync(int id)
+        {
+            var entity = await courseRepository.GetByIdAsync(id);
+            if (entity == null)
+                throw new Exception("Khóa học không tồn tại");
+            await courseRepository.RestoreAsync(entity);
         }
     }
 }

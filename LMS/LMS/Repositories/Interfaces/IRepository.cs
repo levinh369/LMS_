@@ -14,8 +14,9 @@ namespace LMS.Repositories.Interfaces
         Task RestoreAsync(T entity);         // Khôi phục từ thùng rác (IsActive = true)
         Task HardDeleteAsync(T entity);      // Xóa vĩnh viễn khỏi Database
         Task<(List<T> Data, int Total)> GetDeletedListAsync(
-        Expression<Func<T, bool>> filter,
-        int page,
-        int pageSize);
+    Expression<Func<T, bool>> filter,
+    int page,
+    int pageSize,
+    params Expression<Func<T, object>>[] includeProperties);
     }
 }

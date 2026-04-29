@@ -135,15 +135,18 @@
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-primary w-100 shadow-sm fw-bold" onclick="Lesson.loadData()">
-                            <i class="bi bi-search me-1"></i> TÌM KIẾM
-                        </button>
-                        <button class="btn btn-outline-secondary w-50 shadow-sm" onclick="Lesson.resetFilters()">
-                            <i class="bi bi-arrow-clockwise"></i>
-                        </button>
-                    </div>
-                </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-primary flex-fill shadow-sm fw-bold" onclick="Lesson.loadData()">
+            <i class="bi bi-search me-1"></i> TÌM KIẾM
+        </button>
+        <button class="btn btn-outline-secondary shadow-sm" onclick="Lesson.resetFilters()">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+        <a href="course_trash.html" class="btn btn-outline-danger shadow-sm d-flex align-items-center justify-content-center">
+            <i class="bi bi-trash3 me-1"></i> Thùng rác
+        </a>
+    </div>
+</div>
             </div>
         </div>
     </div>
@@ -430,3 +433,9 @@
 
 </body>
 </html>
+<script>
+    $(document).ready(function () {
+    Lesson.init();
+    Lesson.addBulkRow();
+});
+</script>

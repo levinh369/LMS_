@@ -17,7 +17,12 @@ namespace LMS.Services.Interfaces
         Task<(List<ChapterResponseDTO> Data, int Total)> GetChaperListAsync(
         int page, int pageSize, string keySearch, DateTime? fromDate, DateTime? toDate, int isActive);
         Task<bool> ReorderChaptersAsync(int courseId, List<int> chapterId);
+        Task RestoreAsync(int id);
+        Task HardDeleteAsync(int id);
 
-        
+        Task<(List<ChapterResponseDTO> Data, int Total)> GetDeletedChapterListAsync(
+            int page, int pageSize, string keySearch);
     }
+
+}
 }

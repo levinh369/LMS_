@@ -940,12 +940,162 @@ showPaging: function (totalCount, totalPages, currentPage) {
             }
         }
     });
+},
+lessontrash: {
+    init: function() {
+        this.loadData(1);
+    },
+
+    loadData: async function(page) {
+        // Sử dụng config pageSize từ đối tượng cha (ví dụ Lesson.config)
+        const pageSize = Lesson.config.pageSize || 10;
+        const url = `${Lesson.config.apiUrl}/list-deleted?page=${page}&pageSize=${pageSize}`;
+
+        try {
+            const response = await fetch(url);
+            const res = await response.json();
+
+            if (res.success || res.Success) {
+                this.renderTable(res.data || res.Data);
+                this.showPaging(res.total || res.Total || res.totalCount, page);
+                
+                // Cập nhật text tổng số bản ghi nếu có element
+                const totalEl = document.getElementById('total-records');
+                if (totalEl) totalEl.innerText = res.total || res.totalCount || 0;
+            }
+        } catch (error) {
+            console.error("Lỗi load thùng rác bài học:", error);
+        }
+    },
+
+    renderTable: function(data) {
+        // Đảm bảo ID này khớp với id trong file lesson_trash.html của bạn
+        const tbody = document.getElementById('lessonTrashData');
+        if (!tbody) return;
+
+        let html = '';
+        if (!data || data.length === 0) {
+            html = '<tr><td colspan="6" class="text-center py-5 text-muted">Thùng rác bài học trống</td></tr>';
+        } else {
+            data.forEach((item, index) => {
+                html += `
+                <tr>
+                    <td class="ps-3">${index + 1}</td>
+                    <td>
+                        <div class="fw-bold text-dark">${item.title}</div>
+                        <small class="text-muted">Thứ tự: ${item.orderIndex}</small>
+                    </td>
+                    <td>
+                        <div class="chapter-name">
+                            <i class="bi bi-folder2 me-1"></i>${item.chapterName || 'N/A'}
+                        </div>
+                    </td>
+                    <td>
+                        <span class="video-id-badge">ID: ${item.videoId || '---'}</span>
+                        <div class="small text-primary">${item.provider || ''}</div>
+                    </td>
+                    <td>
+                        <span class="text-dark"><i class="bi bi-clock me-1"></i>${item.formattedDuration || '00:00'}</span>
+                    </td>
+                    <td>
+                        <span class="badge ${item.isPreview ? 'bg-info-subtle text-info' : 'bg-secondary-subtle text-secondary'}">
+                            ${item.isPreview ? 'Cho phép' : 'Không'}
+                        </span>
+                    </td>
+                    <td class="text-center text-nowrap">
+                        <div class="btn-group shadow-sm">
+                            <button class="btn btn-success btn-sm" title="Khôi phục" 
+                                    onclick="Lesson.lessontrash.restore(${item.id})">
+                                <i class="bi bi-arrow-counterclockwise"></i>
+                            </button>
+                            <button class="btn btn-danger btn-sm" title="Xóa vĩnh viễn" 
+                                    onclick="Lesson.lessontrash.hardDelete(${item.id})">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>`;
+            });
+        }
+        tbody.innerHTML = html;
+    },
+
+    restore: function(id) {
+        Swal.fire({
+            title: 'Khôi phục bài học?',
+            text: "Bài học sẽ hiển thị lại trong chương tương ứng.",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#198754',
+            confirmButtonText: 'Khôi phục',
+            cancelButtonText: 'Hủy'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    const response = await fetch(`${Lesson.config.apiUrl}/restore/${id}`, { method: 'POST' });
+                    const res = await response.json();
+                    if (res.success || res.Success) {
+                        Swal.fire('Thành công!', 'Đã khôi phục bài học.', 'success');
+                        this.loadData(1);
+                    } else {
+                        Swal.fire('Thất bại!', res.message || 'Có lỗi xảy ra', 'error');
+                    }
+                } catch (e) { console.error(e); }
+            }
+        });
+    },
+
+    hardDelete: function(id) {
+        Swal.fire({
+            title: 'Xóa vĩnh viễn bài học?',
+            text: "Hành động này không thể hoàn tác, dữ liệu video liên quan có thể bị ảnh hưởng!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            confirmButtonText: 'Xóa vĩnh viễn',
+            cancelButtonText: 'Hủy'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    const response = await fetch(`${Lesson.config.apiUrl}/hard-delete/${id}`, { method: 'DELETE' });
+                    const res = await response.json();
+                    if (res.success || res.Success) {
+                        Swal.fire('Đã xóa!', 'Bài học đã bị loại bỏ hoàn toàn.', 'success');
+                        this.loadData(1);
+                    } else {
+                        Swal.fire('Thất bại!', res.message || 'Không thể xóa bài học này.', 'error');
+                    }
+                } catch (e) { console.error(e); }
+            }
+        });
+    },
+
+    showPaging: function(totalCount, currentPage) {
+        const pageSize = Lesson.config.pageSize || 10;
+        const totalPages = Math.ceil(totalCount / pageSize);
+        
+        $('#paging-ul').twbsPagination('destroy');
+        if (totalPages > 0) {
+            $('#paging-ul').twbsPagination({
+                totalPages: totalPages,
+                startPage: currentPage,
+                visiblePages: 5,
+                first: '<<',
+                last: '>>',
+                next: '>',
+                prev: '<',
+                onPageClick: (event, page) => { 
+                    if (page !== currentPage) this.loadData(page); 
+                }
+            });
+        }
+    }
 }
 };
 
 
 // Chạy khởi tạo
-$(document).ready(function () {
-    Lesson.init();
-    Lesson.addBulkRow();
-});
+// $(document).ready(function () {
+//     Lesson.init();
+//     Lesson.addBulkRow();
+// });

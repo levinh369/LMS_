@@ -25,5 +25,10 @@ namespace LMS.Services.Interfaces
         Task<int> GetBunnyVideoDurationAsync(string videoId);
         Task<int> GetCourseId(int chapterId);
         Task<List<LessonBasicDTO>> GetListLessonBasicAsync(int courseId);
+        Task RestoreAsync(int id);
+        Task HardDeleteAsync(int id);
+
+        Task<(List<LessonResponseDTO> Data, int Total)> GetDeletedLessonListAsync(
+            int page, int pageSize, string keySearch);
     }
 }

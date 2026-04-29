@@ -28,5 +28,10 @@ namespace LMS.Services.Interfaces
         Task UpdateLastWatchedTime(int userId, int lessonId, int time);
         Task<List<CourseSearchDTO>> SearchActiveCoursesAsync(string query);
         Task<int> GetResumeLessonIdAsync(int userId, int courseId);
+        Task RestoreAsync(int id);
+        Task HardDeleteAsync(int id);
+
+        Task<(List<CourseResponeDTO> Data, int Total)> GetDeletedCourseListAsync(
+            int page, int pageSize, string keySearch);
     }
 }

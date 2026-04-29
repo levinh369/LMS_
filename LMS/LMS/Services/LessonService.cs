@@ -8,10 +8,11 @@ using LMS.Repositories.Interfaces;
 using LMS.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using System.Linq.Expressions;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Sockets;
 using System.Security.Authentication;
-using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -365,6 +366,54 @@ namespace LMS.Services
         {
             // Gọi thẳng sang Repo bốc dữ liệu đã sắp xếp
             return await lessonRepository.GetListLessonBasicAsync(courseId);
+        }
+        public async Task<(List<LessonResponseDTO> Data, int Total)> GetDeletedLessonListAsync(int page, int pageSize, string keySearch)
+        {
+            Expression<Func<LessonModel, bool>> filter = x =>
+                string.IsNullOrEmpty(keySearch) || x.Title.Contains(keySearch);
+
+            // 2. Gọi Repo lấy Entity
+            var (entities, total) = await lessonRepository.GetDeletedListAsync(
+                filter,
+                page,
+                pageSize,
+                x => x.Chapter
+            );
+
+            // 3. Map sang DTO
+            var dtoList = entities.Select(c => new LessonResponseDTO
+            {
+                Id = c.Id,
+                chapterId = c.ChapterId,
+                chapterName = c.Chapter.Title,
+                Title = c.Title,
+                VideoId = c.VideoId,
+                Provider = c.Provider,
+                IsActive = c.IsActive,
+                CreatedAt = c.CreatedAt,
+                IsPreview = c.IsPreview,
+                FormattedDuration = FormatDuration(c.Duration),
+                OrderIndex = c.OrderIndex,
+
+            }).ToList();
+
+            return (dtoList, total);
+        }
+
+        public async Task HardDeleteAsync(int id)
+        {
+            var entity = await lessonRepository.GetByIdAsync(id);
+            if (entity == null)
+                throw new Exception("Bài học không tồn tại");
+            await lessonRepository.HardDeleteAsync(entity);
+        }
+
+        public async Task RestoreAsync(int id)
+        {
+            var entity = await lessonRepository.GetByIdAsync(id);
+            if (entity == null)
+                throw new Exception("Bài học không tồn tại");
+            await lessonRepository.RestoreAsync(entity);
         }
     }
 }

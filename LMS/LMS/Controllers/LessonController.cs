@@ -1,6 +1,7 @@
 ﻿using LMS.DTOs.Request;
 using LMS.Services;
 using LMS.Services.Interfaces;
+using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -156,6 +157,55 @@ namespace LMS.Controllers
                 success = true,
                 data = data,
             });
+        }
+        [HttpGet("list-deleted")]
+        public async Task<IActionResult> GetDeletedList(int page = 1, int pageSize = 10, string? keySearch = "")
+        {
+            try
+            {
+                var (data, total) = await lessonService.GetDeletedLessonListAsync(page, pageSize, keySearch ?? "");
+
+                return Ok(new
+                {
+                    Success = true,
+                    Data = data,
+                    Total = total,
+                    Page = page,
+                    PageSize = pageSize
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Success = false, Message = ex.Message });
+            }
+        }
+
+        [HttpPost("restore/{id}")]
+        public async Task<IActionResult> Restore(int id)
+        {
+            try
+            {
+                await lessonService.RestoreAsync(id);
+                return Ok(new { Success = true, Message = "Khôi phục bài học thành công" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Success = false, Message = ex.Message });
+            }
+        }
+
+        [HttpDelete("hard-delete/{id}")]
+        public async Task<IActionResult> HardDelete(int id)
+        {
+            try
+            {
+                await lessonService.HardDeleteAsync(id);
+                return Ok(new { Success = true, Message = "Đã xóa vĩnh viễn bài  học" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Success = false, Message = "Không thể xóa vĩnh viễn bài học này vì có dữ liệu liên quan." });
+            }
         }
     }
 }

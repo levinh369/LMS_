@@ -4,6 +4,7 @@ using LMS.Models;
 using LMS.Repositories;
 using LMS.Repositories.Interfaces;
 using LMS.Services.Interfaces;
+using System.Linq.Expressions;
 
 namespace LMS.Services
 {
@@ -141,6 +142,47 @@ namespace LMS.Services
             entity.UpdatedAt = DateTime.UtcNow;
             await chapterRepository.UpdateAsync(entity);
             return "SUCCESS"; ;
+        }
+        public async Task<(List<ChapterResponseDTO> Data, int Total)> GetDeletedChapterListAsync(int page, int pageSize, string keySearch)
+        {
+            Expression<Func<ChapterModel, bool>> filter = x =>
+                string.IsNullOrEmpty(keySearch) || x.Title.Contains(keySearch);
+
+            // 2. Gọi Repo lấy Entity
+            var (entities, total) = await chapterRepository.GetDeletedListAsync(
+                filter,
+                page,
+                pageSize
+            );
+
+            // 3. Map sang DTO
+            var dtoList = entities.Select(c => new ChapterResponseDTO
+            {
+                Id = c.Id,
+                Title = c.Title,
+                Order = c.OrderIndex,
+                IsActive = c.IsActive,
+                CreateAt = c.CreatedAt,
+
+            }).ToList();
+
+            return (dtoList, total);
+        }
+
+        public async Task HardDeleteAsync(int id)
+        {
+            var entity = await chapterRepository.GetByIdAsync(id);
+            if (entity == null)
+                throw new Exception("Chương học không tồn tại");
+            await chapterRepository.HardDeleteAsync(entity);
+        }
+
+        public async Task RestoreAsync(int id)
+        {
+            var entity = await chapterRepository.GetByIdAsync(id);
+            if (entity == null)
+                throw new Exception("Chương học không tồn tại");
+            await chapterRepository.RestoreAsync(entity);
         }
     }
 }

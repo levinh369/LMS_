@@ -545,6 +545,119 @@ listUl.innerHTML = dataArray.map((item, index) => `
         </li>
     `).join('');
 },
+trash: {
+        init: function() {
+            this.loadData(1);
+        },
+
+        loadData: async function(page) {
+            const pageSize = Course.config.pageSize;
+            const url = `${Course.config.apiUrl}/list-deleted?page=${page}&pageSize=${pageSize}`;
+
+            try {
+                const response = await fetch(url);
+                const res = await response.json();
+
+                if (res.success || res.Success) {
+                    this.renderTable(res.data || res.Data);
+                    this.showPaging(res.total || res.Total, page);
+                }
+            } catch (error) {
+                console.error("Lỗi load thùng rác khóa học:", error);
+            }
+        },
+
+        renderTable: function(data) {
+            const tbody = document.getElementById('course-trash-table-body');
+            if (!tbody) return;
+
+            let html = '';
+            if (!data || data.length === 0) {
+                html = '<tr><td colspan="5" class="text-center py-5 text-muted">Thùng rác trống</td></tr>';
+            } else {
+                data.forEach(item => {
+                    html += `
+                    <tr>
+                        <td class="ps-4">
+                            <img src="${item.image || '/assets/img/default-course.png'}" class="course-img shadow-sm">
+                        </td>
+                        <td>
+                            <div class="fw-bold text-dark">${item.title}</div>
+                            <small class="text-muted">ID: ${item.id}</small>
+                        </td>
+                        <td><span class="badge bg-light text-dark border">${item.categoryName || 'N/A'}</span></td>
+                        <td><span class="text-danger small fw-bold">${new Date(item.deletedAt || item.updatedAt).toLocaleDateString('vi-VN')}</span></td>
+                        <td class="text-center">
+                            <button class="btn-action btn-restore me-1" onclick="Course.trash.restore(${item.id})" title="Khôi phục">
+                                <i class="bi bi-arrow-counterclockwise"></i>
+                            </button>
+                            <button class="btn-action btn-delete" onclick="Course.trash.hardDelete(${item.id})" title="Xóa vĩnh viễn">
+                                <i class="bi bi-trash3-fill"></i>
+                            </button>
+                        </td>
+                    </tr>`;
+                });
+            }
+            tbody.innerHTML = html;
+        },
+
+        restore: function(id) {
+            Swal.fire({
+                title: 'Khôi phục khóa học?',
+                text: "Khóa học này sẽ quay lại danh sách hiển thị chính.",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#198754',
+                confirmButtonText: 'Đồng ý',
+                cancelButtonText: 'Hủy'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    const response = await fetch(`${Course.config.apiUrl}/restore/${id}`, { method: 'POST' });
+                    const res = await response.json();
+                    if (res.success || res.Success) {
+                        Swal.fire('Thành công!', 'Đã khôi phục khóa học.', 'success');
+                        this.loadData(1);
+                    }
+                }
+            });
+        },
+
+        hardDelete: function(id) {
+            Swal.fire({
+                title: 'Xóa vĩnh viễn?',
+                text: "Dữ liệu sẽ bị xóa sạch khỏi hệ thống và không thể khôi phục!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'Xóa ngay',
+                cancelButtonText: 'Hủy'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    const response = await fetch(`${Course.config.apiUrl}/hard-delete/${id}`, { method: 'DELETE' });
+                    const res = await response.json();
+                    if (res.success || res.Success) {
+                        Swal.fire('Đã xóa!', 'Khóa học đã bị xóa vĩnh viễn.', 'success');
+                        this.loadData(1);
+                    } else {
+                        Swal.fire('Thất bại!', res.message || 'Có lỗi xảy ra.', 'error');
+                    }
+                }
+            });
+        },
+
+        showPaging: function(totalCount, currentPage) {
+            const totalPages = Math.ceil(totalCount / Course.config.pageSize);
+            $('#paging-ul').twbsPagination('destroy');
+            if (totalPages > 0) {
+                $('#paging-ul').twbsPagination({
+                    totalPages: totalPages,
+                    startPage: currentPage,
+                    visiblePages: 5,
+                    onPageClick: (event, page) => { if (page !== currentPage) this.loadData(page); }
+                });
+            }
+        }
+    }
 };
 
 

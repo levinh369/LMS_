@@ -78,26 +78,28 @@ namespace LMS.Repositories
         }
 
         public async Task<(List<T> Data, int Total)> GetDeletedListAsync(
-            Expression<Func<T, bool>> filter,
-            int page,
-            int pageSize)
+     Expression<Func<T, bool>> filter,
+     int page,
+     int pageSize,
+     params Expression<Func<T, object>>[] includeProperties) // Thêm tham số này
         {
-            // 1. Tạo query cơ bản lấy các bản ghi ĐÃ XÓA
-            // Sử dụng .IgnoreQueryFilters() nếu bạn có dùng Global Query Filter ở DbContext
             var query = _dbSet.IgnoreQueryFilters().Where(x => x.IsDeleted == true);
 
-            // 2. Áp dụng thêm bộ lọc tìm kiếm (ví dụ: theo tên, theo mô tả...)
+            // Tự động Include các bảng liên quan nếu có truyền vào
+            foreach (var includeProperty in includeProperties)
+            {
+                query = query.Include(includeProperty);
+            }
+
             if (filter != null)
             {
                 query = query.Where(filter);
             }
 
-            // 3. Đếm tổng số lượng để phân trang
             int total = await query.CountAsync();
 
-            // 4. Lấy dữ liệu phân trang
             var data = await query
-                .OrderByDescending(x => x.UpdatedAt) // Ưu tiên những cái vừa xóa lên đầu
+                .OrderByDescending(x => x.UpdatedAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();

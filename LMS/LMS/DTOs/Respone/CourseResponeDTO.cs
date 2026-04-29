@@ -33,6 +33,7 @@ namespace LMS.DTOs.Respone
         public string LastLearnedFriendly { get; set; } = "Chưa bắt đầu";
         public double Progress { get; set; }
         public bool IsCompleted { get; set; }
+        public DateTime UpdatedAt { get; set; }
     }
     public class CourseResponeDetailDTO
     {

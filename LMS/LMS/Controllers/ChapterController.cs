@@ -1,6 +1,7 @@
 ﻿using LMS.DTOs.Request;
 using LMS.Services;
 using LMS.Services.Interfaces;
+using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -95,6 +96,55 @@ namespace LMS.Controllers
                 return Ok(new { message = "Thứ tự mới đã được ghi nhận!" });
 
             return BadRequest("Không cập nhật được thứ tự chương!.");
+        }
+        [HttpGet("list-deleted")]
+        public async Task<IActionResult> GetDeletedList(int page = 1, int pageSize = 10, string? keySearch = "")
+        {
+            try
+            {
+                var (data, total) = await chapterService.GetDeletedChapterListAsync(page, pageSize, keySearch ?? "");
+
+                return Ok(new
+                {
+                    Success = true,
+                    Data = data,
+                    Total = total,
+                    Page = page,
+                    PageSize = pageSize
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Success = false, Message = ex.Message });
+            }
+        }
+
+        [HttpPost("restore/{id}")]
+        public async Task<IActionResult> Restore(int id)
+        {
+            try
+            {
+                await chapterService.RestoreAsync(id);
+                return Ok(new { Success = true, Message = "Khôi phục chương học thành công" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Success = false, Message = ex.Message });
+            }
+        }
+
+        [HttpDelete("hard-delete/{id}")]
+        public async Task<IActionResult> HardDelete(int id)
+        {
+            try
+            {
+                await courseService.HardDeleteAsync(id);
+                return Ok(new { Success = true, Message = "Đã xóa vĩnh viễn chương học" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Success = false, Message = "Không thể xóa vĩnh viễn chương học này vì có dữ liệu liên quan." });
+            }
         }
     }
 }

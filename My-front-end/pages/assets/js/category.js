@@ -292,8 +292,10 @@ trash: {
             const res = await response.json();
 
             if (res.success || res.Success) {
+                 const totalCount = res.total || res.Total;
+                 const totalPages = Math.ceil(totalCount / pageSize);
                 this.renderTable(res.data || res.Data);
-                this.showPaging(res.total || res.Total, page);
+                this.showPaging(totalCount, totalPages, page);
             }
         } catch (error) {
             console.error("Lỗi loadData:", error);
@@ -421,6 +423,3 @@ trash: {
 
 
 // Chạy khởi tạo
-$(document).ready(function () {
-    Category.init();
-});

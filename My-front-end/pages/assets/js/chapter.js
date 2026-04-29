@@ -200,5 +200,97 @@ changeStatus: async function(id) {
     } catch (error) {
         toastr.error("Lỗi hệ thống!");
     }
+},
+chapterTrash: {
+    init: function() {
+        this.loadData(1);
+    },
+
+    loadData: async function(page) {
+        const pageSize = 10; // Hoặc lấy từ config của bạn
+        const url = `/api/Chapter/list-deleted?page=${page}&pageSize=${pageSize}`;
+
+        try {
+            const response = await fetch(url);
+            const res = await response.json();
+
+            if (res.success || res.Success) {
+                this.renderTable(res.data || res.Data);
+                this.showPaging(res.total || res.Total || res.totalCount, page);
+                document.getElementById('total-records').innerText = res.total || res.totalCount || 0;
+            }
+        } catch (error) {
+            console.error("Lỗi load thùng rác chương:", error);
+        }
+    },
+
+    renderTable: function(data) {
+        const tbody = document.getElementById('chapterTrashData');
+        if (!tbody) return;
+
+        let html = '';
+        if (!data || data.length === 0) {
+            html = '<tr><td colspan="5" class="text-center py-5 text-muted">Thùng rác chương trống</td></tr>';
+        } else {
+            data.forEach(item => {
+                html += `
+                <tr>
+                    <td class="ps-4 text-muted">#${item.id}</td>
+                    <td><span class="fw-bold text-dark">${item.title}</span></td>
+                    <td><span class="badge bg-secondary">Index: ${item.orderIndex || item.order}</span></td>
+                    <td>${new Date(item.createdAt || item.createAt).toLocaleDateString('vi-VN')}</td>
+                    <td class="text-end pe-4">
+                        <button class="btn btn-success btn-sm px-3 shadow-sm" onclick="Chapter.chapterTrash.restore(${item.id})">
+                            <i class="bi bi-arrow-counterclockwise"></i> Khôi phục
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm px-3 ms-1" onclick="Chapter.chapterTrash.hardDelete(${item.id})">
+                            <i class="bi bi-trash"></i> Xóa vĩnh viễn
+                        </button>
+                    </td>
+                </tr>`;
+            });
+        }
+        tbody.innerHTML = html;
+    },
+
+    restore: function(id) {
+        this.actionHandle(id, 'restore', 'Khôi phục chương này?', 'success');
+    },
+
+    hardDelete: function(id) {
+        this.actionHandle(id, 'hard-delete', 'Xóa vĩnh viễn chương và toàn bộ bài học bên trong?', 'warning', 'DELETE');
+    },
+
+    actionHandle: function(id, action, title, icon, method = 'POST') {
+        Swal.fire({
+            title: title,
+            icon: icon,
+            showCancelButton: true,
+            confirmButtonText: 'Đồng ý',
+            cancelButtonText: 'Hủy'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                const response = await fetch(`/api/Chapter/${action}/${id}`, { method: method });
+                const res = await response.json();
+                if (res.success || res.Success) {
+                    Swal.fire('Thành công!', '', 'success');
+                    this.loadData(1);
+                }
+            }
+        });
+    },
+
+    showPaging: function(totalCount, currentPage) {
+        $('#paging-ul').twbsPagination('destroy');
+        const totalPages = Math.ceil(totalCount / 10);
+        if (totalPages > 0) {
+            $('#paging-ul').twbsPagination({
+                totalPages: totalPages,
+                startPage: currentPage,
+                visiblePages: 5,
+                onPageClick: (event, page) => { if (page !== currentPage) this.loadData(page); }
+            });
+        }
+    }
 }
 };

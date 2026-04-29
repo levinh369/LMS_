@@ -249,5 +249,54 @@ namespace LMS.Controllers
                 return StatusCode(500, "Đã có lỗi xảy ra phía server khi tìm bài học tiếp theo.");
             }
         }
+        [HttpGet("list-deleted")]
+        public async Task<IActionResult> GetDeletedList(int page = 1, int pageSize = 10, string? keySearch = "")
+        {
+            try
+            {
+                var (data, total) = await courseService.GetDeletedCourseListAsync(page, pageSize, keySearch ?? "");
+
+                return Ok(new
+                {
+                    Success = true,
+                    Data = data,
+                    Total = total,
+                    Page = page,
+                    PageSize = pageSize
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Success = false, Message = ex.Message });
+            }
+        }
+
+        [HttpPost("restore/{id}")]
+        public async Task<IActionResult> Restore(int id)
+        {
+            try
+            {
+                await courseService.RestoreAsync(id);
+                return Ok(new { Success = true, Message = "Khôi phục khóa học thành công" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Success = false, Message = ex.Message });
+            }
+        }
+
+        [HttpDelete("hard-delete/{id}")]
+        public async Task<IActionResult> HardDelete(int id)
+        {
+            try
+            {
+                await courseService.HardDeleteAsync(id);
+                return Ok(new { Success = true, Message = "Đã xóa vĩnh viễn khóa học" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Success = false, Message = "Không thể xóa vĩnh viễn khóa học này vì có dữ liệu liên quan." });
+            }
+        }
     }
 }
