@@ -51,12 +51,15 @@ builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddSignalR();
-builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IDashBoardRepository, DashBoardRepository>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IYoutubeService, YoutubeService>();
 builder.Services.AddControllers();
+builder.Configuration.Sources.Clear(); // Xóa các nguồn mặc định nếu muốn kiểm soát hoàn toàn
+builder.Configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+                     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: false)
+                     .AddEnvironmentVariables();
 builder.Services.Configure<BunnyNetSettings>(builder.Configuration.GetSection("BunnyNet"));
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
