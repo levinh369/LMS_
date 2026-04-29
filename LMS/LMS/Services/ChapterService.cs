@@ -51,9 +51,14 @@ namespace LMS.Services
             await chapterRepository.AddAsync(chapter);
         }
 
-        public Task DeleteAsync(int id)
+        public async Task DeleteAsync(int id)
         {
-            throw new NotImplementedException();
+            var exist = await GetByIdOrThrowAsync(id);
+            if (exist.IsDeleted)
+            {
+                throw new Exception("Chuonwg ho đã bị xóa trước đó rồi");
+            }
+            await chapterRepository.DeleteAsync(exist);
         }
 
         public Task<IEnumerable<ChapterResponseDTO>> GetAllAsync()

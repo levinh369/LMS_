@@ -579,19 +579,19 @@ trash: {
                     html += `
                     <tr>
                         <td class="ps-4">
-                            <img src="${item.image || '/assets/img/default-course.png'}" class="course-img shadow-sm">
+                            <img src="${item.thumbnailUrl || '/assets/img/default-course.png'}" class="course-img shadow-sm">
                         </td>
                         <td>
                             <div class="fw-bold text-dark">${item.title}</div>
-                            <small class="text-muted">ID: ${item.id}</small>
+                            <small class="text-muted">ID: ${item.courseId}</small>
                         </td>
                         <td><span class="badge bg-light text-dark border">${item.categoryName || 'N/A'}</span></td>
                         <td><span class="text-danger small fw-bold">${new Date(item.deletedAt || item.updatedAt).toLocaleDateString('vi-VN')}</span></td>
                         <td class="text-center">
-                            <button class="btn-action btn-restore me-1" onclick="Course.trash.restore(${item.id})" title="Khôi phục">
+                            <button class="btn-action btn-restore me-1" onclick="Course.trash.restore(${item.courseId})" title="Khôi phục">
                                 <i class="bi bi-arrow-counterclockwise"></i>
                             </button>
-                            <button class="btn-action btn-delete" onclick="Course.trash.hardDelete(${item.id})" title="Xóa vĩnh viễn">
+                            <button class="btn-action btn-delete" onclick="Course.trash.hardDelete(${item.courseId})" title="Xóa vĩnh viễn">
                                 <i class="bi bi-trash3-fill"></i>
                             </button>
                         </td>

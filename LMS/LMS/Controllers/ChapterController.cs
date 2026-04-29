@@ -27,6 +27,15 @@ namespace LMS.Controllers
                 message = "Thêm chương thành công!"
             });
         }
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteAynsc(int id)
+        {
+            await chapterService.DeleteAsync(id);
+            return Ok(new
+            {
+                message = "Xóa chương thành công"
+            });
+        }
         [HttpGet("course/{courseId}")]
         public async Task<IActionResult> GetByIdAsync(int courseId)
         {

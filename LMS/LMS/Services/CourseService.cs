@@ -513,6 +513,7 @@ namespace LMS.Services
                 Description = c.Description,
                 CategoryName = c.Category != null ? c.Category.Name : "Chưa phân loại", 
                 UpdatedAt = c.UpdatedAt,
+                ThumbnailUrl = c.ThumbnailUrl
 
             }).ToList();
 

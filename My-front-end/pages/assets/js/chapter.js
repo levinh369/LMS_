@@ -201,6 +201,32 @@ changeStatus: async function(id) {
         toastr.error("Lỗi hệ thống!");
     }
 },
+delete: async function(id) {
+    const result = await Swal.fire({
+        title: "Bạn có chắc muốn xóa?",
+        text: "Thao tác này sẽ không thể hoàn tác!",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#d33",
+        cancelButtonColor: "#3085d6",
+        confirmButtonText: "Xóa ngay",
+        cancelButtonText: "Hủy"
+    });
+    if (result.isConfirmed) {
+        try {
+            const res = await $.ajax({
+                url: `${chapter.config.apiUrl}/${id}`,
+                type: "DELETE"
+            });
+            Swal.fire("Thành công!", res.message || "Đã xóa chương.", "success");
+            chapter.loadData(1);
+
+        } catch (error) {
+            console.error("Lỗi khi xóa:", error);
+            Swal.fire("Lỗi!", "Không thể xóa bản ghi này.", "error");
+        }
+    }
+},
 chapterTrash: {
     init: function() {
         this.loadData(1);
