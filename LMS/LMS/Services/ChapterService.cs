@@ -101,9 +101,12 @@ namespace LMS.Services
             return chapter;
         }
 
-        public Task<ChapterModel> GetByIdOrThrowAsync(int id)
+        public async Task<ChapterModel> GetByIdOrThrowAsync(int id)
         {
-            throw new NotImplementedException();
+            var entity = await chapterRepository.GetByIdAsync(id);
+            if (entity == null)
+                throw new Exception("Chương không tồn tại");
+            return entity;
         }
 
         public async Task<(List<ChapterResponseDTO> Data, int Total)> GetChaperListAsync(int page, int pageSize, string keySearch, DateTime? fromDate, DateTime? toDate, int isActive)
