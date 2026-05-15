@@ -23,11 +23,11 @@ namespace LMS.Services
             _userRepository = userRepository;
             _courseRepository = courseRepository;
         }
-        public async Task<bool> AddAsync(CommentRequestDTO dto, int userId, string userName)
+        public async Task<CommentResponseDTO?> AddAsync(CommentRequestDTO dto, int userId, string userName)
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(dto.Content)) return false;
+                if (string.IsNullOrWhiteSpace(dto.Content)) return null;
 
                 var comment = new CommentModel
                 {
@@ -40,54 +40,64 @@ namespace LMS.Services
                     CreatedAt = DateTime.UtcNow.AddHours(7),
                     IsActive = true,
                 };
-
                 await _commentRepository.AddAsync(comment);
-
-                // 1. Lấy thông tin khóa học để tìm TeacherId
+                var user = await _userRepository.GetByIdAsync(userId);
                 var course = await _courseRepository.GetByIdAsync(dto.CourseId);
-                if (course == null) return true; // Comment vẫn thành công nhưng không bắn thông báo
-
-                string url = $"/learn/learning.html?id={dto.CourseId}&lessonId={dto.LessonId}#comment-{comment.Id}";
-
-                // --- LUỒNG 1: BÁO CHO GIẢNG VIÊN ---
-                // Chỉ gửi nếu người comment KHÔNG PHẢI là giảng viên
-                if (course.TeacherId != userId)
+                bool isTeacher = course != null && course.TeacherId == userId;
+                if (course != null)
                 {
-                    string teacherMsg = $"Học viên <b>{userName}</b> đã thảo luận trong khóa học <b>{course.Title}</b>.";
-                    await notificationService.SendNotificationAsync(
-                        course.TeacherId.Value,
-                        userId,
-                        teacherMsg,
-                        NotificationTypeEnum.NewComment, // Dùng type 5 (NewComment)
-                        url,
-                        null
-                    );
-                }
+                    string parentQuery = (dto.ParentId != null && dto.ParentId > 0)
+                                    ? $"&parentId={dto.ParentId}"
+                                    : "";
+                    string url = $"/learn/learning.html?id={dto.CourseId}&lessonId={dto.LessonId}{parentQuery}#comment-{comment.Id}";
 
-                // --- LUỒNG 2: BÁO CHO NGƯỜI BỊ TRẢ LỜI ---
-                if (dto.ReplyToUserId.HasValue && dto.ReplyToUserId.Value > 0)
-                {
-                    // Chỉ gửi nếu người bị trả lời KHÔNG PHẢI là chính mình
-                    // VÀ người bị trả lời KHÔNG PHẢI là giảng viên (đã gửi ở trên rồi để tránh lặp)
-                    if (dto.ReplyToUserId.Value != userId && dto.ReplyToUserId.Value != course.TeacherId)
+                    if (course.TeacherId.HasValue && course.TeacherId != userId)
                     {
-                        string replyMsg = $"<b>{userName}</b> đã trả lời bình luận của bạn.";
+                        string teacherMsg = $"Học viên <b>{userName}</b> đã thảo luận trong khóa học <b>{course.Title}</b>.";
                         await notificationService.SendNotificationAsync(
-                            dto.ReplyToUserId.Value,
+                            course.TeacherId.Value,
                             userId,
-                            replyMsg,
-                            NotificationTypeEnum.CommentReply, // Dùng type 1 (CommentReply)
+                            teacherMsg,
+                            NotificationTypeEnum.NewComment,
                             url,
                             null
                         );
                     }
+
+                    if (dto.ReplyToUserId.HasValue && dto.ReplyToUserId.Value > 0)
+                    {
+                        if (dto.ReplyToUserId.Value != userId && dto.ReplyToUserId.Value != course.TeacherId)
+                        {
+                            string replyMsg = $"<b>{userName}</b> đã trả lời bình luận của bạn.";
+                            await notificationService.SendNotificationAsync(
+                                dto.ReplyToUserId.Value,
+                                userId,
+                                replyMsg,
+                                NotificationTypeEnum.CommentReply,
+                                url,
+                                null
+                            );
+                        }
+                    }
                 }
 
-                return true;
+                return new CommentResponseDTO
+                {
+                    UserId = userId,
+                    Id = comment.Id,
+                    Content = comment.Content,
+                    UserFullName = user?.FullName ?? userName,
+                    UserAvatar = user?.AvatarUrl,
+                    CreatedAt = comment.CreatedAt,
+                    ParentId = comment.ParentId,
+                    ReplyToUserName = comment.ReplyToUserName,
+                    IsAdmin = user?.Role?.RoleName == "Admin", // Nhớ check null Role nếu cần
+                    IsTeacher = isTeacher
+                };
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return false;
+                return null;
             }
         }
         public async Task<bool> ProcessPinAsync(PinRequest request, int adminId, string adminName)
@@ -110,17 +120,17 @@ namespace LMS.Services
             }
             else
             {
+
                 var updateModel = new CommentModel
                 {
                     Id = request.CommentId.Value,
                     LessonId = request.LessonId
                 };
 
-                var id = await _commentRepository.HandlePinLogicAsync(updateModel, false);
-
-                if (id > 0)
+                var resultId = await _commentRepository.HandlePinLogicAsync(updateModel, false);
+                if (resultId == -1) return true;
+                if (resultId > 0)
                 {
-                    // Bắn thông báo cho "khổ chủ"
                     var comment = await _commentRepository.GetCommentByIdAsync(request.CommentId.Value);
                     if (comment != null && comment.UserId != adminId)
                     {
@@ -138,7 +148,7 @@ namespace LMS.Services
                         );
                     }
                 }
-                return id > 0;
+                return resultId > 0;
             }
         }
         public async Task<bool> DeleteAsync(int commentId)
@@ -175,13 +185,14 @@ namespace LMS.Services
             return true;
         }
 
-        public async Task<(List<AdminCommentResponseDTO> Items, int TotalCount)> GetAdminCommentsAsync(int pageIndex, int? courseId, int? lessonId, string? search, string status)
+        public async Task<(List<AdminCommentResponseDTO> Items, int TotalCount)> GetAdminCommentsAsync(int pageIndex, int? courseId, int? lessonId, string? search, string status, int ? teacherId)
         {
-            return await _commentRepository.GetAdminCommentsAsync(pageIndex, courseId, lessonId, search,status);
+            return await _commentRepository.GetAdminCommentsAsync(pageIndex, courseId, lessonId, search,status, teacherId);
         }
 
         public async Task<List<CommentResponseDTO>> GetCommentListAsync(int lessonId, int userId)
         {
+            var course = await _courseRepository.GetByLessonId(lessonId);
             var comments = await _commentRepository.GetByComment(lessonId, userId);
             var response = comments.Select(c => new CommentResponseDTO
             {
@@ -200,13 +211,16 @@ namespace LMS.Services
                 ReplyToUserName = c.ReplyToUserName,
                 ReactionType = c.UserReaction != null ? (int)c.UserReaction : 0,
                 ReactionStats = c.ReactionStats,
+                IsTeacher = course != null && c.UserId == course.TeacherId,
                 TopReactionTypes = c.ReactionStats
                 .OrderByDescending(s => s.Count)
                 .Take(3)
                 .Select(s => s.Type)
-                .ToList()
-                }).ToList();
-
+               .ToList()
+            })
+                .OrderByDescending(c => c.IsPinned)
+                .ThenByDescending(c => c.CreatedAt)
+                .ToList();
             return response;
         }
 
@@ -251,7 +265,10 @@ namespace LMS.Services
                         _ => "đã tương tác với"
                     };
                     string message = $"<b>{userName}</b> {reactionText} bình luận của bạn.";
-                    string url = $"/learn/learning.html?id={comment.Lesson.CourseModelId}&lessonId={comment.LessonId}#comment-{comment.Id}";
+                    string parentQuery = (comment.ParentId != null && comment.ParentId > 0)
+                                    ? $"&parentId={comment.ParentId}"
+                                    : "";
+                    string url = $"/learn/learning.html?id={comment.Lesson.CourseModelId}&lessonId={comment.LessonId}{parentQuery}#comment-{comment.Id}";
 
                     // GỌI HÀM REAL-TIME CỦA BÁC
                     await notificationService.SendNotificationAsync(
@@ -276,6 +293,50 @@ namespace LMS.Services
         public async Task<bool> ToggleHideCommentAsync(int id)
         {
             return await _commentRepository.ToggleHideCommentAsync(id);
+        }
+        public async Task HardDeleteAsync(int id)
+        {
+            var entity = await _commentRepository.GetCommentByIdAsync(id);
+            if (entity == null)
+                throw new Exception("Bình luận không tồn tại");
+            await _commentRepository.HardDeleteAsync(entity);
+        }
+        public async Task<object> GetParentCommentsPaginatedAsync(int lessonId, int userId, int page, int pageSize)
+        {
+            var course = await _courseRepository.GetByLessonId(lessonId);
+            var (comments, totalCount) = await _commentRepository.GetParentCommentsAsync(lessonId, userId, page, pageSize);
+
+            var response = MapToDTO(comments, course?.TeacherId);
+            return new { data = response, total = totalCount };
+        }
+        public async Task<object> GetRepliesPaginatedAsync(int parentId, int lessonId, int userId, int page, int pageSize)
+        {
+            var course = await _courseRepository.GetByLessonId(lessonId);
+            int? teacherId = course?.TeacherId;
+            var (comments, totalCount) = await _commentRepository.GetRepliesAsync(parentId, userId, page, pageSize);
+            var response = MapToDTO(comments, teacherId);
+            return new { data = response, total = totalCount };
+        }
+        private List<CommentResponseDTO> MapToDTO(List<CommentModel> comments, int? teacherId)
+        {
+            return comments.Select(c => new CommentResponseDTO
+            {
+                Id = c.Id,
+                Content = c.Content,
+                UserId = c.UserId,
+                UserFullName = c.User?.FullName ?? "Người dùng LMS",
+                UserAvatar = c.User?.AvatarUrl ?? "/assets/img/default-avatar.png",
+                CreatedAt = c.CreatedAt,
+                ParentId = c.ParentId,
+                IsPinned = c.IsPinned,
+                TopReactionTypes = c.TopReactionTypes,
+                ReplyCount = c.Replies?.Count(r => !r.IsDeleted && r.IsActive) ?? 0, // Đếm tổng reply
+                TotalReactions = c.TotalReactions,
+                IsLiked = c.IsLiked,
+                ReactionType = c.UserReaction != null ? (int)c.UserReaction : 0,
+                ReactionStats = c.ReactionStats,
+                IsTeacher = teacherId.HasValue && c.UserId == teacherId.Value
+            }).ToList();
         }
     }
 }

@@ -20,8 +20,6 @@ namespace LMS.Models
         public int OrderIndex { get; set; }
         public string PhaseName { get; set; } = "Chưa phân loại";
 
-        // Nếu bác thực sự muốn biết ai là người gắn khóa học này vào lộ trình
-        // thì chỉ cần thêm CreatedAt là đủ, không cần IsActive/IsDeleted
         public DateTime CreatedAt { get; set; } = DateTime.Now;
     }
 }

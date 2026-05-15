@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng ký trở thành giảng viên</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+    <style>
+        /* 2. Reset Body để không xung đột với Header */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f3f4f6;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        /* 3. Wrapper để căn giữa form mà không ảnh hưởng Header */
+        .form-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 20px;
+            min-height: 80vh;
+        }
+
+        .form-container {
+            background-color: #ffffff;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 500px;
+        }
+
+        h2 { text-align: center; color: #1f2937; margin-bottom: 10px; }
+        p.subtitle { text-align: center; color: #6b7280; margin-bottom: 30px; font-size: 14px; }
+        
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #374151; font-size: 14px; }
+        
+        input[type="text"], input[type="email"], textarea, input[type="file"] {
+            width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;
+        }
+        
+        textarea { resize: vertical; height: 120px; }
+        
+        .readonly-field { background-color: #f9fafb; color: #6b7280; cursor: not-allowed; border-color: #e5e7eb; }
+        
+        .btn-submit { 
+            width: 100%; background-color: #2563eb; color: white; padding: 12px; border: none; 
+            border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; 
+        }
+        .btn-submit:disabled { background-color: #9ca3af; }
+        
+        #message { margin-top: 15px; padding: 12px; border-radius: 6px; text-align: center; display: none; }
+        .success { background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+        .error { background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+        .file-hint {
+    display: block; /* Để nó nhảy xuống dòng dưới thẻ input */
+    margin-top: 5px; /* Tạo khoảng cách với ô chọn file */
+    color: #6b7280; /* Màu xám nhẹ, dễ nhìn */
+    font-size: 13px; /* Kích thước chữ nhỏ hơn label một chút */
+}
+
+/* (Tùy chọn) Thêm style nếu muốn chữ nổi bật hơn */
+.file-hint b {
+    color: #374151; /* Màu chữ đậm hơn cho phần định dạng và dung lượng */
+}
+    </style>
+</head>
+<body>
+
+    <div id="header-placeholder"></div>
+
+    <div class="form-wrapper">
+        <div class="form-container">
+            <h2>Trở thành Giảng viên</h2>
+            <p class="subtitle">Chia sẻ kiến thức của bạn và tạo thu nhập cùng chúng tôi</p>
+
+            <form id="instructorForm">
+                <div class="form-group">
+                    <label for="fullName">Họ và Tên</label>
+                    <input type="text" id="fullNameInstructor" class="readonly-field" readonly placeholder="Đang tải dữ liệu...">
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Địa chỉ Email</label>
+                    <input type="email" id="emailInstructor" class="readonly-field" readonly placeholder="Đang tải dữ liệu...">
+                </div>
+
+               <div class="form-group mb-3">
+                <label for="bio">Giới thiệu bản thân *</label>
+                <textarea id="bio" name="bio" class="form-control" placeholder="Tóm tắt ngắn gọn về bạn..." required></textarea>
+            </div>
+
+            <div class="form-group mb-3">
+                <label for="experience">Kinh nghiệm chuyên môn *</label>
+                <textarea id="experience" name="experience" class="form-control" placeholder="Liệt kê các dự án, kỹ năng hoặc nơi làm việc cũ..." required></textarea>
+            </div>
+
+              <div class="form-group">
+    <label for="cvFile">Tải lên CV (Sơ yếu lý lịch) *</label>
+    <input type="file" id="cvFile" name="cvFile" accept=".pdf,.doc,.docx" required>
+    
+    <small class="file-hint">
+        Hỗ trợ định dạng: <b>PDF, DOC, DOCX</b>. Dung lượng tối đa: <b>5MB</b>.
+    </small>
+</div>
+
+                <button type="submit" class="btn-submit" id="submitBtn">Gửi yêu cầu xét duyệt</button>
+                <div id="message"></div>
+            </form>
+        </div>
+    </div>
+
+    <div id="footer-placeholder"></div>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../assets/js/common.js"></script>
+    <script src="../assets/js/ApplyInstructor.js"></script>
+</body>
+</html>

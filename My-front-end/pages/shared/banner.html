@@ -31,6 +31,10 @@
             <i class="bi bi-people"></i>
             <span>Người dùng</span>
         </a>
+        <a href="/manager-rank/index.html" class="nav-menu-item admin-only" id="btn-nav-rank">
+        <i class="bi bi-award"></i>
+        <span>Hạng giảng viên</span>
+    </a>
         <a href="/manager-comment/index.html" class="nav-menu-item" id="btn-nav-comment">
             <i class="bi bi-chat-dots"></i>
             <span>Bình luận</span>
@@ -67,34 +71,33 @@
                 Xem thêm thông báo cũ hơn
             </button>
         </div>
-
-        <li class="p-2 text-center border-top">
-            <a href="/admin/notifications/index.html" class="text-primary small text-decoration-none fw-bold">Xem tất cả thông báo</a>
-        </li>
     </div>
 </li>
 
         <div class="text-end d-none d-md-block ms-2">
-            <div class="fw-bold text-white small" style="line-height: 1;">Lê Quang Vinh</div>
-            <small class="text-white-50" style="font-size: 10px;">Group Leader</small>
-        </div>
-        
-        <div class="dropdown">
-            <img src="../assets/img/default-avatar.png" class="rounded-circle border border-2 border-white-50 p-1" 
-                 style="width:40px; height:40px; object-fit:cover; cursor:pointer;" data-bs-toggle="dropdown">
-            <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
-                <li><a class="dropdown-item py-2" href="#"><i class="bi bi-person me-2"></i>Hồ sơ</a></li>
-                <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item py-2 text-danger fw-bold" href="javascript:void(0)" onclick="logout()">
-                    <i class="bi bi-box-arrow-right me-2"></i>Thoát
-                </a></li>
-            </ul>
-        </div>
+    <!-- Thêm ID user-fullname -->
+    <div id="user-fullname" class="fw-bold text-white small" style="line-height: 1;">Đang tải...</div>
+    <!-- Thêm ID user-role -->
+    <small id="user-role" class="text-white-50" style="font-size: 10px;">Chức vụ</small>
+</div>
+
+<div class="dropdown">
+    <img src="../assets/img/default-avatar.png" id="user-avatar" class="rounded-circle border border-2 border-white-50 p-1" 
+         style="width:40px; height:40px; object-fit:cover; cursor:pointer;" data-bs-toggle="dropdown">
+    <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
+        <li><a class="dropdown-item py-2" href="/pages/managerUser/update-profile.html"><i class="bi bi-person me-2"></i>Hồ sơ</a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item py-2 text-danger fw-bold" href="javascript:void(0)" onclick="AuthHelper.logout()">
+            <i class="bi bi-box-arrow-right me-2"></i>Đăng xuất
+        </a></li>
+    </ul>
+</div>
     </div>
 </div>
 
 
 <script src="../assets/js/notification.js"></script>
+<script src="../assets/js/auth.js"></script>
 <script>
 $(document).ready(function() {
     // 1. Kiểm tra xem Token của Admin có tồn tại không

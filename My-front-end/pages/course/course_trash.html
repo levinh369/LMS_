@@ -26,21 +26,79 @@
     <div id="sidebar-placeholder"></div>
 
     <div class="course-trash-wrapper">
-        <div class="trash-header d-flex justify-content-between align-items-center">
-            <div>
-                <h3 class="fw-bold mb-1"><i class="bi bi-trash3-fill me-2"></i>THÙNG RÁC KHÓA HỌC</h3>
-                <p class="text-muted small mb-0">Danh sách các khóa học đã xóa tạm thời.</p>
+       <div class="trash-header shadow-sm bg-white p-4 mb-4" style="border-radius: 15px; border-left: 6px solid #dc3545;">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold mb-1"><i class="bi bi-trash3-fill me-2 text-danger"></i>THÙNG RÁC KHÓA HỌC</h3>
+            <p class="text-muted small mb-0">Quản lý các khóa học đã tạm xóa. Bạn có thể khôi phục hoặc xóa vĩnh viễn.</p>
+        </div>
+        <button onclick="window.location.href='index.html'" class="btn btn-outline-dark rounded-pill px-4 fw-bold">
+            <i class="bi bi-arrow-left"></i> QUAY LẠI
+        </button>
+    </div>
+
+    <!-- THANH CÔNG CỤ: TÌM KIẾM & LỌC -->
+    <div class="row g-3 align-items-end">
+        <div class="col-md-4">
+        <div class="position-relative">
+            <label class="form-label fw-bold small text-muted">Tìm theo tiêu đề</label>
+            <div class="input-group">
+                <span class="input-group-text bg-light border-end-0"><i class="bi bi-search"></i></span>
+                <input type="text" id="trashKeySearch" class="form-control bg-light border-start-0" placeholder="Nhập tiêu đề khóa học...">
             </div>
-            <button onclick="window.location.href='index.html'" class="btn btn-outline-dark rounded-pill px-4">
-                <i class="bi bi-arrow-left"></i> QUAY LẠI
+            
+            <!-- DÒNG THÔNG BÁO: Đưa xuống đây -->
+            <div id="bulk-actions" class="text-danger fw-bold transition" 
+                 style="visibility: hidden; opacity: 0; font-size: 11px; position: absolute; bottom: -20px; left: 5px;">
+                <i class="bi bi-check2-circle"></i> Đã chọn: <span id="selected-count">0</span> mục
+            </div>
+        </div>
+    </div>
+        <div class="col-md-3">
+            <label class="form-label fw-bold small text-muted">Danh mục</label>
+            <select id="trashFilterCategory" class="form-select bg-light">
+                <option value="0">-- Tất cả danh mục --</option>
+            </select>
+        </div>
+   <div class="col-md-2">
+    <div class="d-flex gap-2">
+        <!-- Nút Lọc chính -->
+          <button onclick="Course.trash.resetFilter()" class="btn btn-outline-secondary btn-sm rounded-pill shadow-sm" title="Xóa bộ lọc" style="height: 31px; width: 40px; line-height: 1;">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+        <button onclick="Course.trash.loadData(1)" class="btn btn-dark btn-sm flex-fill fw-bold rounded-pill shadow-sm" style="height: 31px; line-height: 1;">
+            <i class="bi bi-funnel-fill"></i> LỌC
+        </button>
+    
+    </div>
+</div>
+
+<div class="col-md-3">
+    <div class="d-flex flex-column gap-1 transition">
+        <!-- Chỉ ID này được điều khiển ẩn/hiện -->
+        
+        
+        <!-- Cụm nút luôn hiển thị -->
+        <div class="d-flex gap-2">
+            <button onclick="Course.trash.restoreBulk()" class="btn btn-primary btn-sm flex-fill fw-bold rounded-pill" style="height: 31px; line-height: 1;">
+                <i class="bi bi-arrow-counterclockwise"></i> Khôi phục
+            </button>
+            <button onclick="Course.trash.deleteBulk()" class="btn btn-danger btn-sm flex-fill fw-bold rounded-pill" style="height: 31px; line-height: 1;">
+                <i class="bi bi-trash-fill"></i> Xóa sạch
             </button>
         </div>
-
+    </div>
+</div>
+    </div>
+</div>
         <div class="card border-0 shadow-sm overflow-hidden" style="border-radius: 12px;">
             <div class="table-responsive">
                 <table class="table align-middle mb-0">
                     <thead class="table-light">
                         <tr class="small text-uppercase fw-bold">
+                            <th class="ps-4" style="width: 50px;">
+                                <input class="form-check-input" type="checkbox" id="check-all">
+                            </th>
                             <th class="ps-4">Hình ảnh</th>
                             <th>Tiêu đề</th>
                             <th>Danh mục</th>

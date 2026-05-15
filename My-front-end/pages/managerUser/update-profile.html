@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cập nhật hồ sơ | LMS System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        .profile-card { border-radius: 20px; overflow: hidden; }
+        .avatar-wrapper { position: relative; width: 150px; height: 150px; margin: 0 auto; }
+        .avatar-preview { width: 150px; height: 150px; object-fit: cover; border-radius: 50%; border: 4px solid #fff; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .btn-upload { position: absolute; bottom: 5px; right: 5px; background: #0d6efd; color: white; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s; }
+        .btn-upload:hover { background: #0056b3; transform: scale(1.1); }
+        .form-control { border-radius: 10px; padding: 12px; border: 1px solid #dee2e6; }
+        .info-label { font-size: 0.8rem; font-weight: 700; color: #6c757d; text-transform: uppercase; margin-bottom: 5px; }
+        .cursor-pointer {
+        cursor: pointer;
+        }
+        .input-group-text {
+            border-left: none; /* Bỏ viền giữa input và icon */
+            border-radius: 0 10px 10px 0 !important;
+        }
+        .form-control.border-end-0 {
+            border-right: none;
+            border-radius: 10px 0 0 10px !important;
+        }
+    </style>
+</head>
+<body>
+<div id="sidebar-placeholder"></div>
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-9">
+            <div class="card profile-card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 pt-4 px-4">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-primary bg-opacity-10 p-3 rounded-3 me-3">
+                            <i class="bi bi-person-gear text-primary fs-3"></i>
+                        </div>
+                        <div>
+                            <h4 class="fw-bold mb-0">Hồ sơ cá nhân</h4>
+                            <p class="text-muted mb-0 small">Thông tin này sẽ hiển thị công khai trên hệ thống</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body p-4 p-lg-5">
+                    <form id="profileForm">
+                        <div class="row g-5">
+                            <!-- Cột trái: Ảnh đại diện -->
+                            <div class="col-md-4 text-center border-end">
+                                <div class="avatar-wrapper mb-3">
+                                    <img id="avatarPreview" src="../assets/img/default-avatar.png" class="avatar-preview">
+                                    <label for="AvatarFile" class="btn-upload">
+                                        <i class="bi bi-camera-fill"></i>
+                                        <input type="file" id="AvatarFile" name="AvatarFile" class="d-none" accept="image/*">
+                                    </label>
+                                </div>
+                                <h5 class="fw-bold mb-1" id="display-name">---</h5>
+                                <div id="role-badge" class="badge rounded-pill mb-3 px-3 py-2">---</div>
+                                
+                                <div class="p-3 bg-light rounded-3 text-start mt-3">
+                                    <small class="text-muted d-block small">Email đăng nhập:</small>
+                                    <span class="fw-bold small" id="display-email">---</span>
+                                </div>
+                            </div>
+
+                            <!-- Cột phải: Nhập liệu -->
+                            <div class="col-md-8">
+                                <h6 class="fw-bold mb-3">Thông tin định danh</h6>
+                                <div class="mb-4">
+                                    <label class="info-label">Họ và tên</label>
+                                    <input type="text" class="form-control" id="FullName" name="FullName" required>
+                                </div>
+
+                                <hr class="my-4 opacity-25">
+                                
+                                <h6 class="fw-bold mb-3 text-danger"><i class="bi bi-shield-lock me-2"></i>Thay đổi bảo mật</h6>
+                                <!-- Mật khẩu hiện tại -->
+                    <div class="mb-3">
+                        <label class="info-label">Mật khẩu hiện tại</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control border-end-0" id="CurrentPassword" name="CurrentPassword" placeholder="••••••••">
+                            <span class="input-group-text bg-white cursor-pointer toggle-password" data-target="#CurrentPassword">
+                                <i class="bi bi-eye-slash"></i>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="info-label">Mật khẩu mới</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control border-end-0" id="NewPassword" name="NewPassword" placeholder="Nhập mật khẩu mới">
+                            <span class="input-group-text bg-white cursor-pointer toggle-password" data-target="#NewPassword">
+                                <i class="bi bi-eye-slash"></i>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="info-label">Xác nhận mật khẩu mới</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control border-end-0" id="ConfirmPassword" name="ConfirmPassword" placeholder="Nhập lại mật khẩu mới">
+                            <span class="input-group-text bg-white cursor-pointer toggle-password" data-target="#ConfirmPassword">
+                                <i class="bi bi-eye-slash"></i>
+                            </span>
+                        </div>
+                        <div id="password-error" class="text-danger small mt-1" style="display:none;">Mật khẩu xác nhận không khớp bác ơi!</div>
+                    </div>
+                                
+                                <div class="alert alert-warning border-0 small d-flex align-items-center">
+                                    <i class="bi bi-info-circle-fill fs-5 me-2"></i>
+                                    Sau khi lưu, hệ thống sẽ cập nhật lại thông tin trên toàn bộ giao diện quản trị.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-footer bg-white border-0 d-flex justify-content-between mt-4 px-0">
+                            <button type="button" class="btn btn-light px-4 fw-bold shadow-sm" onclick="window.history.back()">Hủy bỏ</button>
+                            <button type="submit" class="btn btn-primary px-5 fw-bold shadow-sm">Cập nhật ngay</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<!-- Nhúng file logic riêng -->
+<script src="../assets/js/admin-loader.js"></script>
+<script src="../assets/js/adminProfile.js"></script>
+</body>
+</html>

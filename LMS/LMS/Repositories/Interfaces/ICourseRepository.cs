@@ -9,7 +9,7 @@ namespace LMS.Repositories.Interfaces
         Task<CourseModel?> GetById(int id);
         Task<CourseModel?> GetCourseAndLessons(int id);
         Task<(List<CourseModel> Data, int Total)> GetPagedAsync(int page, int pageSize, string keySearch,
-            DateTime? fromDate, DateTime? toDate, int isAcitve);
+            DateTime? fromDate, DateTime? toDate, int isAcitve, int teacherId, int categoryId);
         Task<(List<CourseModel> Data, int Total)> GetPublicCourse(int page, int pageSize, string keySearch);
         Task<List<CourseModel>> GetCourseFree();
         Task<List<CourseModel>> GetCoursePremium();
@@ -18,5 +18,9 @@ namespace LMS.Repositories.Interfaces
         Task<List<CourseModel>> GetCourseForUser(int userId);
         Task<List<CourseModel>> GetAvailableCoursesAsync(List<int> excludedIds);
         Task<List<CourseSearchDTO>> GetByQueryList(string query, int limit);
+        Task<List<UserModel>> GetAllTeachersAsync();
+        Task<bool> ToggleStatusAsync(int id, string role);
+        Task<List<CourseLookupDTO>> GetCourseByTeacherAsync(int teacherId);
+        Task<CourseModel?> GetByLessonId(int lessonId);
     }
 }

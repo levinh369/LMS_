@@ -7,6 +7,7 @@
         public string? Avatar { get; set; }
 
         public bool HasPassword { get; set; }
+        public int RoleId {  get; set; }
     }
     public class UpdateProfileResponse
     {

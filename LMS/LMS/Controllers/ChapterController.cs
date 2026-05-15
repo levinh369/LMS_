@@ -107,11 +107,11 @@ namespace LMS.Controllers
             return BadRequest("Không cập nhật được thứ tự chương!.");
         }
         [HttpGet("list-deleted")]
-        public async Task<IActionResult> GetDeletedList(int page = 1, int pageSize = 10, string? keySearch = "")
+        public async Task<IActionResult> GetDeletedList(int courseId = 0, int page = 1, int pageSize = 10, string? keySearch = "")
         {
             try
             {
-                var (data, total) = await chapterService.GetDeletedChapterListAsync(page, pageSize, keySearch ?? "");
+                var (data, total) = await chapterService.GetDeletedChapterListAsync(courseId, page, pageSize, keySearch ?? "");
 
                 return Ok(new
                 {

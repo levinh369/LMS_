@@ -26,13 +26,15 @@ namespace LMS.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> LoginAsync([FromBody] LoginRequestDTO dto)
         {
-            var result = await authService.LoginAsync(dto);
-            if (result == null)
+            try
             {
-                return Unauthorized(new { message = "Email hoặc mật khẩu không chính xác!" });
+                var result = await authService.LoginAsync(dto);
+                return Ok(result);
             }
-
-            return Ok(result);
+            catch (Exception ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
         }
         [HttpPost("register")]
         public async Task<IActionResult> RegisterAsync([FromBody] RegisterRequestDTO dto)

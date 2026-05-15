@@ -8,6 +8,7 @@ using LMS.Services.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
+using System.Linq.Expressions;
 
 namespace LMS.Services
 {
@@ -25,9 +26,9 @@ namespace LMS.Services
             return await userRepository.GetFullProfileDataAsync(userId);
         }
 
-        public async Task<(List<UserResponseDTO> Data, int Total)> GetUserListAsync(int page, int pageSize, string keySearch, DateTime? fromDate, DateTime? toDate, int isActive)
+        public async Task<(List<UserResponseDTO> Data, int Total)> GetUserListAsync(int page, int pageSize, string keySearch, DateTime? fromDate, DateTime? toDate, int isActive, int teacherId, int roleId, int courseId)
         {
-            var (entities, total) = await userRepository.GetPagedAsync(page, pageSize, keySearch, fromDate, toDate, isActive);
+            var (entities, total) = await userRepository.GetPagedAsync(page, pageSize, keySearch, fromDate, toDate, isActive, teacherId, roleId, courseId);
 
             var modelList = entities.Select(u => new UserResponseDTO
             {
@@ -46,7 +47,13 @@ namespace LMS.Services
                     RoleEnum.Student => "Học viên",
                     RoleEnum.Teacher => "Giảng viên",
                     _ => "N/A"
-                }
+                },
+                Courses = u.Enrollments != null ? u.Enrollments.Select(e => new UserCourseDTO
+                {
+                    CourseId = e.CourseId,
+                    CourseName = e.Course.Title,
+                    Progress = e.ProgressPercent
+                }).ToList() : new List<UserCourseDTO>()
             }).ToList();
 
             return (modelList, total);
@@ -56,37 +63,32 @@ namespace LMS.Services
         {
             return await userRepository.GetUserSettingsAsync(userId);
         }
-
-       
-
-        public async Task<UpdateProfileResponse?> UpdateProfile(int userId, UpdateProfileRequestDTO request)
+        public async Task<UpdateProfileResponse> UpdateProfile(int userId, UpdateProfileRequestDTO request)
         {
             var user = await userRepository.GetByIdAsync(userId);
-            if (user == null) return null;
-
+            if (user == null) throw new Exception("Không tìm thấy người dùng!");
             if (!string.IsNullOrEmpty(request.NewPassword))
             {
-                if (!string.IsNullOrEmpty(user.PasswordHash))
-                {
-                    if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
-                        return null;
-                }
+                // 1. Check xem có nhập mật khẩu hiện tại không
+                if (string.IsNullOrEmpty(request.CurrentPassword))
+                    throw new Exception("Bạn phải nhập mật khẩu hiện tại mới đổi được mật khẩu mới!");
+                if (request.NewPassword != request.ConfirmPassword)
+                    throw new Exception("Mật khẩu xác nhận không khớp!");
+                if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
+                    throw new Exception("Mật khẩu hiện tại không chính xác!");
+
                 user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
             }
+
+            // Xử lý Avatar và FullName như cũ...
             if (request.AvatarFile != null)
             {
-                var avatarUrl = await cloudinaryService.UploadImageAsync(request.AvatarFile);
-                user.AvatarUrl = avatarUrl;
+                user.AvatarUrl = await cloudinaryService.UploadImageAsync(request.AvatarFile);
             }
-
-            // 3. Cập nhật thông tin khác
             user.FullName = request.FullName;
+
             await userRepository.UpdateAsync(user);
-            return new UpdateProfileResponse
-            {
-                FullName = user.FullName,
-                AvatarUrl = user.AvatarUrl
-            };
+            return new UpdateProfileResponse { FullName = user.FullName, AvatarUrl = user.AvatarUrl };
         }
         public async Task DeleteAsync(int id)
         {
@@ -236,6 +238,67 @@ namespace LMS.Services
         public async Task<List<OrderResponeDTO>> GetOrdersList(int userId)
         {
             return await userRepository.GetOrdersList(userId);
+        }
+        public async Task<(List<UserResponseDTO> Data, int Total)> GetDeletedUserListAsync(int page, int pageSize, string keySearch, int roleId, int currentUserId)
+        {
+            Expression<Func<UserModel, bool>> filter = x =>
+            (string.IsNullOrEmpty(keySearch) || x.FullName.Contains(keySearch) || x.Email.Contains(keySearch))
+            && (roleId == 0 || x.RoleId == roleId)
+            && (currentUserId == 0 || x.Id == currentUserId);
+
+            var (entities, total) = await userRepository.GetDeletedListAsync(
+                 filter,
+                 page,
+                 pageSize,
+                 x => x.Role
+             );
+
+            // 3. Map sang DTO
+            var data = entities.Select(x => new UserResponseDTO
+            {
+                Id = x.Id,
+                FullName = x.FullName,
+                Email = x.Email,
+                RoleId = x.RoleId,
+                RoleName = x.Role?.RoleName,
+                UpdatedAt = x.UpdatedAt,
+                AvatarUrl = x.AvatarUrl,
+            }).ToList();
+
+            return (data, total);
+        }
+
+        public async Task HardDeleteAsync(int id)
+        {
+            var entity = await userRepository.GetByIdAsync(id);
+            if (entity == null)
+                throw new Exception("Người dùng không tồn tại");
+            await userRepository.HardDeleteAsync(entity);
+        }
+
+        public async Task RestoreAsync(int id)
+        {
+            var entity = await userRepository.GetByIdAsync(id);
+            if (entity == null)
+                throw new Exception("Người dùng không tồn tại");
+            await userRepository.RestoreAsync(entity);
+        }
+        public async Task<bool> RestoreBulkAsync(List<int> ids)
+        {
+            if (ids == null || !ids.Any()) return false;
+            return await userRepository.UpdateDeleteStatusBulkAsync(ids, false);
+        }
+
+        public async Task<bool> SoftDeleteBulkAsync(List<int> ids)
+        {
+            if (ids == null || !ids.Any()) return false;
+            return await userRepository.UpdateDeleteStatusBulkAsync(ids, true);
+        }
+
+        public async Task<bool> HardDeleteBulkAsync(List<int> ids)
+        {
+            if (ids == null || !ids.Any()) return false;
+            return await userRepository.HardDeleteBulkAsync(ids);
         }
     }
 }

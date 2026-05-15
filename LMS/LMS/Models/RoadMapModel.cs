@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace LMS.Models
 {
@@ -10,8 +11,10 @@ namespace LMS.Models
         public string? Description { get; set; }
 
         public string? ThumbnailUrl { get; set; }
-
-        // Một lộ trình sẽ có danh sách các khóa học được gắn vào
+        public int? TeacherId { get; set; }
+        [ForeignKey("TeacherId")]
+        public UserModel? Teacher { get; set; }
+        public string? LockedByRole { get; set; }
         public ICollection<RoadmapCourseModel> RoadmapCourses { get; set; } = new List<RoadmapCourseModel>();
     }
 }

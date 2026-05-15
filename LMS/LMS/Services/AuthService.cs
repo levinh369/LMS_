@@ -32,18 +32,28 @@ namespace LMS.Services
         }
         public async Task<AuthResponseDTO> LoginAsync(LoginRequestDTO loginRequest)
         {
-            UserModel user = await userRepository.GetByEmailAsync(loginRequest.Email);
-            if (user == null) return null;
+            UserModel? user = await userRepository.GetByEmailAsync(loginRequest.Email);
 
+            if (user == null || user.IsDeleted == true)
+            {
+                throw new Exception("Tài khoản không tồn tại hoặc đã bị xóa khỏi hệ thống!");
+            }
+            if (user.IsActive == false)
+            {
+                throw new Exception("Tài khoản của bạn hiện đang bị khóa. Vui lòng liên hệ Admin!");
+            }
             bool isPasswordCorrect = BCrypt.Net.BCrypt.Verify(loginRequest.Password, user.PasswordHash);
-            if (!isPasswordCorrect) return null;
+            if (!isPasswordCorrect)
+            {
+                throw new Exception("Mật khẩu không chính xác!");
+            }
             var token = GenerateJwtToken(user);
 
             return new AuthResponseDTO
             {
                 Token = token,
                 Username = user.FullName,
-                Role = (RoleEnum)user.RoleId, 
+                Role = (RoleEnum)user.RoleId,
                 Email = user.Email,
                 UserId = user.Id,
                 AvatarUrl = user.AvatarUrl,
@@ -61,13 +71,11 @@ namespace LMS.Services
     {
         // Lưu ID user (để sau này biết ai đang gửi request)
         new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-        
+        new Claim("Avatar", user.AvatarUrl ?? "/images/default-avatar.png"),
         // Lưu Username
-        new Claim(ClaimTypes.Name, user.Email),
-        
-        // QUAN TRỌNG: Lưu Role để test phân quyền [Authorize(Roles = "Admin")]
-        // Nếu user.Role là null thì để chuỗi rỗng để tránh lỗi
-        //new Claim(ClaimTypes.Role, user.Role ?? "")
+        new Claim(ClaimTypes.Name, user.FullName),
+        new Claim(ClaimTypes.Email, user.Email),
+        new Claim(ClaimTypes.Role, user.Role.RoleName),
     };
 
             // 3. Tạo chữ ký bảo mật (Signing Credentials)
@@ -109,6 +117,7 @@ namespace LMS.Services
                     RoleId = 2,
                 };
                 await userRepository.AddAsync(newUser);
+                newUser.Role = new RoleModel { RoleName = "Student" };
                 if (dto.CourseId.HasValue && dto.CourseId.Value > 0)
                 {
                     var isAlreadyEnrolled = await enrollRepository.IsEnrolledAsync(newUser.Id, dto.CourseId.Value);
@@ -134,7 +143,9 @@ namespace LMS.Services
                     Username = newUser.FullName,
                     Email = newUser.Email,
                     Role = (RoleEnum)newUser.RoleId,
-                    AvatarUrl = newUser.AvatarUrl,  
+                    AvatarUrl = string.IsNullOrEmpty(newUser.AvatarUrl)
+                ? "/assets/images/default-avatar.png" // Hoặc link ảnh online tùy bác
+                : newUser.AvatarUrl,
                 };
             }
             catch (Exception ex)

@@ -114,7 +114,7 @@ showGuestUI: function($guest, $user) {
 // Hàm này CHỈ gọi khi người dùng bấm vào nút "Đăng xuất"
 logout: function() {
     AuthHelper.clearAuthSilently();
-    window.location.href = "/auth/login.html";
+    window.location.href = "/pages/auth/login.html";
 },
     initMyCoursesEvents: function() {
         $(document).on('click', '#btnMyCourses', function(e) {
@@ -140,7 +140,7 @@ logout: function() {
 
     try {
         const response = await $.ajax({
-            url: "https://lms-u2jn.onrender.com/api/Course/my-course", // URL API của ông
+            url: "http://127.0.0.1:5000/api/Course/my-course", // URL API của ông
             type: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}` // Gửi token lên để Backend lấy UserId
@@ -269,7 +269,7 @@ $(document).on('input', '#mainSearchInput', function() {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(async () => {
         try {
-            const res = await $.get(`https://lms-u2jn.onrender.com/api/course/search?query=${encodeURIComponent(query)}`);
+            const res = await $.get(`http://127.0.0.1:5000/api/course/search?query=${encodeURIComponent(query)}`);
             
             // Xử lý dữ liệu: Nếu Backend trả về trực tiếp mảng hoặc object có .data
             const results = Array.isArray(res) ? res : (res.data || []);
@@ -302,7 +302,7 @@ $(document).on('click', function (e) {
 // TRONG FILE common.js
 $(document).ready(function() {
     // 1. Nạp Header - Chỉ nạp 1 lần duy nhất
-    $("#header-placeholder").load("/shared/header.html", function() {
+    $("#header-placeholder").load("/pages/shared/header.html", function() {
         console.log("🚩 Hệ thống: Header đã load xong.");
 
         // 2. Kiểm tra trạng thái đăng nhập

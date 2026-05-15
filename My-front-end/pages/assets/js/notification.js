@@ -3,26 +3,54 @@ window.NotificationApp = {
     currentSkip: 0,
     limit:10,
     // 1. Khởi tạo SignalR
-    init: function () {
+   init: function () {
         if (this.connection) return;
         const token = localStorage.getItem("jwt_token") || localStorage.getItem("token");
         
         this.connection = new signalR.HubConnectionBuilder()
-            .withUrl("https://lms-u2jn.onrender.com/notificationHub", {
-                accessTokenFactory: () => token
-            })
+            .withUrl("http://127.0.0.1:5000/notificationHub", { accessTokenFactory: () => token })
             .withAutomaticReconnect()
             .build();
-
-        this.connection.on("ReceiveNotification", (data) => {
+       
+        // 1. Nhận tin Online
+        this.connection.on("UserIsOnline", (userData) => {
+            console.log("🟢 Có người online:", userData);
+            let user = typeof userData === 'string' ? { userId: userData, userName: "User " + userData } : userData;
             
-            console.log("🔔 SignalR nhận tin:", data);
-            this.renderNotification(data);
+            // KiỂM TRA: Nếu trang hiện tại có object DashboardTeacher và có hàm thì gọi
+            if (window.DashboardTeacher && typeof window.DashboardTeacher.updateOnlineStatus === 'function') {
+                window.DashboardTeacher.updateOnlineStatus(user, true);
+            }
         });
 
-        this.connection.start().catch(err => console.error("SignalR Error:", err));
-    },
+        // 2. Nhận tin Offline
+        this.connection.on("UserIsOffline", (userId) => {
+            console.log("⚪ Có người offline:", userId);
+            
+            // KiỂM TRA và GỌI
+            if (window.DashboardTeacher && typeof window.DashboardTeacher.updateOnlineStatus === 'function') {
+                window.DashboardTeacher.updateOnlineStatus({ userId: userId }, false);
+            }
+        });
 
+        // 3. Khởi chạy
+        this.connection.start().then(async () => {
+            console.log("✅ SignalR Connected!");
+
+            // Chỉ gọi Backend nếu DashboardTeacher tồn tại
+            if (window.DashboardTeacher && typeof window.DashboardTeacher.updateOnlineStatus === 'function') {
+                try {
+                    const activeUsers = await this.connection.invoke("GetActiveUsers", ""); // Đã truyền đủ 1 tham số
+                    if (activeUsers && activeUsers.length > 0) {
+                        activeUsers.forEach(user => {
+                            let u = typeof user === 'string' ? { userId: user, userName: "User " + user } : user;
+                            window.DashboardTeacher.updateOnlineStatus(u, true);
+                        });
+                    }
+                } catch (err) { console.error(err); }
+            }
+        }).catch(err => console.error("❌ SignalR Error:", err));
+    },
     // 2. Xử lý khi có thông báo MỚI (từ SignalR)
     renderNotification: function (data) {
         // Cập nhật số chuông ngay lập tức (Tăng thêm 1)
@@ -57,7 +85,7 @@ fetchNotifications: function (isLoadMore = false) {
     }
 
     $.ajax({
-        url: `https://lms-u2jn.onrender.com/api/Notification/GetNotif?skip=${this.currentSkip}&limit=${this.limit}`,
+        url: `http://127.0.0.1:5000/api/Notification/GetNotif?skip=${this.currentSkip}&limit=${this.limit}`,
         type: 'GET',
         headers: { "Authorization": "Bearer " + token },
         success: (res) => {
@@ -120,7 +148,7 @@ fetchNotifications: function (isLoadMore = false) {
     }
 
     $.ajax({
-        url: "https://lms-u2jn.onrender.com/api/Notification/unread-count",
+        url: "http://127.0.0.1:5000/api/Notification/unread-count",
         type: "GET",
         headers: { 
             "Authorization": "Bearer " + token // Đây là chìa khóa để hết lỗi 401
@@ -142,7 +170,7 @@ markAllRead: async function() {
     if (!token) return;
 
     try {
-        const response = await fetch(`https://lms-u2jn.onrender.com/api/notification/mark-all`, {
+        const response = await fetch(`http://127.0.0.1:5000/api/notification/mark-all`, {
             method: 'POST', 
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -236,9 +264,8 @@ generateNotifHtml: function(data) {
 handleRedirect: async function(notifId, url) {
     const token = localStorage.getItem("jwt_token");
     
-    // Đánh dấu đã đọc
     try {
-        fetch(`https://lms-u2jn.onrender.com/api/notification/mark-read/${notifId}`, {
+        fetch(`http://127.0.0.1:5000/api/notification/mark-read/${notifId}`, {
             method: 'POST', 
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -247,19 +274,25 @@ handleRedirect: async function(notifId, url) {
     if (url && url !== '#') {
         const parts = url.split('#');
         const targetBaseUrl = parts[0];
-        const targetHash = parts[1];
+        const targetHash = '#' + parts[1]; // Nhớ cộng thêm dấu #
 
+        // Nếu ĐANG Ở CÙNG MỘT TRANG BÀI HỌC
         if (window.location.href.split('#')[0].includes(targetBaseUrl)) {
-            // Cập nhật hash lên thanh địa chỉ
             window.location.hash = targetHash;
             
-            // Chỉ làm 1 việc duy nhất: Mở Tab. 
-            // Khi tab mở, nó sẽ tự gọi loadComments -> loadComments sẽ tự gọi handleCommentAnchor
             const commentTab = document.querySelector('#comment-tab');
             if (commentTab) {
-                bootstrap.Tab.getOrCreateInstance(commentTab).show();
+                // Kiểm tra xem tab đã active chưa
+                if ($(commentTab).hasClass('active')) {
+                    // Nếu tab đang mở sẵn rồi -> Chỉ cần cuộn luôn
+                    if(typeof Learn !== 'undefined') Learn.scrollToHashComment();
+                } else {
+                    // Nếu tab chưa mở -> Mở tab (sự kiện shown.bs.tab sẽ lo phần còn lại)
+                    bootstrap.Tab.getOrCreateInstance(commentTab).show();
+                }
             }
         } else {
+            // Nếu ở trang khác, redirect hẳn sang URL mới
             window.location.href = url;
         }
     }

@@ -15,6 +15,7 @@ namespace LMS.Repositories
         public async Task<UserModel?> GetByEmailAsync(string email)
         {
             return await _context.Users
+                .Include(u => u.Role) 
                 .FirstOrDefaultAsync(u => u.Email.ToLower() == email.ToLower());
         }
 
@@ -76,31 +77,60 @@ namespace LMS.Repositories
                 FullName = u.FullName,
                 Email = u.Email,
                 Avatar = u.AvatarUrl,
-                HasPassword = !string.IsNullOrEmpty(u.PasswordHash)
+                HasPassword = !string.IsNullOrEmpty(u.PasswordHash),
+                RoleId = u.RoleId
             })
             .FirstOrDefaultAsync();
 
                 return result;
         }
 
-        public async Task<(List<UserModel> Data, int Total)> GetPagedAsync(int page, int pageSize, string keySearch, DateTime? fromDate, DateTime? toDate, int isAcitve)
+        public async Task<(List<UserModel> Data, int Total)> GetPagedAsync(int page, int pageSize, string keySearch, DateTime? fromDate, DateTime? toDate, int isActive, int teacherId, int roleId, int courseId)
         {
-            var query = _context.Users.AsNoTracking().Where(c => !c.IsDeleted);
+            var query = _context.Users
+             .Include(u => u.Enrollments)
+                 .ThenInclude(e => e.Course)
+             .AsNoTracking()
+             .Where(u => !u.IsDeleted && u.RoleId!=1);
+
+            if (teacherId > 0)
+            {
+                query = query.Where(u => u.Enrollments
+                    .Any(e => e.Course.TeacherId == teacherId &&
+                              (courseId == -1 || e.CourseId == courseId)));
+            }
+            else
+            {
+                if (roleId != -1)
+                {
+                    query = query.Where(u => u.RoleId == roleId);
+                }
+            }
+
             if (!string.IsNullOrEmpty(keySearch))
-                query = query.Where(d => d.FullName.Contains(keySearch));
+            {
+                string search = keySearch.ToLower();
+                query = query.Where(u => u.FullName.ToLower().Contains(search) || u.Email.ToLower().Contains(search));
+            }
+
             if (fromDate.HasValue)
-                query = query.Where(d => d.CreatedAt >= fromDate.Value);
+                query = query.Where(u => u.CreatedAt >= fromDate.Value);
 
             if (toDate.HasValue)
-                query = query.Where(d => d.CreatedAt <= toDate.Value);
-            if (isAcitve != -1)
-                query = query.Where(d => d.IsActive == (isAcitve == 1));
+                query = query.Where(u => u.CreatedAt <= toDate.Value.AddDays(1).AddTicks(-1));
+
+            if (isActive != -1)
+                query = query.Where(u => u.IsActive == (isActive == 1));
+
+
             int total = await query.CountAsync();
+
             var data = await query
-                .OrderByDescending(d => d.CreatedAt)
+                .OrderByDescending(u => u.CreatedAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
+
             return (data, total);
         }
         public async Task<UserModel?> GetByExternalIdAsync(string externalId, string provider)

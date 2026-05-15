@@ -24,5 +24,12 @@
         public bool IsDeleted { get; set; }
 
         public bool IsActive { get; set; }
+        public List<UserCourseDTO> Courses { get; set; } = new List<UserCourseDTO>();
+    }
+    public class UserCourseDTO
+    {
+        public int CourseId { get; set; }
+        public string CourseName { get; set; }
+        public double Progress { get; set; } // Phần trăm hoàn thành (0-100)
     }
 }

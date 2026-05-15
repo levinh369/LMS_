@@ -40,5 +40,7 @@ namespace LMS.Models
 
         [NotMapped]
         public List<ReactionStatDTO> ReactionStats { get; set; } = new();
+        [NotMapped]
+        public List<int> TopReactionTypes { get; set; } = new();
     }
 }

@@ -1,7 +1,7 @@
 
 var Auth = {
     config: {
-        apiUrl: "https://lms-u2jn.onrender.com/api/Auth"
+        apiUrl: "http://127.0.0.1:5000/api/Auth"
     },
     
 login: async function(btn) {
@@ -124,7 +124,7 @@ loginWithSocial: function(provider) {
         ? `${frontendDomain}/Home/detail.html?id=${courseId}`
         : `${frontendDomain}/auth/login-success.html`;
 
-    const backendUrl = `https://lms-u2jn.onrender.com/api/auth/external-login?provider=${provider}&returnUrl=${encodeURIComponent(returnUrl)}`;
+    const backendUrl = `http://127.0.0.1:5000/api/auth/external-login?provider=${provider}&returnUrl=${encodeURIComponent(returnUrl)}`;
     window.location.href = backendUrl;
 }
    

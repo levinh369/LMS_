@@ -5,7 +5,7 @@ const User = {
 
         try {
             const res = await $.ajax({
-                url: "https://lms-u2jn.onrender.com/api/User/my-profile",
+                url: "http://127.0.0.1:5000/api/User/my-profile",
                 type: "GET",
                 // Header này nếu bác đã có $.ajaxSetup thì có thể bỏ qua
                 headers: { "Authorization": "Bearer " + token }
@@ -108,7 +108,7 @@ const User = {
     },
     loadProfile: function() {
     $.ajax({
-        url: "https://lms-u2jn.onrender.com/api/User/settings-data",
+        url: "http://127.0.0.1:5000/api/User/settings-data",
         type: "GET",
         headers: {
             "Authorization": "Bearer " + localStorage.getItem("jwt_token") 
@@ -176,7 +176,7 @@ updateProfile: async function() {
 
     // 3. Kiểm tra logic mật khẩu phía Client (Validation)
     if (!fullName) {
-        Toast.fire({ icon: 'warning', title: 'Họ tên không được để trống bác ơi!' });
+        Toast.fire({ icon: 'warning', title: 'Họ tên không được để trống!' });
         return;
     }
     if (newPass && newPass !== confirmPass) {
@@ -207,13 +207,14 @@ updateProfile: async function() {
         formData.append('fullName', fullName);
         formData.append('currentPassword', currentPass);
         formData.append('newPassword', newPass || "");
+        formData.append('confirmPassword', confirmPass);
         if (avatarFile) {
             formData.append('avatarFile', avatarFile);
         }
 
         // 5. Gửi AJAX lên Backend
         const res = await $.ajax({
-            url: "https://lms-u2jn.onrender.com/api/User/update-profile",
+            url: "http://127.0.0.1:5000/api/User/update-profile",
             type: "POST",
             data: formData,
             processData: false, // Bắt buộc khi dùng FormData

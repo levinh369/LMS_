@@ -367,10 +367,13 @@ namespace LMS.Services
             // Gọi thẳng sang Repo bốc dữ liệu đã sắp xếp
             return await lessonRepository.GetListLessonBasicAsync(courseId);
         }
-        public async Task<(List<LessonResponseDTO> Data, int Total)> GetDeletedLessonListAsync(int page, int pageSize, string keySearch)
+        public async Task<(List<LessonResponseDTO> Data, int Total)> GetDeletedLessonListAsync(int chapterId, int page, int pageSize, string keySearch, bool? isPreview)
         {
             Expression<Func<LessonModel, bool>> filter = x =>
-                string.IsNullOrEmpty(keySearch) || x.Title.Contains(keySearch);
+         x.IsDeleted == true && 
+         (chapterId == 0 || x.ChapterId == chapterId) &&
+         (string.IsNullOrEmpty(keySearch) || x.Title.Contains(keySearch)) && 
+         (!isPreview.HasValue || x.IsPreview == isPreview.Value);
 
             // 2. Gọi Repo lấy Entity
             var (entities, total) = await lessonRepository.GetDeletedListAsync(
@@ -414,6 +417,23 @@ namespace LMS.Services
             if (entity == null)
                 throw new Exception("Bài học không tồn tại");
             await lessonRepository.RestoreAsync(entity);
+        }
+        public async Task<bool> RestoreBulkAsync(List<int> ids)
+        {
+            if (ids == null || !ids.Any()) return false;
+            return await lessonRepository.UpdateDeleteStatusBulkAsync(ids, false);
+        }
+
+        public async Task<bool> SoftDeleteBulkAsync(List<int> ids)
+        {
+            if (ids == null || !ids.Any()) return false;
+            return await lessonRepository.UpdateDeleteStatusBulkAsync(ids, true);
+        }
+
+        public async Task<bool> HardDeleteBulkAsync(List<int> ids)
+        {
+            if (ids == null || !ids.Any()) return false;
+            return await lessonRepository.HardDeleteBulkAsync(ids);
         }
     }
 }

@@ -18,11 +18,14 @@ namespace LMS.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal Price { get; set; }
         public int? TeacherId { get; set; } // ID của người dạy
+        public int? CommissionRate { get; set; }
 
         [ForeignKey("TeacherId")]
         public UserModel? Teacher { get; set; }
         [ForeignKey("CategoryId")]
         public CategoryModel Category { get; set; }
+        [StringLength(20)]
+        public string? LockedByRole { get; set; }
         public ICollection<LessonModel> Lessons { get; set; } = new List<LessonModel>();
         public ICollection<CourseDetailModel> CourseDetails { get; set; } = new List<CourseDetailModel>();
         public ICollection<ChapterModel> Chapters { get; set; } = new List<ChapterModel>();
@@ -40,5 +43,6 @@ namespace LMS.Models
         public string LastLearnedFriendly { get; set; } = "Chưa bắt đầu";
         [NotMapped]
         public bool IsCompleted { get; set; }
+        
     }
 }

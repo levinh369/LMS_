@@ -76,7 +76,35 @@ namespace LMS.Repositories
         {
             return await _dbSet.Where(x => x.IsDeleted).ToListAsync();
         }
+        public async Task<bool> UpdateDeleteStatusBulkAsync(List<int> ids, bool isDeleted)
+        {
+            var entities = await _dbSet.IgnoreQueryFilters()
+                                       .Where(x => ids.Contains(x.Id))
+                                       .ToListAsync();
 
+            if (!entities.Any()) return false;
+
+            foreach (var entity in entities)
+            {
+                entity.IsDeleted = isDeleted; 
+                entity.UpdatedAt = DateTime.Now;
+            }
+
+            _dbSet.UpdateRange(entities);
+            return await _context.SaveChangesAsync() > 0;
+        }
+
+        public async Task<bool> HardDeleteBulkAsync(List<int> ids)
+        {
+            var entities = await _dbSet.IgnoreQueryFilters()
+                                       .Where(x => ids.Contains(x.Id))
+                                       .ToListAsync();
+
+            if (!entities.Any()) return false;
+
+            _dbSet.RemoveRange(entities);
+            return await _context.SaveChangesAsync() > 0;
+        }
         public async Task<(List<T> Data, int Total)> GetDeletedListAsync(
      Expression<Func<T, bool>> filter,
      int page,

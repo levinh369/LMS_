@@ -19,7 +19,6 @@ namespace LMS.Controllers
             this.lessonService = lessonService;
             this.youtubeService = youtubeService;
         }
-
         // 1. Lấy danh sách bài học theo ID khóa học (Dùng cho trang quản lý)
         [HttpGet("course/{courseId}")]
         public async Task<IActionResult> GetByCourse(int courseId)
@@ -159,11 +158,11 @@ namespace LMS.Controllers
             });
         }
         [HttpGet("list-deleted")]
-        public async Task<IActionResult> GetDeletedList(int page = 1, int pageSize = 10, string? keySearch = "")
+        public async Task<IActionResult> GetDeletedList(int chapterId = 0,int page = 1, int pageSize = 10, string? keySearch = "", bool? isPreview = null)
         {
             try
             {
-                var (data, total) = await lessonService.GetDeletedLessonListAsync(page, pageSize, keySearch ?? "");
+                var (data, total) = await lessonService.GetDeletedLessonListAsync(chapterId,page, pageSize, keySearch ?? "", isPreview);
 
                 return Ok(new
                 {
@@ -207,5 +206,43 @@ namespace LMS.Controllers
                 return BadRequest(new { Success = false, Message = "Không thể xóa vĩnh viễn bài học này vì có dữ liệu liên quan." });
             }
         }
+        [HttpPost("soft-delete-bulk")]
+        public async Task<IActionResult> SoftDeleteBulk([FromBody] List<int> ids)
+        {
+            if (ids == null || !ids.Any())
+                return BadRequest(new { Success = false, Message = "Danh sách ID không hợp lệ." });
+
+            var result = await lessonService.SoftDeleteBulkAsync(ids);
+            if (result)
+                return Ok(new { Success = true, Message = $"Đã chuyển {ids.Count} mục vào thùng rác." });
+
+            return BadRequest(new { Success = false, Message = "Không thể xóa các mục đã chọn." });
+        }
+        [HttpPost("restore-bulk")]
+        public async Task<IActionResult> RestoreBulk([FromBody] List<int> ids)
+        {
+            if (ids == null || !ids.Any())
+                return BadRequest(new { Success = false, Message = "Danh sách ID không hợp lệ." });
+
+            var result = await lessonService.RestoreBulkAsync(ids);
+            if (result)
+                return Ok(new { Success = true, Message = $"Đã khôi phục {ids.Count} bài học thành công." });
+
+            return BadRequest(new { Success = false, Message = "Khôi phục thất bại. Vui lòng thử lại." });
+        }
+
+        [HttpDelete("hard-delete-bulk")]
+        public async Task<IActionResult> HardDeleteBulk([FromBody] List<int> ids)
+        {
+            if (ids == null || !ids.Any())
+                return BadRequest(new { Success = false, Message = "Danh sách ID không hợp lệ." });
+
+            var result = await lessonService.HardDeleteBulkAsync(ids);
+            if (result)
+                return Ok(new { Success = true, Message = $"Đã xóa vĩnh viễn {ids.Count} bài học." });
+
+            return BadRequest(new { Success = false, Message = "Không thể xóa vĩnh viễn dữ liệu." });
+        }
+
     }
 }

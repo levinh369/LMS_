@@ -11,11 +11,11 @@ namespace LMS.Services.Interfaces
         Task<CourseResponeDTO> GetByIdAsync(int id);
         Task UpdateAsync(int id, CourseRequestDTO dto);
         Task DeleteAsync(int id);
-        Task<CourseResponeDTO> GetById(int id);   
+        Task<CourseResponeDTO> GetById(int id);
         Task CreateAsync(CourseRequestDTO dto, int userId);
         Task<CourseModel> GetByIdOrThrowAsync(int id);
         Task<(List<CourseResponeDTO> Data, int Total)> GetCourseListAsync(
-        int page, int pageSize, string keySearch, DateTime? fromDate, DateTime? toDate, int isActive);
+        int page, int pageSize, string keySearch, DateTime? fromDate, DateTime? toDate, int isActive, int teacherId, int categoryId);
         Task<(List<CourseHomeDTO> Data, int Total)> GetPublicCourse(
         int page, int pageSize, string keySearch);
         Task<CourseDetailDTO> GetCourseDetailAsync(int id);
@@ -24,7 +24,7 @@ namespace LMS.Services.Interfaces
         Task<CourseResponeDTO> GetCourseDetailHomeAsync(int id, int? userId = null);
         Task<CourseResponeDTO?> GetCourseDetailForLearning(int courseId, int? userId = null);
         Task<List<CourseResponeDTO>> GetCoursesForUser(int userId);
-        Task<(int completedCount, int totalCount, bool isFinished )> MarkAsCompleted(int lessonId, int userId);
+        Task<(int completedCount, int totalCount, bool isFinished)> MarkAsCompleted(int lessonId, int userId);
         Task UpdateLastWatchedTime(int userId, int lessonId, int time);
         Task<List<CourseSearchDTO>> SearchActiveCoursesAsync(string query);
         Task<int> GetResumeLessonIdAsync(int userId, int courseId);
@@ -32,6 +32,12 @@ namespace LMS.Services.Interfaces
         Task HardDeleteAsync(int id);
 
         Task<(List<CourseResponeDTO> Data, int Total)> GetDeletedCourseListAsync(
-            int page, int pageSize, string keySearch);
+            int page, int pageSize, string keySearch, int categoryId, int currentUserId);
+        Task<List<UserSimpleDTO>> GetTeacherListForSelectAsync();
+        Task<bool> ToggleStatusAsync(int id, string role);
+        Task<List<CourseLookupDTO>> GetCourseByTeacherAsync(int teacherId);
+        Task<bool> RestoreBulkAsync(List<int> ids);
+        Task<bool> HardDeleteBulkAsync(List<int> ids);
+        Task<bool> SoftDeleteBulkAsync(List<int> ids);
     }
 }

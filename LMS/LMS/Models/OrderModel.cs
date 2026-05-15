@@ -10,7 +10,13 @@ namespace LMS.Models
 
         [Column(TypeName = "decimal(18,2)")]
         public decimal Amount { get; set; } // Số tiền thanh toán
+        public int AppliedRate { get; set; } // % chiết khấu áp dụng lúc mua
 
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal AdminAmount { get; set; } // Tiền sàn thu thực tế
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal TeacherAmount { get; set; }
         public string? OrderDescription { get; set; } // Mô tả đơn hàng
 
         // Trạng thái đơn hàng: 0-Chờ thanh toán, 1-Thành công, 2-Thất bại

@@ -34,6 +34,8 @@ namespace LMS.DTOs.Respone
         public double Progress { get; set; }
         public bool IsCompleted { get; set; }
         public DateTime UpdatedAt { get; set; }
+        public string LockedByRole {  get; set; }
+        
     }
     public class CourseResponeDetailDTO
     {
@@ -50,5 +52,9 @@ namespace LMS.DTOs.Respone
         public DateTime UpdatedAt { get; set; }
         public List<LessonResponseDTO> Lessons { get; set; } = new List<LessonResponseDTO>();
     }
-
+    public class CourseLookupDTO
+    {
+        public int Id { get; set; }
+        public string Title { get; set; }
+    }
 }

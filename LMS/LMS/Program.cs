@@ -50,9 +50,17 @@ builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
-builder.Services.AddSignalR();
+builder.Services.AddScoped<IRankService, RankService>();
+builder.Services.AddScoped<IRankRepository, RankRepository>();
+builder.Services.AddSignalR(options =>
+{
+    options.EnableDetailedErrors = true; // Bật dòng này lên để xem chi tiết lỗi C# ở Frontend
+});
 builder.Services.AddScoped<IDashBoardRepository, DashBoardRepository>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IInstructorApplicationRepository, InstructorApplicationRepository>();
+builder.Services.AddScoped<IInstructorApplicationService, InstructorApplicationService>();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IYoutubeService, YoutubeService>();
 builder.Services.AddControllers();

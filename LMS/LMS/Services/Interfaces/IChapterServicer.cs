@@ -21,7 +21,7 @@ namespace LMS.Services.Interfaces
         // --- Phần dành cho Thùng rác ---
         Task RestoreAsync(int id);
         Task HardDeleteAsync(int id);
-        Task<(List<ChapterResponseDTO> Data, int Total)> GetDeletedChapterListAsync(
+        Task<(List<ChapterResponseDTO> Data, int Total)> GetDeletedChapterListAsync( int courseId,
             int page, int pageSize, string keySearch);
     }
 }

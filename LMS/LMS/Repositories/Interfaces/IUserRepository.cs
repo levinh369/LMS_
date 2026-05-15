@@ -10,7 +10,7 @@ namespace LMS.Repositories.Interfaces
         Task<MyProfileResponseDTO> GetFullProfileDataAsync(int userId);
         Task<UserSettingsResponseDTO> GetUserSettingsAsync(int userId);
         Task<(List<UserModel> Data, int Total)> GetPagedAsync(int page, int pageSize, string keySearch,
-            DateTime? fromDate, DateTime? toDate, int isAcitve);
+            DateTime? fromDate, DateTime? toDate, int isAcitve, int teacherId, int roleId, int courseId);
         Task<UserModel?> GetByExternalIdAsync(string externalId, string provider);
         Task<List<OrderResponeDTO>> GetOrdersList(int userId);
     }

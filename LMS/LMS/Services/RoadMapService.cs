@@ -7,6 +7,7 @@ using LMS.Repositories;
 using LMS.Repositories.Interfaces;
 using LMS.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 
 namespace LMS.Services
 {
@@ -32,7 +33,7 @@ namespace LMS.Services
             await roadMapRepository.ChangeStatus(exist);
         }
 
-        public async Task CreateAsync(RoadMapRequestDTO dto)
+        public async Task CreateAsync(RoadMapRequestDTO dto, int teacherId)
         {
             var exist = await roadMapRepository.GetByTitleAsync(dto.Title);
             if (exist != null)
@@ -52,6 +53,7 @@ namespace LMS.Services
                 ThumbnailUrl = imageUrl,
                 CreatedAt = DateTime.UtcNow.AddHours(7),
                 UpdatedAt = DateTime.UtcNow.AddHours(7),
+                TeacherId = teacherId,
             };
             await roadMapRepository.AddAsync(roadMap);
         }
@@ -111,6 +113,7 @@ namespace LMS.Services
                 IsActive = entity.IsActive,
                 Description = entity.Description,
                 ThumbnailUrl = entity.ThumbnailUrl,
+                LockedByRole = entity.LockedByRole,
             };
             return roadMap;
         }
@@ -187,9 +190,9 @@ namespace LMS.Services
                 AvailableCourses = leftSideCourses 
             };
         }
-        public async Task<(List<RoadMapResponeDTO> Data, int Total)> GetRoadMapListAsync(int page, int pageSize, string keySearch, int isActive)
+        public async Task<(List<RoadMapResponeDTO> Data, int Total)> GetRoadMapListAsync(int page, int pageSize, string keySearch, int isActive, int teacherId)
         {
-            var (entities, total) = await roadMapRepository.GetPagedAsync(page, pageSize, keySearch, isActive);
+            var (entities, total) = await roadMapRepository.GetPagedAsync(page, pageSize, keySearch, isActive, teacherId);
             var modelList = entities.Select(c => new RoadMapResponeDTO
             {
                 Id = c.Id,
@@ -199,6 +202,9 @@ namespace LMS.Services
                 ThumbnailUrl= c.ThumbnailUrl,
                 CreatedAt = c.CreatedAt,
                 CourseCount = c.RoadmapCourses?.Count() ??0,
+                InstructorId = c.Teacher?.Id ?? 0, 
+                InstructorName = c.Teacher?.FullName ?? "Chưa xác định", 
+                LockedByRole = c.LockedByRole,
             }).ToList();
             return (modelList, total);
         }
@@ -277,6 +283,71 @@ namespace LMS.Services
             roadMap.IsActive = dto.IsActive;
             roadMap.Description = dto.Description;
             await roadMapRepository.UpdateAsync(roadMap);
+        }
+        public async Task<bool> ToggleStatusAsync(int id, string role)
+        {
+            return await roadMapRepository.ToggleStatusAsync(id, role);
+        }
+        public async Task<(List<RoadMapResponeDTO> Data, int Total)> GetDeletedRoadMapListAsync(int page, int pageSize, string keySearch, int teacherId)
+        {
+            Expression<Func<RoadMapModel, bool>> filter = x =>
+        (string.IsNullOrEmpty(keySearch) || x.Title.Contains(keySearch)) &&
+        (teacherId == 0 || x.TeacherId == teacherId);
+
+            // 2. Gọi Repo lấy Entity
+            var (entities, total) = await roadMapRepository.GetDeletedListAsync(
+                filter,
+                page,
+                pageSize
+            );
+
+            // 3. Map sang DTO
+            var dtoList = entities.Select(c => new RoadMapResponeDTO
+            {
+                Id = c.Id,
+                Title = c.Title,
+                Description = c.Description,
+                IsActive = c.IsActive,
+                ThumbnailUrl = c.ThumbnailUrl,
+                UpdatedAt = c.UpdatedAt,
+                CourseCount = c.RoadmapCourses?.Count() ?? 0,
+
+            }).ToList();
+
+            return (dtoList, total);
+        }
+
+        public async Task HardDeleteAsync(int id)
+        {
+            var entity = await roadMapRepository.GetByIdAsync(id);
+            if (entity == null)
+                throw new Exception("Lộ trình không tồn tại");
+            await roadMapRepository.HardDeleteAsync(entity);
+        }
+
+        public async Task RestoreAsync(int id)
+        {
+            var entity = await roadMapRepository.GetByIdAsync(id);
+            if (entity == null)
+                throw new Exception("Lộ trình không tồn tại");
+            await roadMapRepository.RestoreAsync(entity);
+        }
+        public async Task<bool> RestoreBulkAsync(List<int> ids)
+        {
+            if (ids == null || !ids.Any()) return false;
+            return await roadMapRepository.UpdateDeleteStatusBulkAsync(ids, false);
+        }
+
+        public async Task<bool> SoftDeleteBulkAsync(List<int> ids)
+        {
+            if (ids == null || !ids.Any()) return false;
+            return await roadMapRepository.UpdateDeleteStatusBulkAsync(ids, true);
+        }
+
+        public async Task<bool> HardDeleteBulkAsync(List<int> ids)
+        {
+            if (ids == null || !ids.Any()) return false;
+            return await roadMapRepository.HardDeleteBulkAsync(ids);
         }
     }
 }

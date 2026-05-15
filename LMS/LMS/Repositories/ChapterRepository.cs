@@ -20,7 +20,11 @@ namespace LMS.Repositories
 
         public async Task<List<ChapterModel>?> GetByCourseIdAsync(int courseId)
         {
-            return await _context.Chapters.AsNoTracking().Where(c => c.CourseId == courseId).ToListAsync();
+            return await _context.Chapters
+                .AsNoTracking()
+                .Where(c => c.CourseId == courseId && !c.IsDeleted)
+                .OrderBy(c => c.OrderIndex) 
+                .ToListAsync();
         }
 
         public async Task<ChapterModel?> GetByTitleAsync(string title, int id)

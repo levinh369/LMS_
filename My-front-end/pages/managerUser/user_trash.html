@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thùng rác Người dùng - LMS Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        #sidebar-placeholder { width: 100%; position: sticky; top: 0; z-index: 1000; }
+        .user-trash-wrapper { padding: 30px 5%; }
+        .trash-header { 
+            background: #fff; padding: 20px; border-radius: 12px; 
+            border-left: 6px solid #dc3545; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 25px; 
+        }
+        .user-avatar { width: 35px; height: 35px; object-fit: cover; border-radius: 50%; }
+        /* Style cho các nút hành động */
+        .btn-action { width: 32px; height: 32px; border-radius: 6px; border: none; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; }
+        .btn-restore { background: #e3f2fd; color: #1976d2; }
+        .btn-restore:hover { background: #1976d2; color: white; }
+        .btn-delete-forever { background: #ffebee; color: #c62828; }
+        .btn-delete-forever:hover { background: #c62828; color: white; }
+        
+        /* Thanh tác vụ hàng loạt */
+        #bulk-actions { display: none; transition: 0.3s; }
+        .form-check-input:checked { background-color: #dc3545; border-color: #dc3545; }
+    </style>
+</head>
+<body>
+    <div id="sidebar-placeholder"></div>
+
+<div class="user-trash-wrapper">
+    <div class="trash-header">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h3 class="fw-bold mb-1"><i class="bi bi-person-x-fill me-2"></i>THÙNG RÁC NGƯỜI DÙNG</h3>
+                <p class="text-muted small mb-0">Chọn các mục để khôi phục hoặc xóa vĩnh viễn hàng loạt.</p>
+            </div>
+            <button onclick="window.location.href='index.html'" class="btn btn-outline-dark rounded-pill px-4">
+                <i class="bi bi-arrow-left"></i> QUAY LẠI
+            </button>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-5">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
+                    <input type="text" id="search-user-trash" class="form-control border-start-0 ps-0" placeholder="Tìm theo tên hoặc email...">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <select id="filter-role-trash" class="form-select">
+                    <option value="0">-- Tất cả vai trò --</option>
+                    <option value="3">Giảng viên</option>
+                    <option value="2">Học viên</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-dark w-100" onclick="Manager.trash.loadData(1)">
+                    <i class="bi bi-filter"></i> LỌC DỮ LIỆU
+                </button>
+            </div>
+        </div>
+
+        <div id="bulk-actions" class="bg-light p-3 border rounded-3 d-flex align-items-center justify-content-between" style="display: none;">
+            <span class="text-dark fw-medium">
+                <i class="bi bi-check2-circle me-2 text-danger"></i>
+                <span id="selected-count">0</span> người dùng đã được chọn
+            </span>
+            <div>
+                <button class="btn btn-primary btn-sm me-2 rounded-pill px-3" onclick="Manager.trash.restoreBulk()">
+                    <i class="bi bi-arrow-counterclockwise"></i> Khôi phục 
+                </button>
+                <button class="btn btn-danger btn-sm rounded-pill px-3" onclick="Manager.trash.deleteBulk()">
+                    <i class="bi bi-trash"></i> Xóa vĩnh viễn
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+        <div class="card border-0 shadow-sm overflow-hidden" style="border-radius: 12px;">
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead class="table-light">
+                        <tr class="small text-uppercase fw-bold">
+                            <th class="ps-4" style="width: 50px;">
+                                <input class="form-check-input" type="checkbox" id="check-all">
+                            </th>
+                            <th style="width: 80px;">ID</th>
+                            <th>Người dùng</th>
+                            <th>Email</th>
+                            <th>Vai trò</th>
+                            <th>Ngày xóa</th>
+                            <th class="text-center">Hành động</th>
+                        </tr>
+                    </thead>
+                  <tbody id="user-trash-table-body">
+                        <tr>
+                            <td colspan="7" class="text-center py-5">
+                                <div class="spinner-border text-danger spinner-border-sm me-2"></div>
+                                Đang tải dữ liệu...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="py-4 border-top">
+                <ul id="paging-ul" class="pagination justify-content-center mb-0"></ul>
+            </div>
+        </div>
+    </div>
+    
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/twbs-pagination/1.4.2/jquery.twbsPagination.min.js"></script>
+
+<script src="../assets/js/admin-loader.js"></script>
+<script src="../assets/js/managerUser.js"></script>
+ <script>
+        $(document).ready(function() {
+            if (typeof Manager !== 'undefined' && Manager.trash) {
+                Manager.trash.init();
+            }
+        });
+    </script>
+
+   
+</body>
+</html>

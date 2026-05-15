@@ -29,6 +29,10 @@ namespace LMS.Services.Interfaces
         Task HardDeleteAsync(int id);
 
         Task<(List<LessonResponseDTO> Data, int Total)> GetDeletedLessonListAsync(
-            int page, int pageSize, string keySearch);
+            int chapterId, int page, int pageSize, string keySearch, bool? isPreview);
+        Task<bool> RestoreBulkAsync(List<int> ids);
+        Task<bool> HardDeleteBulkAsync(List<int> ids);
+        Task<bool> SoftDeleteBulkAsync(List<int> ids);
+
     }
 }

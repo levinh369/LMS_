@@ -2,6 +2,7 @@
 using LMS.DTOs.Request;
 using LMS.Services;
 using LMS.Services.Interfaces;
+using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -58,6 +59,22 @@ namespace LMS.Controllers
             {
                 return BadRequest(new { isSuccess = false, message = ex.Message });
             }
+        }
+        [HttpDelete("unenroll")]
+        public async Task<IActionResult> UnenrollStudent(int studentId, int courseId)
+        {
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+            if (userIdClaim == null) return Unauthorized(new { success = false, message = "Hết phiên làm việc." });
+
+            int currentTeacherId = int.Parse(userIdClaim.Value);
+            var result = await enrollmentService.UnenrollStudentAsync(studentId, courseId, currentTeacherId);
+
+            if (!result)
+            {
+                return NotFound(new { success = false, message = "Không tìm thấy thông tin đăng ký phù hợp hoặc bạn không có quyền xóa." });
+            }
+
+            return Ok(new { success = true, message = "Đã hủy đăng ký thành công." });
         }
 
     }

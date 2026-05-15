@@ -4,6 +4,7 @@ using LMS.Services.Interfaces;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace LMS.Controllers
 {
@@ -19,11 +20,21 @@ namespace LMS.Controllers
         [HttpPost]
         public async Task<IActionResult> AddAsync([FromForm] RoadMapRequestDTO dto)
         {
-            await roadMapService.CreateAsync(dto);
-            return Ok(new
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null)
             {
-                message = "Thêm lộ trình học thành công!"
-            });
+                return Unauthorized(new { message = "Bạn cần đăng nhập để thực hiện chức năng này!" });
+            }
+            try
+            {
+                int userId = int.Parse(userIdClaim.Value);
+                await roadMapService.CreateAsync(dto, userId);
+                return Ok(new { message = "Thêm lộ trình học thành công!" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Có lỗi xảy ra: " + ex.Message });
+            }
         }
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteAynsc(int id)
@@ -128,16 +139,134 @@ namespace LMS.Controllers
         int page = 1,
         int pageSize = 10,
         string keySearch = "",
-        int isActive = -1)
+        int isActive = -1,
+        int teacherId =0)
         {
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            int currentUserId = int.TryParse(userIdClaim, out var id) ? id : 0;
+            var currentUserRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
+            int filterTeacherId;
+            if (currentUserRole == "Admin")
+            {
+                filterTeacherId = teacherId;
+            }
+            else
+            {
+                filterTeacherId = currentUserId;
+            }
             var (data, total) = await roadMapService.GetRoadMapListAsync(
-                page, pageSize, keySearch, isActive);
+                page, pageSize, keySearch, isActive, filterTeacherId);
             return Ok(new
             {
                 success = true,
                 total = total,
                 data = data
             });
+        }
+        [HttpPut("toggle-status/{id}")]
+        public async Task<IActionResult> ToggleStatus(int id, [FromQuery] string role)
+        {
+            try
+            {
+                var result = await roadMapService.ToggleStatusAsync(id, role);
+
+                if (!result)
+                {
+                    return BadRequest("Thao tác bị chặn: Lộ trình  đang trong trạng thái niêm phong bởi Quản trị viên.");
+                }
+
+                return Ok(new { success = true, message = "Cập nhật trạng thái thành công!" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Lỗi hệ thống: {ex.Message}");
+            }
+        }
+        [HttpGet("list-deleted")]
+        public async Task<IActionResult> GetDeletedList(int page = 1, int pageSize = 10, string? keySearch = "", int teacherId= 0)
+        {
+            try
+            {
+                var (data, total) = await roadMapService.GetDeletedRoadMapListAsync(page, pageSize, keySearch ?? "",teacherId);
+
+                return Ok(new
+                {
+                    Success = true,
+                    Data = data,
+                    Total = total,
+                    Page = page,
+                    PageSize = pageSize
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Success = false, Message = ex.Message });
+            }
+        }
+
+        [HttpPost("restore/{id}")]
+        public async Task<IActionResult> Restore(int id)
+        {
+            try
+            {
+                await roadMapService.RestoreAsync(id);
+                return Ok(new { Success = true, Message = "Khôi phục lộ trình thành công" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Success = false, Message = ex.Message });
+            }
+        }
+
+        [HttpDelete("hard-delete/{id}")]
+        public async Task<IActionResult> HardDelete(int id)
+        {
+            try
+            {
+                await roadMapService.HardDeleteAsync(id);
+                return Ok(new { Success = true, Message = "Đã xóa vĩnh viễn lộ trình " });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Success = false, Message = "Không thể xóa vĩnh viễn lộ trình này vì có dữ liệu liên quan." });
+            }
+        }
+        [HttpPost("soft-delete-bulk")]
+        public async Task<IActionResult> SoftDeleteBulk([FromBody] List<int> ids)
+        {
+            if (ids == null || !ids.Any())
+                return BadRequest(new { Success = false, Message = "Danh sách ID không hợp lệ." });
+
+            var result = await roadMapService.SoftDeleteBulkAsync(ids);
+            if (result)
+                return Ok(new { Success = true, Message = $"Đã chuyển {ids.Count} mục vào thùng rác." });
+
+            return BadRequest(new { Success = false, Message = "Không thể xóa các mục đã chọn." });
+        }
+        [HttpPost("restore-bulk")]
+        public async Task<IActionResult> RestoreBulk([FromBody] List<int> ids)
+        {
+            if (ids == null || !ids.Any())
+                return BadRequest(new { Success = false, Message = "Danh sách ID không hợp lệ." });
+
+            var result = await roadMapService.RestoreBulkAsync(ids);
+            if (result)
+                return Ok(new { Success = true, Message = $"Đã khôi phục {ids.Count} lộ trình thành công." });
+
+            return BadRequest(new { Success = false, Message = "Khôi phục thất bại. Vui lòng thử lại." });
+        }
+
+        [HttpDelete("hard-delete-bulk")]
+        public async Task<IActionResult> HardDeleteBulk([FromBody] List<int> ids)
+        {
+            if (ids == null || !ids.Any())
+                return BadRequest(new { Success = false, Message = "Danh sách ID không hợp lệ." });
+
+            var result = await roadMapService.HardDeleteBulkAsync(ids);
+            if (result)
+                return Ok(new { Success = true, Message = $"Đã xóa vĩnh viễn {ids.Count} lộ trình." });
+
+            return BadRequest(new { Success = false, Message = "Không thể xóa vĩnh viễn dữ liệu." });
         }
     }
 }

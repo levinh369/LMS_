@@ -1,6 +1,7 @@
 ﻿using LMS.Data;
 using LMS.DTOs.Respone;
 using LMS.Enums;
+using LMS.Models;
 using LMS.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -69,6 +70,40 @@ namespace LMS.Repositories
             dto.CategoryData = categoryDist.Select(x => x.Count).ToList();
 
             return dto;
+        }
+        public IQueryable<EnrollmentModel> GetEnrollmentsQuery()
+        {
+            return _context.Enrollments
+                .AsNoTracking();
+        }
+
+ 
+        public IQueryable<EnrollmentModel> GetEnrollmentsQueryByDate(DateTime startDate, DateTime endDate)
+        {
+            return _context.Enrollments
+                .AsNoTracking()
+                .Where(e => e.CreatedAt >= startDate && e.CreatedAt <= endDate);
+        }
+
+        public IQueryable<EnrollmentModel> FilterMyStudentsQuery(int teacherId, List<string> onlineUserIds, string? keySearch = null)
+        {
+            var onlineUserIdsInt = onlineUserIds
+                .Where(id => int.TryParse(id, out _))
+                .Select(int.Parse)
+                .ToList();
+
+            var query = _context.Enrollments
+                .AsNoTracking()
+                .Where(e => e.Course.TeacherId == teacherId && onlineUserIdsInt.Contains(e.UserId));
+
+            if (!string.IsNullOrEmpty(keySearch))
+            {
+                string search = keySearch.ToLower().Trim();
+                // THÊM: e.User.FullName != null để chặn đứng lỗi Null Reference dưới SQL
+                query = query.Where(e => e.User.FullName != null && e.User.FullName.ToLower().Contains(search));
+            }
+
+            return query;
         }
     }
 }

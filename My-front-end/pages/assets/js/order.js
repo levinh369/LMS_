@@ -9,7 +9,7 @@ const OrderApp = {
         const $noOrder = $('#noOrder');
 
         $.ajax({
-            url: "https://lms-u2jn.onrender.com/api/User/my-orders", // Thay bằng URL API thật của bác
+            url: "http://127.0.0.1:5000/api/User/my-orders", // Thay bằng URL API thật của bác
             type: 'GET',
             headers: { "Authorization": "Bearer " + token },
             success: (res) => {

@@ -106,45 +106,82 @@
     </style>
 </head>
 <body>
-
 <div class="container-fluid py-4 px-lg-5">
-    <div class="card shadow-sm mb-4">
-        <div class="card-body">
+    <div class="card shadow-sm border-0 mb-4" style="border-radius: 15px;">
+        <div class="card-body p-4">
             <div class="row g-3 align-items-end">
+                
+                <!-- CỘT TÌM KIẾM -->
                 <div class="col-md-3">
-                    <label class="form-label fw-bold small text-muted text-uppercase">Tìm kiếm tiêu đề</label>
-                    <div class="input-group">
-                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-search"></i></span>
-                        <input type="text" id="keySearch" class="form-control border-start-0 ps-0" placeholder="Nhập tên bài học...">
+                    <div class="position-relative"> <!-- Thêm position-relative ở đây -->
+                        <label class="form-label fw-bold small text-muted text-uppercase mb-2">Tìm kiếm tiêu đề</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="bi bi-search"></i></span>
+                            <input type="text" id="keySearch" class="form-control bg-light border-start-0 ps-0" placeholder="Nhập tên bài học..." style="height: 38px;">
+                        </div>
+                        <!-- Dải thông báo nằm tuyệt đối để không đẩy khung -->
+                        <div id="bulk-actions" class="text-danger fw-bold transition" 
+                             style="visibility: hidden; opacity: 0; font-size: 11px; position: absolute; bottom: -20px; left: 0; white-space: nowrap;">
+                            <i class="bi bi-check2-circle"></i> Đã chọn: <span id="selected-count">0</span> bài học
+                        </div>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label fw-bold small text-muted text-uppercase">Loại bài học</label>
-                    <select id="isPreview" class="form-select">
+
+                <!-- LOẠI BÀI HỌC -->
+                <div class="col-md-2">
+                    <label class="form-label fw-bold small text-muted text-uppercase mb-2">Loại bài học</label>
+                    <select id="isPreview" class="form-select bg-light border-0" style="height: 38px;">
                         <option value="">Tất cả loại</option>
                         <option value="true">Cho phép học thử</option>
-                        <option value="false">Nội dung khóa học</option>
+                        <option value="false">Nội dung chính</option>
                     </select>
                 </div>
+
+                <!-- TRẠNG THÁI -->
                 <div class="col-md-2">
-                    <label class="form-label fw-bold small text-muted text-uppercase">Trạng thái</label>
-                    <select id="isActive" class="form-select">
-                        <option value="-1">Tất cả trạng thái</option>
-                        <option value="1">Đang hoạt động</option>
-                        <option value="0">Đang tạm ẩn</option>
+                    <label class="form-label fw-bold small text-muted text-uppercase mb-2">Trạng thái</label>
+                    <select id="isActive" class="form-select bg-light border-0" style="height: 38px;">
+                        <option value="-1">Tất cả</option>
+                        <option value="1">Hoạt động</option>
+                        <option value="0">Tạm ẩn</option>
                     </select>
                 </div>
-                <div class="col-md-4">
-    <div class="d-flex gap-2">
-        <button class="btn btn-primary flex-fill shadow-sm fw-bold" onclick="Lesson.loadData()">
-            <i class="bi bi-search me-1"></i> TÌM KIẾM
+
+                <!-- CỤM NÚT ĐIỀU KHIỂN -->
+              <div class="col-md-5">
+    <div class="d-flex gap-2 justify-content-end align-items-center" style="height: 38px;">
+        
+        <!-- NÚT XÓA CHỌN: Màu đỏ dịu, bo tròn hoàn toàn -->
+        <button id="btn-bulk-delete" 
+                class="btn btn-danger btn-sm fw-bold rounded-pill px-3 shadow-sm transition border-0" 
+                style="height: 34px; font-size: 12px;"
+                onclick="Lesson.softDeleteBulk()">
+            <i class="bi bi-trash-fill"></i> XÓA CHỌN
         </button>
-        <button class="btn btn-outline-secondary shadow-sm" onclick="Lesson.resetFilters()">
-            <i class="bi bi-arrow-clockwise"></i>
+
+        <!-- NÚT LỌC: Đổi sang màu Indigo (Xanh tím) cho sang, bo tròn hoàn toàn -->
+        <button class="btn btn-primary btn-sm px-4 fw-bold rounded-pill shadow-sm border-0" 
+                onclick="Lesson.loadData(1)"
+                style="height: 34px; font-size: 12px; background-color: #6366f1;">
+            <i class="bi bi-funnel-fill me-1"></i> LỌC DỮ LIỆU
         </button>
-        <a href="course_trash.html" class="btn btn-outline-danger shadow-sm d-flex align-items-center justify-content-center">
-            <i class="bi bi-trash3 me-1"></i> Thùng rác
-        </a>
+        
+        <!-- NÚT LÀM MỚI: Dạng hình tròn hoàn hảo -->
+        <button class="btn btn-light btn-sm rounded-circle shadow-sm border-0 d-flex align-items-center justify-content-center" 
+                onclick="Lesson.resetFilter()" 
+                title="Làm mới" 
+                style="width: 34px; height: 34px;">
+            <i class="bi bi-arrow-clockwise fs-6"></i>
+        </button>
+        
+        <!-- NÚT THÙNG RÁC: Dùng màu xám đỏ nhạt, bo tròn mịn -->
+        <button type="button" 
+                onclick="Lesson.goToTrash()" 
+                class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-bold border-0 shadow-sm"
+                style="height: 34px; font-size: 12px; background-color: #fff5f5;">
+            <i class="bi bi-trash3-fill me-1"></i> THÙNG RÁC
+        </button>
+
     </div>
 </div>
             </div>
@@ -167,6 +204,9 @@
                 <table class="table table-hover align-middle mb-0" id="mainLessonTable">
                     <thead class="table-light">
                         <tr class="text-center text-uppercase small fw-bold">
+                             <th class="ps-4" style="width: 50px;">
+                                <input class="form-check-input" type="checkbox" id="check-all">
+                            </th>
                             <th style="width: 50px">#</th>
                             <th style="width: 50px">STT</th>
                             <th class="text-start">Tiêu đề bài học</th>

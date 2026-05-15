@@ -21,6 +21,8 @@ namespace LMS.Enums
         [Display(Name = "Khóa học đã được duyệt")]
         CourseApproved = 6,
         [Display(Name = "Yêu cầu duyệt khóa học")]
-        CoursePendingReview = 7
+        CoursePendingReview = 7,
+        [Display(Name = "Yêu cầu đăng ký giảng viên")]
+        InstructorApplicationPending = 8,
     }
 }

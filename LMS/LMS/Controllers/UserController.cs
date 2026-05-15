@@ -4,8 +4,10 @@ using LMS.Repositories;
 using LMS.Services;
 using LMS.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace LMS.Controllers
@@ -33,7 +35,7 @@ namespace LMS.Controllers
             return Ok(profileData);
         }
         [Authorize]
-        [HttpGet("settings-data")] 
+        [HttpGet("settings-data")]
         public async Task<IActionResult> GetUserSettings()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
@@ -57,28 +59,26 @@ namespace LMS.Controllers
         [HttpPost("update-profile")]
         public async Task<IActionResult> UpdateProfile([FromForm] UpdateProfileRequestDTO model)
         {
-            // 1. Lấy UserId từ Token
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null)
+            try
             {
-                return Unauthorized(new { message = "Vui lòng đăng nhập lại bác ơi!" });
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null) return Unauthorized(new { message = "Hết phiên đăng nhập!" });
+
+                int userId = int.Parse(userIdClaim.Value);
+                var result = await userService.UpdateProfile(userId, model);
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Cập nhật hồ sơ thành công!",
+                    newName = result.FullName,
+                    newAvatar = result.AvatarUrl
+                });
             }
-
-            int userId = int.Parse(userIdClaim.Value);
-
-            var result = await userService.UpdateProfile(userId, model);
-            if (result == null)
+            catch (Exception ex)
             {
-                return BadRequest(new { message = "Mật khẩu hiện tại không đúng hoặc có lỗi xảy ra!" });
+                return BadRequest(new { success = false, message = ex.Message });
             }
-            return Ok(new
-            {
-                success = true,
-                message = "Cập nhật hồ sơ thành công!",
-                newName = result.FullName,  
-                newAvatar = result.AvatarUrl 
-            });
-
         }
         [HttpGet("list-data")]
         public async Task<IActionResult> ListData(
@@ -87,10 +87,19 @@ namespace LMS.Controllers
         string keySearch = "",
         DateTime? fromDate = null,
         DateTime? toDate = null,
+        int courseId = 0,
+        int roleId = 0,
         int isActive = -1)
         {
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            int currentUserId = int.TryParse(userIdClaim, out var id) ? id : 0;
+            var currentUserRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
+            if (currentUserRole == "Admin")
+            {
+                currentUserId = 0;
+            }
             var (data, total) = await userService.GetUserListAsync(
-                page, pageSize, keySearch, fromDate, toDate, isActive);
+                page, pageSize, keySearch, fromDate, toDate, isActive, currentUserId, roleId, courseId);
             return Ok(new
             {
                 success = true,
@@ -99,7 +108,7 @@ namespace LMS.Controllers
             });
         }
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteAsync(int id) 
+        public async Task<IActionResult> DeleteAsync(int id)
         {
             await userService.DeleteAsync(id);
             return Ok(new
@@ -110,7 +119,7 @@ namespace LMS.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateAsync(int id, [FromBody] UserRequestDTO dto) 
+        public async Task<IActionResult> UpdateAsync(int id, [FromBody] UserRequestDTO dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
@@ -123,13 +132,13 @@ namespace LMS.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetUserAsync(int id) 
+        public async Task<IActionResult> GetUserAsync(int id)
         {
             var user = await userService.GetByIdAsync(id);
             return Ok(new
             {
                 success = true,
-                data = user 
+                data = user
             });
         }
         [HttpPatch("toggle-status/{id}")]
@@ -172,6 +181,97 @@ namespace LMS.Controllers
             var orders = await userService.GetOrdersList(userId);
 
             return Ok(new { data = orders });
+        }
+        [HttpGet("list-deleted")]
+        public async Task<IActionResult> GetDeletedList(int page = 1, int pageSize = 10, string? keySearch = "", int roleId = 0)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "";
+
+            int userId = int.TryParse(userIdClaim, out var id) ? id : 0;
+            int userIdToFilter = (currentUserRole == "Admin") ? 0 : userId;
+            try
+            {
+                var (data, total) = await userService.GetDeletedUserListAsync(page, pageSize, keySearch ?? "", roleId, userIdToFilter);
+
+                return Ok(new
+                {
+                    Success = true,
+                    Data = data,
+                    Total = total,
+                    Page = page,
+                    PageSize = pageSize
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Success = false, Message = ex.Message });
+            }
+        }
+
+        [HttpPost("restore/{id}")]
+        public async Task<IActionResult> Restore(int id)
+        {
+            try
+            {
+                await userService.RestoreAsync(id);
+                return Ok(new { Success = true, Message = "Khôi phục khóa học thành công" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Success = false, Message = ex.Message });
+            }
+        }
+
+        [HttpDelete("hard-delete/{id}")]
+        public async Task<IActionResult> HardDelete(int id)
+        {
+            try
+            {
+                await userService.HardDeleteAsync(id);
+                return Ok(new { Success = true, Message = "Đã xóa vĩnh viễn khóa học" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Success = false, Message = "Không thể xóa vĩnh viễn khóa học này vì có dữ liệu liên quan." });
+            }
+        }
+        [HttpPost("soft-delete-bulk")]
+        public async Task<IActionResult> SoftDeleteBulk([FromBody] List<int> ids)
+        {
+            if (ids == null || !ids.Any())
+                return BadRequest(new { Success = false, Message = "Danh sách ID không hợp lệ." });
+
+            var result = await userService.SoftDeleteBulkAsync(ids);
+            if (result)
+                return Ok(new { Success = true, Message = $"Đã chuyển {ids.Count} mục vào thùng rác." });
+
+            return BadRequest(new { Success = false, Message = "Không thể xóa các mục đã chọn." });
+        }
+        [HttpPost("restore-bulk")]
+        public async Task<IActionResult> RestoreBulk([FromBody] List<int> ids)
+        {
+            if (ids == null || !ids.Any())
+                return BadRequest(new { Success = false, Message = "Danh sách ID không hợp lệ." });
+
+            var result = await userService.RestoreBulkAsync(ids);
+            if (result)
+                return Ok(new { Success = true, Message = $"Đã khôi phục {ids.Count} tài khoản thành công." });
+
+            return BadRequest(new { Success = false, Message = "Khôi phục thất bại. Vui lòng thử lại." });
+        }
+
+        [HttpDelete("hard-delete-bulk")]
+        public async Task<IActionResult> HardDeleteBulk([FromBody] List<int> ids)
+        {
+            if (ids == null || !ids.Any())
+                return BadRequest(new { Success = false, Message = "Danh sách ID không hợp lệ." });
+
+            var result = await userService.HardDeleteBulkAsync(ids);
+            if (result)
+                return Ok(new { Success = true, Message = $"Đã xóa vĩnh viễn {ids.Count} tài khoản." });
+
+            return BadRequest(new { Success = false, Message = "Không thể xóa vĩnh viễn dữ liệu." });
         }
     }
 }

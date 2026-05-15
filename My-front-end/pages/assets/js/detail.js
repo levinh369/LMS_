@@ -3,7 +3,7 @@ var Detail = {
     currentLessons: [], // Sẽ chứa danh sách phẳng của tất cả bài học để hiện trong Modal
     currentTeacherId: 0,
     config: {
-        apiUrl: "https://lms-u2jn.onrender.com/api/course"
+        apiUrl: "http://127.0.0.1:5000/api/course"
     },
     init: function () {
         const urlParams = new URLSearchParams(window.location.search);
@@ -105,22 +105,38 @@ showLoading: function(isShow) {
     $('#courseDescription').html(data.description || 'Đang cập nhật nội dung...');
 
     // 4. Vẽ Benefits (Lợi ích khóa học)
-    let benefitsHtml = '';
-    if (data.courseDetails && data.courseDetails.length > 0) {
-        data.courseDetails.forEach(item => {
-            const isBenefit = item.detailType === 0; // 0 là lợi ích, 1 là yêu cầu
-            benefitsHtml += `
-                <div class="col-md-6 mb-2 d-flex align-items-start">
-                    <div class="flex-shrink-0 mt-1">
-                        <i class="bi ${isBenefit ? 'bi-patch-check-fill text-primary' : 'bi-arrow-right-circle text-secondary'}"></i>
+   let benefitsHtml = '';
+
+if (data.courseDetails && data.courseDetails.length > 0) {
+    data.courseDetails.forEach(item => {
+        const isBenefit = item.detailType === 0; 
+        
+        // Cấu hình icon và màu sắc theo loại
+        const config = isBenefit ? {
+            icon: 'bi-check-circle-fill',
+            color: 'text-success',
+            bgColor: 'bg-success-subtle'
+        } : {
+            icon: 'bi-exclamation-circle-fill', 
+            color: 'text-warning',
+            bgColor: 'bg-warning-subtle'
+        };
+
+        benefitsHtml += `
+            <div class="col-md-6 mb-3">
+                <div class="d-flex align-items-center p-2 rounded-3 border-start border-4 ${isBenefit ? 'border-success' : 'border-warning'} shadow-sm h-100 bg-white hover-shadow">
+                    <div class="flex-shrink-0 ms-1">
+                        <i class="bi ${config.icon} ${config.color} fs-5"></i>
                     </div>
-                    <div class="ms-2 text-dark small">
+                    <div class="ms-3 text-dark fw-medium" style="font-size: 0.9rem; line-height: 1.4;">
                         ${item.content}
                     </div>
-                </div>`;
-        });
-    }
-    $('#benefitsContainer').html(benefitsHtml || '<p class="small text-muted ps-3">Thông tin đang được cập nhật...</p>');
+                </div>
+            </div>`;
+    });
+}
+
+$('#benefitsContainer').html(benefitsHtml || '<div class="col-12 text-center py-3 text-muted"><em>Thông tin đang được cập nhật...</em></div>');
 
     // 5. Trạng thái nút bấm (Đã đăng ký hay chưa)
     if (data.isEnrolled) {
@@ -205,7 +221,7 @@ handlePayment: function (courseId, orderId = 0, teacherId) {
 
         // 4. Gọi API
         $.ajax({
-            url: 'https://lms-u2jn.onrender.com/api/Payment/create-payment',
+            url: 'http://127.0.0.1:5000/api/Payment/create-payment',
             type: 'POST',
             contentType: 'application/json',
             data: JSON.stringify(paymentData), // Gửi Object thay vì gửi mỗi cái ID lẻ
@@ -367,7 +383,7 @@ renderEnrollButton: async function() {
 
         try {
             // Gọi API check xem user này đã sở hữu khóa học chưa
-            const response = await fetch(`https://lms-u2jn.onrender.com/api/enroll/check/${courseId}`, {
+            const response = await fetch(`http://127.0.0.1:5000/api/enroll/check/${courseId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await response.json();

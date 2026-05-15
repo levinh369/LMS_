@@ -2,7 +2,7 @@ const chapter = {
     currentCourseId: 0, // Lưu ID khóa học đang chọn
     config: {
         pageSize: 10,
-        apiUrl: "https://lms-u2jn.onrender.com/api/chapter"
+        apiUrl: "http://127.0.0.1:5000/api/chapter"
     },
     openModal: async function(courseId) {
         chapter.currentCourseId = courseId;
@@ -201,6 +201,14 @@ changeStatus: async function(id) {
         toastr.error("Lỗi hệ thống!");
     }
 },
+goToTrash: function() {
+        if (!this.currentCourseId || this.currentCourseId == 0) {
+            Swal.fire("Lỗi", "Không xác định được khóa học!", "error");
+            return;
+        }
+        // Chuyển hướng kèm theo tham số courseId trên URL
+        window.location.href = `/pages/chapter/chapter_trash.html?courseId=${this.currentCourseId}`;
+    },
 delete: async function(id) {
     const result = await Swal.fire({
         title: "Bạn có chắc muốn xóa?",
@@ -219,7 +227,7 @@ delete: async function(id) {
                 type: "DELETE"
             });
             Swal.fire("Thành công!", res.message || "Đã xóa chương.", "success");
-            chapter.loadData(1);
+            chapter.loadList(this.currentCourseId);
 
         } catch (error) {
             console.error("Lỗi khi xóa:", error);
@@ -229,12 +237,20 @@ delete: async function(id) {
 },
 chapterTrash: {
     init: function() {
-        this.loadData(1);
+        const urlParams = new URLSearchParams(window.location.search);
+            const id = urlParams.get('courseId');
+
+        if (id) {
+            chapter.currentCourseId = id; // Gán lại vào biến global để dùng
+            this.loadData(1);
+        } else {
+            console.error("URL thiếu courseId!");
+        }
     },
 
     loadData: async function(page) {
         const pageSize = 10; // Hoặc lấy từ config của bạn
-        const url = `/api/Chapter/list-deleted?page=${page}&pageSize=${pageSize}`;
+        const url = `http://127.0.0.1:5000/api/Chapter/list-deleted?courseId=${chapter.currentCourseId}&page=${page}&pageSize=${pageSize}`;
 
         try {
             const response = await fetch(url);
@@ -250,61 +266,130 @@ chapterTrash: {
         }
     },
 
-    renderTable: function(data) {
-        const tbody = document.getElementById('chapterTrashData');
-        if (!tbody) return;
+renderTable: function(data) {
+    const tbody = document.getElementById('chapterTrashData');
+    if (!tbody) return;
 
-        let html = '';
-        if (!data || data.length === 0) {
-            html = '<tr><td colspan="5" class="text-center py-5 text-muted">Thùng rác chương trống</td></tr>';
-        } else {
-            data.forEach(item => {
-                html += `
-                <tr>
-                    <td class="ps-4 text-muted">#${item.id}</td>
-                    <td><span class="fw-bold text-dark">${item.title}</span></td>
-                    <td><span class="badge bg-secondary">Index: ${item.orderIndex || item.order}</span></td>
-                    <td>${new Date(item.createdAt || item.createAt).toLocaleDateString('vi-VN')}</td>
-                    <td class="text-end pe-4">
-                        <button class="btn btn-success btn-sm px-3 shadow-sm" onclick="Chapter.chapterTrash.restore(${item.id})">
-                            <i class="bi bi-arrow-counterclockwise"></i> Khôi phục
+    let html = '';
+    if (!data || data.length === 0) {
+        html = `
+            <tr>
+                <td colspan="5" class="text-center py-5">
+                    <div class="mb-3">
+                        <i class="bi bi-trash3 text-muted" style="font-size: 3rem; opacity: 0.3;"></i>
+                    </div>
+                    <p class="text-muted fw-light">Thùng rác hiện đang trống sạch sẽ!</p>
+                </td>
+            </tr>`;
+    } else {
+        data.forEach(item => {
+            // Xử lý ngày xóa
+            const dateValue = item.deletedAt || item.updatedAt || item.createdAt;
+            const deleteDate = new Date(dateValue).toLocaleDateString('vi-VN');
+            
+            // Avatar chữ cái đầu nếu không có ảnh (như phong cách Course)
+            const firstChar = item.title ? item.title.charAt(0).toUpperCase() : '?';
+
+            html += `
+            <tr class="align-middle">
+                <!-- Cột 1: ID -->
+                <td class="ps-4" style="width: 80px">
+                    <span class="text-muted fw-bold">#${item.id}</span>
+                </td>
+                
+                <!-- Cột 2: Thông tin chính (Thumbnail + Title) -->
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="symbol symbol-45px me-3">
+                           
+                        </div>
+                        <div class="d-flex flex-column">
+                            <a href="javascript:void(0)" class="text-dark fw-bold text-hover-primary mb-1 fs-6 text-decoration-none">
+                                ${item.title}
+                            </a>
+                            <span class="text-muted fw-semibold fs-7">Chương học</span>
+                        </div>
+                    </div>
+                </td>
+
+                <!-- Cột 3: Thứ tự hiển thị -->
+                <td>
+                    <span class="badge bg-light-info text-info border-0 fw-bold px-3 py-2">
+                        STT: ${item.orderIndex || item.order || 0}
+                    </span>
+                </td>
+
+                <!-- Cột 4: Ngày xóa -->
+                <td>
+                    <div class="d-flex flex-column">
+                        <span class="text-dark fw-bold mb-1">${deleteDate}</span>
+                        <span class="text-muted fs-7">Ngày xóa tạm</span>
+                    </div>
+                </td>
+
+                <!-- Cột 5: Hành động (Căn giữa hoặc phải tùy thẩm mỹ) -->
+                <td class="text-end pe-4">
+                    <div class="d-flex justify-content-end gap-2">
+                        <button class="btn-action btn-restore" onclick="chapter.chapterTrash.restore(${item.id})" title="Khôi phục">
+                            <i class="bi bi-arrow-counterclockwise"></i>
                         </button>
-                        <button class="btn btn-outline-danger btn-sm px-3 ms-1" onclick="Chapter.chapterTrash.hardDelete(${item.id})">
-                            <i class="bi bi-trash"></i> Xóa vĩnh viễn
+                        <button class="btn-action btn-delete" onclick="chapter.chapterTrash.hardDelete(${item.id})" title="Xóa vĩnh viễn">
+                            <i class="bi bi-trash3-fill"></i>
                         </button>
-                    </td>
-                </tr>`;
-            });
-        }
-        tbody.innerHTML = html;
-    },
-
-    restore: function(id) {
-        this.actionHandle(id, 'restore', 'Khôi phục chương này?', 'success');
-    },
-
-    hardDelete: function(id) {
-        this.actionHandle(id, 'hard-delete', 'Xóa vĩnh viễn chương và toàn bộ bài học bên trong?', 'warning', 'DELETE');
-    },
-
-    actionHandle: function(id, action, title, icon, method = 'POST') {
-        Swal.fire({
-            title: title,
-            icon: icon,
-            showCancelButton: true,
-            confirmButtonText: 'Đồng ý',
-            cancelButtonText: 'Hủy'
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                const response = await fetch(`/api/Chapter/${action}/${id}`, { method: method });
-                const res = await response.json();
-                if (res.success || res.Success) {
-                    Swal.fire('Thành công!', '', 'success');
-                    this.loadData(1);
-                }
-            }
+                    </div>
+                </td>
+            </tr>`;
         });
-    },
+    }
+    tbody.innerHTML = html;
+    
+    // Cập nhật tổng số bản ghi
+    const totalElem = document.getElementById('total-records');
+    if (totalElem) totalElem.innerText = data.length;
+},
+restore: function(id) {
+            Swal.fire({
+                title: 'Khôi phục chương?',
+                text: "Chương này sẽ quay lại danh sách hiển thị chính.",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#198754',
+                confirmButtonText: 'Đồng ý',
+                cancelButtonText: 'Hủy'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    const response = await fetch(`${chapter.config.apiUrl}/restore/${id}`, { method: 'POST' });
+                    const res = await response.json();
+                    if (res.success || res.Success) {
+                        Swal.fire('Thành công!', 'Đã khôi phục chương.', 'success');
+                        this.loadData(1);
+                    }
+                }
+            });
+        },
+
+        hardDelete: function(id) {
+            Swal.fire({
+                title: 'Xóa vĩnh viễn?',
+                text: "Dữ liệu sẽ bị xóa sạch khỏi hệ thống và không thể khôi phục!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'Xóa ngay',
+                cancelButtonText: 'Hủy'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    const response = await fetch(`${chapter.config.apiUrl}/hard-delete/${id}`, { method: 'DELETE' });
+                    const res = await response.json();
+                    if (res.success || res.Success) {
+                        Swal.fire('Đã xóa!', 'Chương học đã bị xóa vĩnh viễn.', 'success');
+                        this.loadData(1);
+                    } else {
+                        Swal.fire('Thất bại!', res.message || 'Có lỗi xảy ra.', 'error');
+                    }
+                }
+            });
+        },
 
     showPaging: function(totalCount, currentPage) {
         $('#paging-ul').twbsPagination('destroy');

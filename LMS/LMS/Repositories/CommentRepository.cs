@@ -56,7 +56,7 @@ namespace LMS.Repositories
            .Include(c => c.ParentComment) // Thằng cha của comment hiện tại
                .ThenInclude(p => p.User) // User của thằng cha đó (Để lấy tên @)
            .Include(c => c.Likes)
-           .Where(c => c.LessonId == lessonId && !c.IsDeleted)
+           .Where(c => c.LessonId == lessonId && !c.IsDeleted && c.IsActive)
            .OrderByDescending(c => c.CreatedAt)
            .ToListAsync();
 
@@ -238,7 +238,7 @@ namespace LMS.Repositories
 
         // 1. LẤY DANH SÁCH (Fix logic lọc để hiện cả con bị xóa lẻ)
         public async Task<(List<AdminCommentResponseDTO> Items, int TotalCount)> GetAdminCommentsAsync(
-     int pageIndex, int? courseId, int? lessonId, string? search, string status) // Thêm lessonId ở đây
+     int pageIndex, int? courseId, int? lessonId, string? search, string status, int? teacherId) // Thêm lessonId ở đây
         {
             int pageSize = 5;
             IQueryable<CommentModel> query;
@@ -257,8 +257,10 @@ namespace LMS.Repositories
             {
                 query = query.Where(c => c.Lesson.Chapter.CourseId == courseId.Value);
             }
-
-            // --- BỘ LỌC BÀI HỌC (Cái này bác đừng bỏ nhé!) ---
+            if (teacherId.HasValue && teacherId.Value > 0)
+            {
+                query = query.Where(c => c.Lesson.Chapter.Course.TeacherId == teacherId.Value);
+            }
             if (lessonId.HasValue && lessonId.Value > 0)
             {
                 query = query.Where(c => c.LessonId == lessonId.Value);
@@ -296,10 +298,13 @@ namespace LMS.Repositories
                     IsAdmin = c.User.Role != null && c.User.Role.RoleName == "Admin",
                     CourseId = c.Lesson.Chapter.CourseId,
                     ParentId = c.ParentId,
-
+                    UserId = c.UserId,
+                    ReplyToUserId = c.ReplyToUserId,
+                    ReplyToUserName = c.ReplyToUserName,
+                    IsTeacher = c.Lesson.Chapter.Course.TeacherId == c.UserId,
                     Replies = c.Replies
                         .Where(r => r.IsDeleted == c.IsDeleted)
-                        .OrderBy(r => r.CreatedAt)
+                        .OrderByDescending(r => r.CreatedAt)
                         .Select(r => new AdminCommentResponseDTO
                         {
                             Id = r.Id,
@@ -310,7 +315,11 @@ namespace LMS.Repositories
                             UserName = r.User.FullName,
                             UserAvatar = r.User.AvatarUrl,
                             IsAdmin = r.User.Role != null && r.User.Role.RoleName == "Admin",
-                            ParentId = r.ParentId
+                            ParentId = r.ParentId,
+                            UserId = r.UserId,
+                            IsTeacher = c.Lesson.Chapter.Course.TeacherId == r.UserId,
+                            ReplyToUserId = r.ReplyToUserId,
+                            ReplyToUserName = r.ReplyToUserName,
                         }).ToList()
                 })
                 .ToListAsync();
@@ -379,7 +388,23 @@ namespace LMS.Repositories
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                // 1. Tìm thằng đang được ghim trong bài học này (nếu có) để gỡ ghim
+                if (!isNew)
+                {
+                    var existingComment = await _context.Comments.FindAsync(model.Id);
+                    if (existingComment == null) return 0;
+
+                    // --- LOGIC BỎ GHIM (TOGGLE) ---
+                    if (existingComment.IsPinned)
+                    {
+                        existingComment.IsPinned = false;
+                        await _context.SaveChangesAsync();
+                        await transaction.CommitAsync();
+                        return -1; // Trả về -1 để Service biết đây là hành động BỎ GHIM
+                    }
+                }
+
+                // --- LOGIC GHIM MỚI / GHIM CÁI KHÁC ---
+                // 1. Tìm thằng đang được ghim trong bài học này để gỡ ghim (nếu có)
                 var currentPin = await _context.Comments
                     .FirstOrDefaultAsync(c => c.LessonId == model.LessonId && c.IsPinned && !c.IsDeleted);
 
@@ -390,39 +415,99 @@ namespace LMS.Repositories
 
                 if (isNew)
                 {
-                    // 2a. Thêm comment mới và ghim luôn
                     model.IsPinned = true;
                     model.CreatedAt = DateTime.Now;
                     model.IsActive = true;
                     await _context.Comments.AddAsync(model);
-                    await _context.SaveChangesAsync(); // Lưu để lấy ID mới
                 }
                 else
                 {
-                    // 2b. Tìm comment cũ và đánh dấu IsPinned = true
                     var existingComment = await _context.Comments.FindAsync(model.Id);
-                    if (existingComment != null)
-                    {
-                        existingComment.IsPinned = true;
-                        // Gán lại Id vào model để return phía dưới cho chuẩn
-                        model.Id = existingComment.Id;
-                    }
-                    else
-                    {
-                        return 0; // Không tìm thấy comment để ghim
-                    }
+                    existingComment.IsPinned = true;
+                    model.Id = existingComment.Id;
                 }
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
-
                 return model.Id;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                // Log lỗi ở đây nếu cần: console.WriteLine(ex.Message);
                 await transaction.RollbackAsync();
                 return 0;
+            }
+        }
+
+        public async Task HardDeleteAsync(CommentModel entity)
+        { 
+            _context.Comments.Remove(entity);
+            await _context.SaveChangesAsync();
+        }
+        public async Task<(List<CommentModel> Comments, int TotalCount)> GetParentCommentsAsync(int lessonId, int userId, int page, int pageSize)
+        {
+            var query = _context.Comments
+                .Include(c => c.User)
+                .Include(c => c.Likes)
+                .Include(c => c.Replies) // Include để đếm số lượng reply
+                .Where(c => c.LessonId == lessonId && c.ParentId == null && !c.IsDeleted && c.IsActive);
+
+            var totalCount = await query.CountAsync();
+
+            var comments = await query
+                .OrderByDescending(c => c.IsPinned)
+                .ThenByDescending(c => c.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            CalculateReactionStats(comments, userId); // Tách logic tính toán ra hàm dùng chung
+
+            return (comments, totalCount);
+        }
+
+        public async Task<(List<CommentModel> Comments, int TotalCount)> GetRepliesAsync(int parentId, int userId, int page, int pageSize)
+        {
+            var query = _context.Comments
+                .Include(c => c.User)
+                .Include(c => c.ParentComment)
+                    .ThenInclude(p => p.User)
+                .Include(c => c.Likes)
+                .Where(c => c.ParentId == parentId && !c.IsDeleted && c.IsActive);
+
+            var totalCount = await query.CountAsync();
+
+            var comments = await query
+                .OrderBy(c => c.CreatedAt) 
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            CalculateReactionStats(comments, userId);
+
+            return (comments, totalCount);
+        }
+
+        private void CalculateReactionStats(List<CommentModel> comments, int userId)
+        {
+            foreach (var comment in comments)
+            {
+                comment.TotalReactions = comment.Likes.Count;
+
+                comment.ReactionStats = comment.Likes
+                    .GroupBy(l => l.Type)
+                    .Select(g => new ReactionStatDTO { Type = (int)g.Key, Count = g.Count() })
+                    .OrderByDescending(x => x.Count)
+                    .ToList();
+                comment.TopReactionTypes = comment.ReactionStats
+                    .Take(3)
+                    .Select(x => x.Type)
+                    .ToList();
+                if (userId > 0)
+                {
+                    var myReaction = comment.Likes.FirstOrDefault(l => l.UserId == userId);
+                    comment.IsLiked = myReaction != null;
+                    comment.UserReaction = myReaction?.Type;
+                }
             }
         }
     }

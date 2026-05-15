@@ -151,19 +151,16 @@ namespace LMS.Services
             await chapterRepository.UpdateAsync(entity);
             return "SUCCESS"; ;
         }
-        public async Task<(List<ChapterResponseDTO> Data, int Total)> GetDeletedChapterListAsync(int page, int pageSize, string keySearch)
+        public async Task<(List<ChapterResponseDTO> Data, int Total)> GetDeletedChapterListAsync(int courseId, int page, int pageSize, string keySearch)
         {
             Expression<Func<ChapterModel, bool>> filter = x =>
-                string.IsNullOrEmpty(keySearch) || x.Title.Contains(keySearch);
-
-            // 2. Gọi Repo lấy Entity
+                (courseId == 0 || x.CourseId == courseId) &&
+                (string.IsNullOrEmpty(keySearch) || x.Title.Contains(keySearch));
             var (entities, total) = await chapterRepository.GetDeletedListAsync(
                 filter,
                 page,
                 pageSize
             );
-
-            // 3. Map sang DTO
             var dtoList = entities.Select(c => new ChapterResponseDTO
             {
                 Id = c.Id,
@@ -171,7 +168,6 @@ namespace LMS.Services
                 Order = c.OrderIndex,
                 IsActive = c.IsActive,
                 CreateAt = c.CreatedAt,
-
             }).ToList();
 
             return (dtoList, total);

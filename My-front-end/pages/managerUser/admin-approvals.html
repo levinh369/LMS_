@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Xét duyệt Giảng viên</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    
+    <style>
+        body { background-color: #f4f6f9; }
+        .truncate-text { max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        /* Chỉnh màu chữ Header bảng giống ảnh */
+        .table-custom-header th {
+            color: #0d6efd; 
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+            padding-top: 15px;
+            padding-bottom: 15px;
+        }
+
+        /* Nút icon hành động giống ảnh */
+        .action-icon {
+            background: transparent;
+            border: none;
+            font-size: 1.1rem;
+            margin: 0 5px;
+            transition: 0.2s;
+        }
+        .action-icon:hover { opacity: 0.7; }
+    </style>
+</head>
+
+<body class="bg-light">
+<div id="sidebar-placeholder"></div>
+<div class="container py-5">
+    
+    <div class="mb-4 d-flex justify-content-between align-items-center d-none">
+        <div>
+            <h3 class="fw-bold text-dark m-0">Xét duyệt Giảng viên</h3>
+        </div>
+    </div>
+
+    <div class="container-fluid px-0"> 
+        
+        <div id="admin-section">
+            <h3 class="mb-4 text-primary fw-bold"><i class="bi bi-shield-check"></i> Quản Trị Hệ Thống Phê Duyệt</h3>
+            
+           <div class="card shadow-sm mb-4 border-0" style="border-left: 4px solid #0d6efd !important; border-radius: 8px;">
+    <div class="card-body p-4">
+        
+        <div class="row g-3">
+            <div class="col-md-5">
+                <label class="form-label fw-bold small text-muted">Từ khóa</label>
+                <div class="input-group shadow-sm">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" id="adminKeySearch" class="form-control border-start-0 ps-0" placeholder="Tên học viên, ID, email...">
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <label class="form-label fw-bold small text-muted">Trạng thái</label>
+                <select id="adminIsActive" class="form-select shadow-sm">
+                    <option value="Pending">Tất cả chờ duyệt</option>
+                    <option value="Approved">Đã phê duyệt</option>
+                    <option value="Rejected">Đã từ chối</option>
+                </select>
+            </div>
+            
+            <div class="col-md-3">
+                <label class="form-label fw-bold small text-muted">Sắp xếp theo</label>
+                <select id="adminSort" class="form-select shadow-sm">
+                    <option value="newest">Mới nhất</option>
+                    <option value="oldest">Cũ nhất</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="d-flex align-items-center justify-content-end gap-3 mt-4 pt-3 border-top">
+            <button onclick="AdminApp.loadData(1)" class="btn btn-primary px-4 fw-bold shadow-sm">
+                <i class="bi bi-funnel-fill me-1"></i> Lọc dữ liệu
+            </button>
+            
+            <button onclick="AdminApp.resetSearch()" class="btn btn-light border text-secondary shadow-sm px-3" title="Đặt lại bộ lọc">
+                <i class="bi bi-arrow-clockwise me-1"></i> Làm mới
+            </button>
+            
+            <button class="btn btn-outline-danger px-4 fw-bold shadow-sm ms-2">
+                <i class="bi bi-trash3 me-1"></i> Thùng rác
+            </button>
+        </div>
+        
+    </div>
+</div>
+
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead id="table-head" class="table-light table-custom-header">
+                            <tr>
+                                <th class="text-uppercase fw-bold ps-4">MÃ HS</th>
+                                <th class="text-uppercase fw-bold">ỨNG VIÊN</th>
+                                <th class="text-uppercase fw-bold">GIỚI THIỆU</th>
+                                <th class="text-uppercase fw-bold">KINH NGHIỆM</th>
+                                <th class="text-uppercase fw-bold text-center">CV ĐÍNH KÈM</th>
+                                <th class="text-uppercase fw-bold text-center">TRẠNG THÁI</th>
+                                <th class="text-uppercase fw-bold text-center pe-4">HÀNH ĐỘNG</th>
+                            </tr>
+                        </thead>
+                        <tbody id="application-table-body">
+                            <tr>
+                                <td colspan="7" class="text-center py-5 text-muted">
+                                    <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                                    Đang tải dữ liệu hồ sơ...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="p-4 d-flex justify-content-between align-items-center border-top">
+                    <div class="text-muted small">Tổng số: <strong id="total-records">0</strong> bản ghi</div>
+                    <nav><ul id="paging-ul" class="pagination pagination-sm m-0"></ul></nav>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-danger text-white border-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i>Từ chối Hồ sơ</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="rejectAppId">
+                <div class="alert alert-warning small mb-4">
+                    Hệ thống sẽ gửi email thông báo lý do từ chối đến ứng viên <strong id="rejectUserName" class="text-dark"></strong>.
+                </div>
+                <div class="mb-2">
+                    <label class="form-label fw-bold">Lý do từ chối (Bắt buộc):</label>
+                    <textarea id="rejectReason" class="form-control" rows="4" placeholder="Ví dụ: CV chưa đủ chi tiết..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer bg-light border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-danger fw-bold" id="btnSubmitReject" onclick="AdminApp.submitReject()">Xác nhận Từ chối</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="detailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg"> <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white border-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-person-lines-fill me-2"></i>Chi tiết Hồ sơ Ứng viên</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                
+                <div id="detailLoading" class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2 text-muted fw-bold">Đang tải dữ liệu hồ sơ...</p>
+                </div>
+
+                <div id="detailContent" style="display: none;">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <p class="mb-1 text-muted small fw-bold">Họ và tên</p>
+                            <h6 class="fw-bold text-dark" id="detailFullName"></h6>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-1 text-muted small fw-bold">Email liên hệ</p>
+                            <h6 class="text-dark" id="detailEmail"></h6>
+                        </div>
+                    </div>
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <p class="mb-1 text-muted small fw-bold">Trạng thái</p>
+                            <div id="detailStatus"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-1 text-muted small fw-bold">Ngày nộp đơn</p>
+                            <h6 class="text-dark" id="detailAppliedAt"></h6>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <p class="mb-1 text-muted small fw-bold">Giới thiệu bản thân (Bio)</p>
+                        <div class="p-3 bg-light border rounded text-dark" id="detailBio" style="white-space: pre-wrap; line-height: 1.6;"></div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <p class="mb-1 text-muted small fw-bold">Kinh nghiệm chuyên môn</p>
+                        <div class="p-3 bg-light border rounded text-dark" id="detailExperience" style="white-space: pre-wrap; line-height: 1.6;"></div>
+                    </div>
+                    
+                    <div class="text-center mt-4 pt-3 border-top">
+                        <a href="#" id="detailCvUrl" target="_blank" class="btn btn-primary px-4 fw-bold shadow-sm">
+                            <i class="bi bi-file-earmark-pdf me-2"></i>Mở file CV Đính kèm
+                        </a>
+                    </div>
+                </div>
+
+            </div>
+            <div class="modal-footer bg-light border-0">
+                <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+<script src="../assets/js/admin_instructor_approval.js"></script>
+<script src="../assets/js/admin-loader.js"></script>
+</body>
+</html>

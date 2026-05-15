@@ -71,16 +71,31 @@ namespace LMS.Controllers
             return Ok(course);
         }
         [HttpGet("list-data")]
+        [Authorize]
         public async Task<IActionResult> ListData(
-        int page = 1,
-        int pageSize = 10,
-        string keySearch = "",
-        DateTime? fromDate = null,
-        DateTime? toDate = null,
-        int isActive = -1)
+      int page = 1,
+      int pageSize = 10,
+      string keySearch = "",
+      DateTime? fromDate = null,
+      DateTime? toDate = null,
+      int isActive = -1,
+      int teacherId = 0, int categoryId = 0) 
         {
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            int currentUserId = int.TryParse(userIdClaim, out var id) ? id : 0;
+            var currentUserRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
+            int filterTeacherId;
+            if (currentUserRole == "Admin")
+            {
+                filterTeacherId = teacherId;
+            }
+            else
+            {
+                filterTeacherId = currentUserId;
+            }
             var (data, total) = await courseService.GetCourseListAsync(
-                page, pageSize, keySearch, fromDate, toDate, isActive);
+                page, pageSize, keySearch, fromDate, toDate, isActive, filterTeacherId, categoryId);
+
             return Ok(new
             {
                 success = true,
@@ -250,11 +265,16 @@ namespace LMS.Controllers
             }
         }
         [HttpGet("list-deleted")]
-        public async Task<IActionResult> GetDeletedList(int page = 1, int pageSize = 10, string? keySearch = "")
+        public async Task<IActionResult> GetDeletedList(int page = 1, int pageSize = 10, string? keySearch = "", int categoryId=0)
         {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "";
+
+            int userId = int.TryParse(userIdClaim, out var id) ? id : 0;
+            int userIdToFilter = (currentUserRole == "Admin") ? 0 : userId;
             try
             {
-                var (data, total) = await courseService.GetDeletedCourseListAsync(page, pageSize, keySearch ?? "");
+                var (data, total) = await courseService.GetDeletedCourseListAsync(page, pageSize, keySearch ?? "", categoryId, userIdToFilter);
 
                 return Ok(new
                 {
@@ -298,5 +318,115 @@ namespace LMS.Controllers
                 return BadRequest(new { Success = false, Message = "Không thể xóa vĩnh viễn khóa học này vì có dữ liệu liên quan." });
             }
         }
-    }
+        [HttpGet("get-all-teachers")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAllTeachers()
+        {
+            try
+            {
+                var data = await courseService.GetTeacherListForSelectAsync();
+                return Ok(new { success = true, data = data });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+        [HttpPut("toggle-status/{id}")]
+        public async Task<IActionResult> ToggleStatus(int id, [FromQuery] string role)
+        {
+            try
+            {
+                var result = await courseService.ToggleStatusAsync(id, role);
+
+                if (!result)
+                {
+                    return BadRequest("Thao tác bị chặn: Khóa học đang trong trạng thái niêm phong bởi Quản trị viên.");
+                }
+
+                return Ok(new { success = true, message = "Cập nhật trạng thái thành công!" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Lỗi hệ thống: {ex.Message}");
+            }
+        }
+        [HttpGet("lookup")]
+        public async Task<IActionResult> GetLookupByTeacher()
+        {
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+            if (userIdClaim == null) return Unauthorized(new { message = "Bạn chưa đăng nhập nhé!" });
+
+            int teacherId = int.Parse(userIdClaim.Value);
+            try
+            {
+                var courses = await courseService.GetCourseByTeacherAsync(teacherId);
+                return Ok(new { success = true, data = courses });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+        [HttpGet("by-teacher")] 
+        public async Task<IActionResult> GetCoursesByTeacher([FromQuery] string teacherId = "all")
+        {
+            try
+            {
+                // Logic xử lý giống như cũ
+                if (teacherId == "all" || teacherId == "0")
+                {
+                    var allCourses = await courseService.GetCourseDetail();
+                    return Ok(new { success = true, data = allCourses });
+                }
+
+                int id = int.Parse(teacherId);
+                var courses = await courseService.GetCourseByTeacherAsync(id);
+                return Ok(new { success = true, data = courses });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+        [HttpPost("soft-delete-bulk")]
+        public async Task<IActionResult> SoftDeleteBulk([FromBody] List<int> ids)
+        {
+            if (ids == null || !ids.Any())
+                return BadRequest(new { Success = false, Message = "Danh sách ID không hợp lệ." });
+
+            var result = await courseService.SoftDeleteBulkAsync(ids);
+            if (result)
+                return Ok(new { Success = true, Message = $"Đã chuyển {ids.Count} mục vào thùng rác." });
+
+            return BadRequest(new { Success = false, Message = "Không thể xóa các mục đã chọn." });
+        }
+        [HttpPost("restore-bulk")]
+        public async Task<IActionResult> RestoreBulk([FromBody] List<int> ids)
+        {
+            if (ids == null || !ids.Any())
+                return BadRequest(new { Success = false, Message = "Danh sách ID không hợp lệ." });
+
+            var result = await courseService.RestoreBulkAsync(ids);
+            if (result)
+                return Ok(new { Success = true, Message = $"Đã khôi phục {ids.Count} khóa học thành công." });
+
+            return BadRequest(new { Success = false, Message = "Khôi phục thất bại. Vui lòng thử lại." });
+        }
+
+        [HttpDelete("hard-delete-bulk")]
+        public async Task<IActionResult> HardDeleteBulk([FromBody] List<int> ids)
+        {
+            if (ids == null || !ids.Any())
+                return BadRequest(new { Success = false, Message = "Danh sách ID không hợp lệ." });
+
+            var result = await courseService.HardDeleteBulkAsync(ids);
+            if (result)
+                return Ok(new { Success = true, Message = $"Đã xóa vĩnh viễn {ids.Count} khóa học." });
+
+            return BadRequest(new { Success = false, Message = "Không thể xóa vĩnh viễn dữ liệu." });
+        }
+    
+
+}
 }

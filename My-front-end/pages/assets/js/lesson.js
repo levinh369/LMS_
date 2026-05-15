@@ -1,3 +1,14 @@
+const Toast1 = Swal.mixin({
+    toast: true,
+    position: 'top-end', // Góc trên bên phải
+    showConfirmButton: false,
+    timer: 3000,
+    timerProgressBar: true,
+    didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer)
+        toast.addEventListener('mouseleave', Swal.resumeTimer)
+    }
+});
 var Lesson = {
     categories: [],
     sortableInstance: null,
@@ -6,7 +17,7 @@ var Lesson = {
     currentCourseId : 0,
     isChapterNameLoaded: false,
     config: {
-        apiUrl: "https://lms-u2jn.onrender.com/api/Lesson"
+        apiUrl: "http://127.0.0.1:5000/api/Lesson"
     },
     
     // Hàm khởi tạo - Gọi khi trang load xong
@@ -14,9 +25,59 @@ var Lesson = {
         Lesson.loadData();
         Lesson.registerEvents();  
     },
+    resetFilter: function() {
+   $('#keySearch').val('');
+    
+    $('#isPreview').val(''); 
+    $('#isActive').val('-1');
+    if (typeof this.uncheckAll === 'function') {
+        this.uncheckAll();
+    }
+    this.loadData(1);
+},
+registerCheckboxEvents: function () {
+        const _this = this;
 
+        $(document).off('change', '#check-all').on('change', '#check-all', function () {
+            const isChecked = $(this).prop('checked');
+            $('.item-check').prop('checked', isChecked);
+            _this.toggleBulkActions();
+        });
+
+        // Sự kiện từng ô lẻ
+        $(document).off('change', '.item-check').on('change', '.item-check', function () {
+            const total = $('.item-check').length;
+            const checked = $('.item-check:checked').length;
+            $('#check-all').prop('checked', total > 0 && total === checked);
+            _this.toggleBulkActions();
+        });
+    },
+    toggleBulkActions: function () {
+        const selectedCount = $('.item-check:checked').length;
+        const $bulkArea = $('#bulk-actions');
+        const $countDisplay = $('#selected-count');
+
+        if (selectedCount > 0) {
+            $countDisplay.text(selectedCount);
+            $bulkArea.css({ 'visibility': 'visible', 'opacity': '1' });
+        } else {
+            $bulkArea.css('opacity', '0');
+            setTimeout(() => {
+                if ($('.item-check:checked').length === 0) {
+                    $bulkArea.css('visibility', 'hidden');
+                }
+            }, 200);
+            $('#check-all').prop('checked', false);
+        }
+    },
+
+    uncheckAll: function() {
+        $('.item-check, #check-all').prop('checked', false);
+        this.toggleBulkActions();
+    },
     // Đăng ký tất cả sự kiện ở đây (Thay vì viết onclick trong HTML)
     registerEvents: function () {
+        this.registerCheckboxEvents()
         $(document).on('input', '.txtVideoLink', function() {
             const val = $(this).val();
             const id = Lesson.extractVideoId(val);
@@ -392,6 +453,9 @@ renderVideo: function(iframeId, videoId, provider = "YouTube") {
 
         html += `
             <tr class="align-middle text-center" data-id="${item.id}">
+             <td class="ps-4">
+                        <input class="form-check-input item-check" type="checkbox" value="${item.id}">
+                    </td>
                 <td class="drag-handle" style="cursor: grab; width: 40px;">
                     <i class="bi bi-grip-vertical text-muted fs-5"></i>
                 </td>
@@ -442,7 +506,7 @@ renderVideo: function(iframeId, videoId, provider = "YouTube") {
                             <i class="bi bi-pencil-square text-primary"></i>
                         </button>
                         <button class="btn btn-sm btn-white border text-danger" 
-                                onclick="Lesson.deleteLesson(${item.id})" title="Xóa bài học">
+                                onclick="Lesson.delete(${item.id})" title="Xóa bài học">
                             <i class="bi bi-trash"></i>
                         </button>
                     </div>
@@ -463,7 +527,7 @@ openDetailModal: async function (id) {
     $('.video-placeholder').removeClass('d-none');
 
     try {
-        const response = await fetch(`https://lms-u2jn.onrender.com/api/Lesson/${id}`);
+        const response = await fetch(`http://127.0.0.1:5000/api/Lesson/${id}`);
         if (!response.ok) throw new Error('Không lấy được dữ liệu bài học');
         
         const item = await response.json(); 
@@ -494,6 +558,14 @@ openDetailModal: async function (id) {
         $('#modalViewLesson').modal('hide');
     }
 },
+goToTrash: function() {
+        if (!this.currentChapterId || this.currentChapterId == 0) {
+            Swal.fire("Lỗi", "Không xác định được khóa học!", "error");
+            return;
+        }
+        // Chuyển hướng kèm theo tham số courseId trên URL
+        window.location.href = `/pages/lesson/lesson_trash.html?chapterId=${this.currentChapterId}`;
+    },
 renderDetailTable: function (data) {
     let html = '';
     let tbody = $('#detailLessonTableBody');
@@ -694,7 +766,7 @@ delete: async function(id) {
                 type: "DELETE"
             });
             Swal.fire("Thành công!", res.message || "Đã xóa bài học.", "success");
-            Course.loadData(1);
+            Lesson.loadData(1);
 
         } catch (error) {
             console.error("Lỗi khi xóa:", error);
@@ -718,7 +790,7 @@ delete: async function(id) {
 
         try {
             console.log("Gọi API lấy danh mục lần đầu");
-            const response = await fetch(`https://lms-u2jn.onrender.com/api/Lesson`);
+            const response = await fetch(`http://127.0.0.1:5000/api/Lesson`);
             Lesson.categories = await response.json(); 
             console.log(Lesson.categories)
             let filterHtml = '<option value="">Tất cả danh mục</option>';
@@ -814,7 +886,71 @@ create: async function() {
         toastr.error("Có lỗi xảy ra: " + (error.message || "Không rõ nguyên nhân"));
     }
 },
-   
+   softDeleteBulk: function() {
+    const ids = $('.item-check:checked').map(function() { 
+        return parseInt($(this).val()); 
+    }).get();
+    
+    if (ids.length === 0) return;
+
+    Swal.fire({
+        title: `Xóa ${ids.length} khóa học?`,
+        text: "Các bài học này sẽ được chuyển vào thùng rác!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Đồng ý xóa',
+        cancelButtonText: 'Hủy',
+        showLoaderOnConfirm: true, 
+        preConfirm: async () => {
+            try {
+                const response = await fetch(`${Lesson.config.apiUrl}/soft-delete-bulk`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem("jwt_token")
+                    },
+                    body: JSON.stringify(ids)
+                });
+                
+                const res = await response.json();
+                if (!response.ok) {
+                    throw new Error(res.Message || res.message || 'Lỗi từ server');
+                }
+                return res;
+            } catch (error) {
+                Toast1.showValidationMessage(`Lỗi: ${error.message}`);
+            }
+        },
+        allowOutsideClick: () => !Swal.isLoading()
+    }).then((result) => {
+        // Kiểm tra result.value tồn tại (dữ liệu trả về từ preConfirm)
+        if (result.isConfirmed && result.value) {
+            
+            // Check cả Success (C# mặc định) và success (JSON camelCase)
+            const isSuccess = result.value.Success || result.value.success;
+
+            if (isSuccess) {
+                // Hiển thị thông báo Toast
+                if (typeof Toast1 !== 'undefined') {
+                    Toast1.fire({
+                        icon: 'success',
+                        title: result.value.Message || result.value.message || 'Thành công!'
+                    });
+                } else {
+                    Toast1.fire('Thành công', result.value.Message || 'Đã chuyển vào thùng rác', 'success');
+                }
+
+                // Gọi qua object Manager để đảm bảo chính xác context
+                Lesson.uncheckAll(); 
+                Lesson.loadData(1); 
+            } else {
+                Toast1.fire('Thất bại', result.value.Message || result.value.message || 'Có lỗi xảy ra', 'error');
+            }
+        }
+    });
+},
   update: async function() {
     const id = $('#editLessonId').val(); 
     console.log("Đang gửi ID lên URL:", id); 
@@ -889,32 +1025,7 @@ detail: async function(id){
         alert("Có lỗi xảy ra: " + (error.responseJSON?.message || "Không rõ nguyên nhân"));
     }
 },
-delete: async function(id) {
-    const result = await Swal.fire({
-        title: "Bạn có chắc muốn xóa?",
-        text: "Thao tác này sẽ không thể hoàn tác!",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonColor: "#d33",
-        cancelButtonColor: "#3085d6",
-        confirmButtonText: "Xóa ngay",
-        cancelButtonText: "Hủy"
-    });
-    if (result.isConfirmed) {
-        try {
-            const res = await $.ajax({
-                url: `${Lesson.config.apiUrl}/${id}`,
-                type: "DELETE"
-            });
-            Swal.fire("Thành công!", res.message || "Đã xóa danh mục.", "success");
-            Lesson.loadData(1);
 
-        } catch (error) {
-            console.error("Lỗi khi xóa:", error);
-            Swal.fire("Lỗi!", "Không thể xóa bản ghi này.", "error");
-        }
-    }
-},
 showPaging: function (totalCount, totalPages, currentPage) {
     $('#total-records').text(totalCount);
     if (totalPages <= 1) {
@@ -943,13 +1054,78 @@ showPaging: function (totalCount, totalPages, currentPage) {
 },
 lessontrash: {
     init: function() {
-        this.loadData(1);
-    },
+         const urlParams = new URLSearchParams(window.location.search);
+            const id = urlParams.get('chapterId');
 
+        if (id) {
+            Lesson.currentChapterId = id; // Gán lại vào biến global để dùng
+            Lesson.registerCheckboxEvents();
+            this.loadData(1);
+        } else {
+            console.error("URL thiếu chapterId!");
+        }
+    },
+resetFilter: function() {
+    // 1. Reset ô tìm kiếm về rỗng
+    $('#trashKeySearch').val('');
+    
+    // 2. Reset select danh mục về giá trị mặc định (0)
+    $('#trashFilterCategory').val('0');
+    
+    // 3. Gọi lại hàm loadData để lấy lại toàn bộ danh sách ban đầu (trang 1)
+    this.loadData(1);
+},
+restoreBulk: function() {
+    const ids = this.getSelectedIds();
+    if (ids.length === 0) return;
+
+    Swal.fire({
+        title: `Khôi phục ${ids.length} bài học?`,
+        text: "Các bài học được chọn sẽ hoạt động trở lại bình thường.",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#1976d2',
+        confirmButtonText: 'Đồng ý khôi phục',
+        cancelButtonText: 'Hủy'
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            try {
+                const response = await fetch(`${Lesson.config.apiUrl}/restore-bulk`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem("jwt_token") // Thêm token nếu cần
+                    },
+                    body: JSON.stringify(ids)
+                });
+
+                const res = await response.json();
+                const isSuccess = res.success || res.Success;
+                const apiMessage = res.message || res.Message;
+
+                if (isSuccess) {
+                    Toast1.fire({ 
+                        icon: 'success', 
+                        title: apiMessage || `Đã khôi phục thành công ${ids.length} bài học.` 
+                    });
+                    Lesson.uncheckAll(); 
+                    this.loadData(1);    
+                } else {
+                    // Hiển thị lỗi trực tiếp từ Backend
+                    Toast1.fire('Thất bại!', apiMessage || 'Có lỗi xảy ra.', 'error');
+                }
+            } catch (error) {
+                console.error("Lỗi restore hàng loạt:", error);
+                Toast1.fire('Lỗi!', 'Không thể kết nối đến máy chủ.', 'error');
+            }
+        }
+    });
+},
     loadData: async function(page) {
-        // Sử dụng config pageSize từ đối tượng cha (ví dụ Lesson.config)
+        const keySearch = $('#trashKeySearch').val() || "";
+        const isPreview = $('#trashIsPreview').val();
         const pageSize = Lesson.config.pageSize || 10;
-        const url = `${Lesson.config.apiUrl}/list-deleted?page=${page}&pageSize=${pageSize}`;
+       const url = `${Lesson.config.apiUrl}/list-deleted?chapterId=${Lesson.currentChapterId}&page=${page}&pageSize=${pageSize}&keySearch=${encodeURIComponent(keySearch)}&isPreview=${isPreview}`;
 
         try {
             const response = await fetch(url);
@@ -980,6 +1156,9 @@ lessontrash: {
             data.forEach((item, index) => {
                 html += `
                 <tr>
+                 <td class="ps-4">
+                        <input class="form-check-input item-check" type="checkbox" value="${item.id}">
+                    </td>
                     <td class="ps-3">${index + 1}</td>
                     <td>
                         <div class="fw-bold text-dark">${item.title}</div>
@@ -1069,6 +1248,40 @@ lessontrash: {
             }
         });
     },
+ deleteBulk: function() {
+            const ids = this.getSelectedIds();
+            if (ids.length === 0) return;
+
+            Swal.fire({
+                title: `Xóa vĩnh viễn ${ids.length} mục?`,
+                text: "Dữ liệu bài học sẽ bị xóa sạch hoàn toàn, hành động này không thể hoàn tác!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'Xóa sạch ngay',
+                cancelButtonText: 'Hủy'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        const response = await fetch(`${Lesson.config.apiUrl}/hard-delete-bulk`, {
+                            method: 'DELETE', 
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(ids)
+                        });
+                        const res = await response.json();
+                        if (res.success || res.Success) {
+                            Toast1.fire({ icon: 'success', title: `Đã xóa vĩnh viễn ${ids.length} mục.` });
+                            this.loadData(1);
+                        } else {
+                            Toast1.fire('Thất bại!', res.message || 'Có lỗi xảy ra.', 'error');
+                        }
+                    } catch (error) {
+                        console.error("Lỗi xóa hàng loạt:", error);
+                        Toast1.fire('Lỗi!', 'Không thể kết nối đến máy chủ.', 'error');
+                    }
+                }
+            });
+        },
 
     showPaging: function(totalCount, currentPage) {
         const pageSize = Lesson.config.pageSize || 10;
@@ -1089,7 +1302,10 @@ lessontrash: {
                 }
             });
         }
-    }
+    },
+    getSelectedIds: function() {
+            return Array.from($('.item-check:checked')).map(cb => parseInt($(cb).val()));
+        },
 }
 };
 

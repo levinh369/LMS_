@@ -8,9 +8,13 @@
         public string? ThumbnailUrl { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
 
         // Trường này cực kỳ quan trọng để hiện lên bảng Admin
         public int CourseCount { get; set; }
+        public string? InstructorName { get; set; }
+        public int? InstructorId { get; set; }
+        public string LockedByRole { get; set; }
 
         // Danh sách khóa học đi kèm (dùng cho trang chi tiết lộ trình)
         public List<CourseInRoadMapDTO>? Courses { get; set; }

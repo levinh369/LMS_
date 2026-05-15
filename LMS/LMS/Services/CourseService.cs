@@ -131,6 +131,7 @@ namespace LMS.Services
                 CategoryId = entity.Category.Id,
                 Level = entity.Level,
                 totalChapters = entity.Chapters.Count(),
+                LockedByRole = entity.LockedByRole,
                 CourseDetails = (entity.CourseDetails ?? new List<CourseDetailModel>())
                 .Select(d => new CourseResponeDetailDTO
                 {
@@ -150,9 +151,9 @@ namespace LMS.Services
             return course;
         }
 
-        public async Task<(List<CourseResponeDTO> Data, int Total)> GetCourseListAsync(int page, int pageSize, string keySearch, DateTime? fromDate, DateTime? toDate, int isActive)
+        public async Task<(List<CourseResponeDTO> Data, int Total)> GetCourseListAsync(int page, int pageSize, string keySearch, DateTime? fromDate, DateTime? toDate, int isActive, int teacherId, int categoryId)
         {
-            var (entities, total) = await courseRepository.GetPagedAsync(page, pageSize, keySearch, fromDate, toDate, isActive);
+            var (entities, total) = await courseRepository.GetPagedAsync(page, pageSize, keySearch, fromDate, toDate, isActive, teacherId, categoryId);
             var modelList = entities.Select(c => new CourseResponeDTO
             {
                 CourseId = c.Id,
@@ -164,7 +165,10 @@ namespace LMS.Services
                 Price = c.Price,
                 totalChapters = c.Chapters.Count(),
                 CategoryName = c.Category.Name,
+                InstructorId = c.Teacher?.Id ?? 0, // Nếu null thì trả về 0
+                InstructorName = c.Teacher?.FullName ?? "Chưa xác định", //
                 Level = c.Level,
+                LockedByRole = c.LockedByRole
             }).ToList();
             return (modelList, total);
         }
@@ -492,10 +496,12 @@ namespace LMS.Services
 
             return await userProgressRepository.GetResumeLessonIdAsync(userId, courseId);
         }
-        public async Task<(List<CourseResponeDTO> Data, int Total)> GetDeletedCourseListAsync(int page, int pageSize, string keySearch)
+        public async Task<(List<CourseResponeDTO> Data, int Total)> GetDeletedCourseListAsync(int page, int pageSize, string keySearch, int categoryId, int currentUserId)
         {
             Expression<Func<CourseModel, bool>> filter = x =>
-                string.IsNullOrEmpty(keySearch) || x.Title.Contains(keySearch);
+        (string.IsNullOrEmpty(keySearch) || x.Title.Contains(keySearch)) &&
+        (categoryId == 0 || x.CategoryId == categoryId)
+         && (currentUserId == 0 || x.TeacherId == currentUserId);
 
             // 2. Gọi Repo lấy Entity
             var (entities, total) = await courseRepository.GetDeletedListAsync(
@@ -535,5 +541,44 @@ namespace LMS.Services
                 throw new Exception("Khóa học không tồn tại");
             await courseRepository.RestoreAsync(entity);
         }
+        public async Task<List<UserSimpleDTO>> GetTeacherListForSelectAsync()
+        {
+            var teachers = await courseRepository.GetAllTeachersAsync(); 
+
+            // Map sang DTO rút gọn chỉ có Id và Name
+            return teachers.Select(u => new UserSimpleDTO
+            {
+                Id = u.Id,
+                FullName = u.FullName
+            }).ToList();
+        }
+
+        public async Task<bool> ToggleStatusAsync(int id, string role)
+        {
+            return await courseRepository.ToggleStatusAsync(id, role);
+        }
+
+        public async Task<List<CourseLookupDTO>> GetCourseByTeacherAsync(int teacherId)
+        {
+            return await courseRepository.GetCourseByTeacherAsync(teacherId);
+        }
+        public async Task<bool> RestoreBulkAsync(List<int> ids)
+        {
+            if (ids == null || !ids.Any()) return false;
+            return await courseRepository.UpdateDeleteStatusBulkAsync(ids, false);
+        }
+
+        public async Task<bool> SoftDeleteBulkAsync(List<int> ids)
+        {
+            if (ids == null || !ids.Any()) return false;
+            return await courseRepository.UpdateDeleteStatusBulkAsync(ids, true);
+        }
+
+        public async Task<bool> HardDeleteBulkAsync(List<int> ids)
+        {
+            if (ids == null || !ids.Any()) return false;
+            return await courseRepository.HardDeleteBulkAsync(ids);
+        }
+
     }
 }

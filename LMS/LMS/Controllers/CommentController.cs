@@ -4,8 +4,10 @@ using LMS.Enums;
 using LMS.Services;
 using LMS.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging.Abstractions;
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 
@@ -25,56 +27,47 @@ namespace LMS.Controllers
         public async Task<IActionResult> Post([FromBody] CommentRequestDTO dto)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            // Lấy UserName từ Claim Name
             var userNameClaim = User.FindFirst(ClaimTypes.Name);
 
             if (userIdClaim == null || userNameClaim == null)
             {
-                return Unauthorized(new { message = "Không tìm thấy thông tin người dùng!" });
+                return Unauthorized(new { success = false, message = "Không tìm thấy thông tin người dùng!" });
             }
 
             int userId = int.Parse(userIdClaim.Value);
-            string userName = userNameClaim.Value; // Đây là tên để bác bắn thông báo
-
-            // Truyền thêm userName vào hàm AddAsync
-            var isSuccess = await commentService.AddAsync(dto, userId, userName);
-
-            if (!isSuccess)
+            string userName = userNameClaim.Value;
+            var result = await commentService.AddAsync(dto, userId, userName);
+            if (result == null)
             {
-                return BadRequest(new { message = "Không thể gửi bình luận. Vui lòng kiểm tra lại!" });
-            }
-
-            return Ok(new { message = "Gửi bình luận thành công!" });
-        }
-        [HttpGet("lesson/{lessonId}")]
-        public async Task<IActionResult> GetAllComments(int lessonId)
-        {
-            try
-            {
-                if (lessonId <= 0)
+                return BadRequest(new
                 {
-                    return BadRequest(new { message = "ID bài học không hợp lệ!" });
-                }
-                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-                int currentUserId = 0;
-
-                if (userIdClaim != null)
-                {
-                    currentUserId = int.Parse(userIdClaim.Value);
-                }
-
-                var comments = await commentService.GetCommentListAsync(lessonId, currentUserId);
-
-                return Ok(new
-                {
-                    success = true,
-                    data = comments
+                    success = false,
+                    message = "Không thể gửi bình luận. Vui lòng kiểm tra lại nội dung!"
                 });
             }
-            catch (Exception ex)
+            return Ok(new
             {
-                return StatusCode(500, new { message = "Lỗi server khi lấy bình luận!" });
-            }
+                success = true,
+                message = "Gửi bình luận thành công!",
+                data = result 
+            });
+        }
+        [HttpGet("lesson/{lessonId}/parents")]
+        public async Task<IActionResult> GetParentComments(int lessonId, [FromQuery] int page = 1, [FromQuery] int limit = 20)
+        {
+            int currentUserId = int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var id) ? id : 0;
+            var result = await commentService.GetParentCommentsPaginatedAsync(lessonId, currentUserId, page, limit);
+            return Ok(new { success = true, result });
+        }
+
+        [HttpGet("{parentId}/replies")]
+        public async Task<IActionResult> GetReplies(int parentId, [FromQuery] int lessonId, [FromQuery] int page = 1, [FromQuery] int limit = 10)
+        {
+            int currentUserId = int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var id) ? id : 0;
+
+            var result = await commentService.GetRepliesPaginatedAsync(parentId, lessonId, currentUserId, page, limit);
+
+            return Ok(new { success = true, result });
         }
         [HttpPost("handleLike/{commentId}")]
         public async Task<IActionResult> HandleLike(int commentId, [FromBody] ReactionRequest request)
@@ -180,15 +173,29 @@ namespace LMS.Controllers
         [HttpGet("manager-comment")]
         public async Task<IActionResult> GetManagerComments(
      [FromQuery] int page = 1,
+     [FromQuery] int? teacherId  = null,
      [FromQuery] int? courseId = null,
      [FromQuery] int? lessonId = null, // THÊM THẰNG NÀY
      [FromQuery] string? search = null,
      [FromQuery] string status = "active")
         {
             if (page < 1) page = 1;
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            int currentUserId = int.TryParse(userIdClaim, out var id) ? id : 0;
+            var currentUserRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
+            int? finalTeacherId; 
 
+            if (currentUserRole == "Admin")
+            {
+                finalTeacherId = teacherId;
+            }
+            else
+            {
+                // Teacher: Ép buộc chỉ được xem dữ liệu của chính mình
+                finalTeacherId = currentUserId;
+            }
             // Truyền thêm lessonId vào Service
-            var (items, total) = await commentService.GetAdminCommentsAsync(page, courseId, lessonId, search, status);
+            var (items, total) = await commentService.GetAdminCommentsAsync(page, courseId, lessonId, search, status, finalTeacherId);
 
             return Ok(new
             {
@@ -278,13 +285,26 @@ namespace LMS.Controllers
                 return Ok(new
                 {
                     success = true,
-                    message = request.IsNew ? "Đã đăng thông báo và ghim!" : "Đã ghim bình luận thành công!"
+                    message = request.IsNew ? "Đã đăng thông báo và ghim!" : "Thao tác thành công!"
                 });
             }
 
             return BadRequest(new { success = false, message = "Lỗi xử lý ghim, bác check lại log nhé!" });
         }
 
+        [HttpDelete("hard-delete/{id}")]
+        public async Task<IActionResult> HardDelete(int id)
+        {
+            try
+            {
+                await commentService.HardDeleteAsync(id);
+                return Ok(new { Success = true, Message = "Đã xóa vĩnh viễn bình luận" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Success = false, Message = "Không thể xóa vĩnh viễn bình luận này vì có dữ liệu liên quan." });
+            }
+        }
         // Model để hứng dữ liệu từ JSON gửi lên
         public class PinRequest
         {

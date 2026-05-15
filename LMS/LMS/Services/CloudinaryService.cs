@@ -47,5 +47,38 @@ namespace LMS.Services
 
             return uploadResult.SecureUrl.AbsoluteUri; // Trả về link Cloudinary xịn
         }
+        public async Task<string> UploadDocumentAsync(IFormFile file)
+        {
+            if (file == null || file.Length <= 0) return null;
+
+            // Validate định dạng file (Chỉ cho phép PDF, DOC, DOCX)
+            var allowedExtensions = new[] { ".pdf", ".doc", ".docx" };
+            var extension = Path.GetExtension(file.FileName).ToLower();
+
+            if (!allowedExtensions.Contains(extension))
+            {
+                throw new Exception("Chỉ hỗ trợ tải lên file PDF hoặc Word.");
+            }
+
+            // Validate dung lượng file (Ví dụ: giới hạn tối đa 5MB)
+            var maxFileSize = 5 * 1024 * 1024; // 5MB
+            if (file.Length > maxFileSize)
+            {
+                throw new Exception("Dung lượng file CV không được vượt quá 5MB.");
+            }
+
+            using var stream = file.OpenReadStream();
+
+            // Sử dụng RawUploadParams thay vì ImageUploadParams cho tài liệu
+            var uploadParams = new RawUploadParams()
+            {
+                File = new FileDescription(file.FileName, stream),
+                Folder = "LMS_CVs" // Tự động tạo folder riêng cho CV để dễ quản lý
+            };
+
+            var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+
+            return uploadResult.SecureUrl.ToString(); // Trả về link tải/xem file
+        }
     }
 }

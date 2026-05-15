@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using LMS.Enums;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Data;
 
@@ -21,8 +22,8 @@ namespace LMS.Models
 
         [ForeignKey("RoleId")]
         public RoleModel Role { get; set; }
-        public string Provider { get; set; } = "Local"; 
-
+        public string Provider { get; set; } = "Local";
+        public TeacherRankEnum Rank { get; set; } = TeacherRankEnum.Bronze;
         public string? ExternalId { get; set; } // Lưu ID mà Google/Facebook trả về
         public ICollection<EnrollmentModel> Enrollments { get; set; } = new List<EnrollmentModel>();
     }

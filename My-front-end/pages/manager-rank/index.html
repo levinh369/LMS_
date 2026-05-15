@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Hạng Giảng Viên - LMS Admin</title>
+    <!-- CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        :root { --admin-primary: #4e73df; --admin-dark: #2e59d9; }
+        body { background-color: #f8f9fc; font-family: 'Segoe UI', Roboto, sans-serif; color: #5a5c69; }
+        .card { border: none; border-radius: 12px; box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.1); }
+        .rank-card-icon { width: 45px; height: 45px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .badge-view-user { cursor: pointer; transition: all 0.2s ease; border: 1px solid #ddd; padding: 8px 12px; background-color: #fff; color: #5a5c69; }
+        .badge-view-user:hover { background-color: var(--admin-primary) !important; color: white !important; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .form-control-sm { border-radius: 6px; }
+        .input-group-text { background-color: #f8f9fc; border-left: none; }
+        .btn-save { background-color: var(--admin-primary); color: white; border-radius: 8px; transition: 0.3s; }
+        .btn-save:hover { background-color: var(--admin-dark); color: white; }
+    </style>
+</head>
+<body>
+<div id="sidebar-placeholder"></div>
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold text-dark mb-0">Cấu hình Hạng & Chiết khấu</h4>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0" style="font-size: 0.8rem;">
+                    <li class="breadcrumb-item"><a href="#">Quản trị</a></li>
+                    <li class="breadcrumb-item active">Hạng giảng viên</li>
+                </ol>
+            </nav>
+        </div>
+        <button class="btn btn-white btn-sm shadow-sm border" onclick="Rank.loadDashboard()">
+            <i class="bi bi-arrow-clockwise me-1"></i> Làm mới dữ liệu
+        </button>
+    </div>
+
+    <!-- Widgets Thống kê -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card p-3 border-start border-4 border-primary h-100">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-primary fw-bold text-uppercase mb-1" style="font-size: 0.7rem;">Tổng Giảng viên</div>
+                        <div class="h5 mb-0 fw-bold" id="widget-total-teachers">...</div>
+                    </div>
+                    <i class="bi bi-people fs-2 opacity-25"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card p-3 border-start border-4 border-success h-100">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-success fw-bold text-uppercase mb-1" style="font-size: 0.7rem;">Lợi nhuận sàn (Tháng)</div>
+                        <div class="h5 mb-0 fw-bold" id="widget-monthly-profit">...</div>
+                    </div>
+                    <i class="bi bi-cash-coin fs-2 opacity-25"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card p-3 border-start border-4 border-warning h-100">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-warning fw-bold text-uppercase mb-1" style="font-size: 0.7rem;">Hạng Vàng/KC</div>
+                        <div class="h5 mb-0 fw-bold" id="widget-high-rank">...</div>
+                    </div>
+                    <i class="bi bi-award fs-2 opacity-25"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card p-3 border-start border-4 border-info h-100">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-info fw-bold text-uppercase mb-1" style="font-size: 0.7rem;">Yêu cầu lên hạng</div>
+                        <div class="h5 mb-0 fw-bold" id="widget-pending-requests">...</div>
+                    </div>
+                    <i class="bi bi-send-check fs-2 opacity-25"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
+            <h6 class="m-0 fw-bold text-primary"><i class="bi bi-sliders2-vertical me-2"></i>Bảng cấu hình Rank</h6>
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="autoRankSwitch">
+                <label class="form-check-label small fw-bold" for="autoRankSwitch">Tự động nâng hạng</label>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr class="small text-muted">
+                            <th>HẠNG</th>
+                            <th>ICON</th>
+                            <th>MỐC DOANH THU (VNĐ)</th>
+                            <th>SÀN THU (%)</th>
+                            <th class="text-center">SỐ LƯỢNG</th>
+                            <th class="text-end">THAO TÁC</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rank-table-body">
+                        <!-- JS SẼ ĐỔ DỮ LIỆU VÀO ĐÂY -->
+                        <tr>
+                            <td colspan="6" class="text-center p-5">
+                                <div class="spinner-border text-primary" role="status"></div>
+                                <div class="mt-2 text-muted">Đang tải dữ liệu cấu hình...</div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Xem giảng viên -->
+<div class="modal fade" id="teacherListModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0">
+            <div class="modal-header bg-light">
+                <h6 class="modal-title fw-bold">Danh sách giảng viên - Hạng <span id="modalRankName" class="text-primary"></span></h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="table-responsive" style="max-height: 400px;">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="table-light sticky-top">
+                            <tr class="small text-muted">
+                                <th>Họ tên</th>
+                                <th>Email</th>
+                                <th>Doanh thu tích lũy</th>
+                                <th class="text-end">Chi tiết</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modalTeacherTableBody">
+                            <!-- JS SẼ ĐỔ DỮ LIỆU VÀO ĐÂY -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="../assets/js/rank.js"></script> 
+<script src="../assets/js/admin-loader.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+</body>
+</html>

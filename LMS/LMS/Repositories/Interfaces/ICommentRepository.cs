@@ -19,9 +19,13 @@ namespace LMS.Repositories.Interfaces
         Task DeleteReactionAsync(CommentLikeModel like);
         Task AddReactionAsync(CommentLikeModel like);
         Task <CommentModel?> GetCommentByIdAsync(int id);
-        Task<(List<AdminCommentResponseDTO> Items, int TotalCount)> GetAdminCommentsAsync(int pageIndex, int? courseId, int? lessonId, string? search, string status);
+        Task<(List<AdminCommentResponseDTO> Items, int TotalCount)> GetAdminCommentsAsync(int pageIndex, int? courseId, int? lessonId, string? search, string status, int? teacherId);
         Task<bool> ToggleHideCommentAsync(int id);
         Task<bool> RestoreAsync(int id);
         Task<int> HandlePinLogicAsync(CommentModel model, bool isNew);
+        Task HardDeleteAsync(CommentModel comment);
+        Task<(List<CommentModel> Comments, int TotalCount)> GetParentCommentsAsync(int lessonId, int userId, int page, int pageSize);
+        Task<(List<CommentModel> Comments, int TotalCount)> GetRepliesAsync(int parentId, int userId, int page, int pageSize);
+
     }
 }

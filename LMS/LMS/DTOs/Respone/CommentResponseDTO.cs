@@ -23,5 +23,7 @@
         // 6. Danh sách 3 icon đứng đầu (Gửi sẵn từ Backend để FE chỉ việc hiện)
         public List<int> TopReactionTypes { get; set; } = new();
         public string? ReplyToUserName { get; set; }
+        public bool IsAdmin { get; set; }
+        public bool IsTeacher { get; set; }
     }
 }

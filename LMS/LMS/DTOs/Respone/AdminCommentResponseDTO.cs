@@ -27,6 +27,9 @@
 
         // Đệ quy để hiện Reply như Facebook
         public int? ParentId { get; set; }
+        public string ReplyToUserName {  get; set; }
+        public int? ReplyToUserId {  get; set; }
+        public bool IsTeacher { get; set; }
         public List<AdminCommentResponseDTO> Replies { get; set; } = new List<AdminCommentResponseDTO>();
     }
 }

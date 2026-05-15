@@ -17,13 +17,25 @@ namespace LMS.Repositories
             return await _context.Courses.FirstOrDefaultAsync(c => c.Title == title && !c.IsDeleted);
         }
         public async Task<(List<CourseModel> Data, int Total)> GetPagedAsync(int page, int pageSize, string keySearch,
-           DateTime? fromDate, DateTime? toDate, int isAcitve)
+    DateTime? fromDate, DateTime? toDate, int isAcitve, int teacherId, int categoryId)
         {
-            var query = _context.Courses.Include(c=>c.Category)
-                .Include(c=>c.Chapters)
-                .AsNoTracking().Where(c => !c.IsDeleted);
+            var query = _context.Courses
+                .Include(c => c.Category)
+                .Include(c => c.Teacher)
+                .Include(c => c.Chapters)
+                .AsNoTracking()
+                .Where(c => !c.IsDeleted);
+            if (teacherId > 0)
+            {
+                query = query.Where(c => c.TeacherId == teacherId);
+            }
+            if (categoryId > 0)
+            {
+                query = query.Where(c => c.CategoryId == categoryId);
+            }
             if (!string.IsNullOrEmpty(keySearch))
                 query = query.Where(d => d.Title.Contains(keySearch));
+
             if (fromDate.HasValue)
                 query = query.Where(d => d.CreatedAt >= fromDate.Value);
 
@@ -32,7 +44,6 @@ namespace LMS.Repositories
             if (isAcitve != -1)
                 query = query.Where(d => d.IsActive == (isAcitve == 1));
             int total = await query.CountAsync();
-            
             var data = await query
                 .OrderByDescending(d => d.CreatedAt)
                 .Skip((page - 1) * pageSize)
@@ -40,16 +51,16 @@ namespace LMS.Repositories
                 .ToListAsync();
 
             return (data, total);
-        }  
+        }
         public async Task<CourseModel?> GetById(int id)
         {
             var entity = await _context.Courses
-            .Include(c => c.Category) 
+            .Include(c => c.Category)
             .Include(c => c.CourseDetails)
             .Include(c => c.Chapters)
             .FirstOrDefaultAsync(c => c.Id == id);
 
-            if (entity == null) 
+            if (entity == null)
                 throw new Exception("Không tìm thấy khóa học");
 
             return entity;
@@ -60,7 +71,7 @@ namespace LMS.Repositories
             var query = _context.Courses.AsNoTracking().Where(c => !c.IsDeleted && c.IsActive);
             if (!string.IsNullOrEmpty(keySearch))
             {
-                query = query.Where(d=>d.Title.Contains(keySearch));
+                query = query.Where(d => d.Title.Contains(keySearch));
             }
             int total = await query.CountAsync();
             var data = await query
@@ -76,36 +87,36 @@ namespace LMS.Repositories
         public async Task<CourseModel?> GetCourseAndLessons(int id)
         {
             return await _context.Courses
-                .AsNoTracking() 
-                .Include(c => c.Lessons.OrderBy(l => l.OrderIndex)) 
-                .Where(c => c.Id == id && !c.IsDeleted && c.IsActive) 
+                .AsNoTracking()
+                .Include(c => c.Lessons.OrderBy(l => l.OrderIndex))
+                .Where(c => c.Id == id && !c.IsDeleted && c.IsActive)
                 .FirstOrDefaultAsync();
         }
 
         public async Task<List<CourseModel>> GetCourseFree()
         {
-            return await _context.Courses.Include(c=>c.Lessons).Include(c=>c.Category).Include(e=>e.Enrollments).Include(c => c.Teacher).
+            return await _context.Courses.Include(c => c.Lessons).Include(c => c.Category).Include(e => e.Enrollments).Include(c => c.Teacher).
                 AsNoTracking().Where(c => c.Price == 0 && !c.IsDeleted && c.IsActive).ToListAsync();
         }
 
         public async Task<List<CourseModel>> GetCoursePremium()
         {
-            return await _context.Courses.Include(c=>c.Lessons).Include(c => c.Category).Include(e => e.Enrollments).Include(c => c.Teacher).
-                AsNoTracking().Where(c=>c.Price > 0 && !c.IsDeleted && c.IsActive).ToListAsync();
+            return await _context.Courses.Include(c => c.Lessons).Include(c => c.Category).Include(e => e.Enrollments).Include(c => c.Teacher).
+                AsNoTracking().Where(c => c.Price > 0 && !c.IsDeleted && c.IsActive).ToListAsync();
         }
 
         public async Task<CourseModel?> GetCourseDetail(int id)
         {
             return await _context.Courses.AsNoTracking()
-            .Include(c => c.Category)               
-            .Include(c => c.CourseDetails)            
+            .Include(c => c.Category)
+            .Include(c => c.CourseDetails)
             .Include(c => c.Enrollments)
             .Include(c => c.Teacher)
             .Include(c => c.Chapters)
-            
-                .ThenInclude(ch => ch.Lessons)      
+
+                .ThenInclude(ch => ch.Lessons)
             .FirstOrDefaultAsync(c => c.Id == id);
-            
+
         }
 
         public async Task<CourseModel?> GetCourseDetailForLearning(int courseId, int? userId)
@@ -139,7 +150,7 @@ namespace LMS.Repositories
                 .AsNoTracking()
                 .Where(e => e.UserId == userId && e.IsActive)
                 .Include(e => e.Course)
-                .OrderByDescending(e => e.LastAccessedAt) 
+                .OrderByDescending(e => e.LastAccessedAt)
                 .ToListAsync();
 
             var result = enrollments.Select(e =>
@@ -172,13 +183,13 @@ namespace LMS.Repositories
             var keyword = query.Trim().ToLower();
 
             return await _context.Courses
-                .AsNoTracking() 
+                .AsNoTracking()
                 .Where(c => c.Title.ToLower().Contains(keyword)
                             && !c.IsDeleted
                             && c.IsActive)
                 .OrderByDescending(c => c.Enrollments.Count())
                 .Take(limit)
-                .Select(c => new CourseSearchDTO 
+                .Select(c => new CourseSearchDTO
                 {
                     Id = c.Id,
                     Title = c.Title,
@@ -187,5 +198,72 @@ namespace LMS.Repositories
                 })
                 .ToListAsync();
         }
+        public async Task<List<UserModel>> GetAllTeachersAsync()
+        {
+            return await _context.Users
+                .AsNoTracking()
+                .Where(u => u.RoleId == 3 && !u.IsDeleted)
+                .OrderBy(u => u.FullName)
+                .ToListAsync();
+        }
+        public async Task<bool> ToggleStatusAsync(int id, string role)
+        {
+            var course = await _context.Courses.FindAsync(id);
+            if (course == null) return false;
+
+            if (role == "Admin")
+            {
+                if (course.IsActive)
+                {
+                    course.IsActive = false;
+                    course.LockedByRole = "Admin";
+                }
+                else
+                {
+                    course.IsActive = true;
+                    course.LockedByRole = null;
+                }
+            }
+            else if (role == "Teacher")
+            {
+                if (course.LockedByRole == "Admin")
+                {
+                    return false;
+                }
+
+                course.IsActive = !course.IsActive;
+                course.LockedByRole = null;
+            }
+
+            course.UpdatedAt = DateTime.UtcNow.AddHours(7);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<List<CourseLookupDTO>> GetCourseByTeacherAsync(int id)
+        {
+            return await _context.Courses
+                .AsNoTracking()
+                .Where(c => c.TeacherId == id && !c.IsDeleted)
+                .Select(c => new CourseLookupDTO
+                {
+                    Id = c.Id,
+                    Title = c.Title
+                })
+                .ToListAsync();
+        }
+        public async Task<CourseModel?> GetByLessonId(int lessonId)
+        {
+            var courseId = await _context.Lessons
+                .Where(l => l.Id == lessonId)
+                .Select(l => l.CourseModelId)
+                .FirstOrDefaultAsync();
+
+            if (courseId <= 0) return null;
+
+            return await _context.Courses
+                .FirstOrDefaultAsync(c => c.Id == courseId);
+        }
     }
-}
+
+    }

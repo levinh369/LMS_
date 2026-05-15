@@ -74,9 +74,9 @@ namespace LMS.Services
             return await enrollRepository.IsEnrolledAsync(userId, courseId);
         }
 
-        public Task<bool> UnenrollAsync(int userId, int courseId)
+        public async Task<bool> UnenrollStudentAsync(int studentId, int courseId, int teacherId)
         {
-            throw new NotImplementedException();
+            return await enrollRepository.UnenrollStudentAsync(studentId, courseId, teacherId);
         }
     }
 }

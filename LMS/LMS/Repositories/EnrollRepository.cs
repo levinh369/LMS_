@@ -23,11 +23,49 @@ namespace LMS.Repositories
                 .AsNoTracking()
                 .Where(e => e.UserId == userId && e.IsActive)
                 .Include(e => e.Course)
-                    .ThenInclude(c => c.Teacher) // Include bảng giáo viên
+                    .ThenInclude(c => c.Teacher) 
                 .Include(e => e.Course)
-                    .ThenInclude(c => c.Lessons) // Include bảng bài học để Count()
+                    .ThenInclude(c => c.Lessons) 
                 .OrderByDescending(e => e.LastAccessedAt)
                 .ToListAsync();
         }
-    }
+        public async Task<bool> UnenrollStudentAsync(int studentId, int courseId, int teacherId)
+        {
+            var enrollment = await _context.Enrollments
+                .FirstOrDefaultAsync(e => e.UserId == studentId
+                                       && e.CourseId == courseId
+                                       && e.Course.TeacherId == teacherId);
+
+            if (enrollment == null)
+            {
+                return false;
+            }
+
+            _context.Enrollments.Remove(enrollment);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+        public async Task<List<object>> FilterMyStudentsAsync(int teacherId, List<string> onlineUserIds)
+        {
+            var onlineUserIdsInt = onlineUserIds
+                .Where(id => int.TryParse(id, out _))
+                .Select(int.Parse)
+                .ToList();
+
+            var myStudents = await _context.Enrollments
+                .Where(e => e.Course.TeacherId == teacherId && onlineUserIdsInt.Contains(e.UserId))
+                .Select(e => new
+                {
+                    userId = e.UserId.ToString(),
+                    userName = e.User.FullName,
+                    avatar = e.User.AvatarUrl
+                })
+                .Distinct()
+                .ToListAsync<object>();
+
+            return myStudents;
+        }
+     
+    
+}
 }

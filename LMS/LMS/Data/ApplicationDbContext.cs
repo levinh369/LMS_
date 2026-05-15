@@ -24,6 +24,8 @@ namespace LMS.Data
         public DbSet<CommentLikeModel> CommentLikes { get; set; }
         public DbSet<NotificationModel> NotificationModels { get; set; }
         public DbSet<OrderModel> Orders { get; set; }
+        public DbSet<RankModel> Ranks { get; set; }
+        public DbSet<InstructorApplicationModel> InstructorApplications { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

@@ -8,7 +8,22 @@ function loadAdminLayout() {
         const path = window.location.pathname;
         let pageTitle = "Hệ thống quản lý";
         let breadcrumb = "Admin";
+        const userInfo = JSON.parse(localStorage.getItem("user_info"));
+        if (userInfo.avatar && userInfo.avatar !== 'null') {
+            $("#user-avatar").attr("src", userInfo.avatar); // Đổi ảnh từ default sang ảnh người dùng
+        }
+        // Đổ tên vào UI
+        $("#user-fullname").text(userInfo.username);
 
+        // Đổ chức danh dựa trên roleId
+        let roleText = "Nhân viên";
+        if (userInfo.role === 1) {
+            roleText = "QUẢN TRỊ VIÊN";
+        } else if (userInfo.role === 3) {
+            roleText = "GIẢNG VIÊN";
+            $("#btn-nav-dashboard").attr("href", "/dashboard/dashboard-teacher.html"); 
+        }
+        $("#user-role").text(roleText);
         // --- PHẦN QUAN TRỌNG: LOGIC ACTIVE NÚT ---
         // Duyệt qua tất cả các thẻ <a> trong banner vừa nạp
         $(".nav-menu-item").each(function() {
