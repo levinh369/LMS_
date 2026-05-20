@@ -17,7 +17,7 @@ namespace LMS.Migrations
                 nullable: true,
                 oldClrType: typeof(int),
                 oldType: "int");
-
+            migrationBuilder.Sql("UPDATE [RoadMapModels] SET [TeacherId] = NULL WHERE [TeacherId] = 0;");
             migrationBuilder.CreateIndex(
                 name: "IX_RoadMapModels_TeacherId",
                 table: "RoadMapModels",
