@@ -8,10 +8,13 @@ window.NotificationApp = {
         const token = localStorage.getItem("jwt_token") || localStorage.getItem("token");
         
         this.connection = new signalR.HubConnectionBuilder()
-            .withUrl("http://127.0.0.1:5000/notificationHub", { accessTokenFactory: () => token })
+            .withUrl("https://lms-u2jn.onrender.com/notificationHub", { accessTokenFactory: () => token })
             .withAutomaticReconnect()
             .build();
-       
+       this.connection.on("ReceiveNotification", (data) => {
+            console.log("🔔 SignalR nhận tin:", data);
+            this.renderNotification(data);
+        });
         // 1. Nhận tin Online
         this.connection.on("UserIsOnline", (userData) => {
             console.log("🟢 Có người online:", userData);
@@ -85,7 +88,7 @@ fetchNotifications: function (isLoadMore = false) {
     }
 
     $.ajax({
-        url: `http://127.0.0.1:5000/api/Notification/GetNotif?skip=${this.currentSkip}&limit=${this.limit}`,
+        url: `https://lms-u2jn.onrender.com/api/Notification/GetNotif?skip=${this.currentSkip}&limit=${this.limit}`,
         type: 'GET',
         headers: { "Authorization": "Bearer " + token },
         success: (res) => {
@@ -148,7 +151,7 @@ fetchNotifications: function (isLoadMore = false) {
     }
 
     $.ajax({
-        url: "http://127.0.0.1:5000/api/Notification/unread-count",
+        url: "https://lms-u2jn.onrender.com/api/Notification/unread-count",
         type: "GET",
         headers: { 
             "Authorization": "Bearer " + token // Đây là chìa khóa để hết lỗi 401
@@ -170,7 +173,7 @@ markAllRead: async function() {
     if (!token) return;
 
     try {
-        const response = await fetch(`http://127.0.0.1:5000/api/notification/mark-all`, {
+        const response = await fetch(`https://lms-u2jn.onrender.com/api/notification/mark-all`, {
             method: 'POST', 
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -265,7 +268,7 @@ handleRedirect: async function(notifId, url) {
     const token = localStorage.getItem("jwt_token");
     
     try {
-        fetch(`http://127.0.0.1:5000/api/notification/mark-read/${notifId}`, {
+        fetch(`https://lms-u2jn.onrender.com/api/notification/mark-read/${notifId}`, {
             method: 'POST', 
             headers: { 'Authorization': `Bearer ${token}` }
         });

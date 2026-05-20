@@ -8,7 +8,6 @@ namespace LMS.Services.Interfaces
     {
         // Gửi tbao + Lưu DB + Thổi SignalR
         Task SendNotificationAsync(int receiverId, int senderId, string message, NotificationTypeEnum type, string url, ReactionTypeEnum? reactionType);
-
         // Lấy danh sách để hiện lên Menu
         Task<List<NotificationModel>> GetUserNotificationsAsync(int userId, int skip =0, int limit = 20);
 

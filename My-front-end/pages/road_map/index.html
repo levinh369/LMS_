@@ -61,41 +61,41 @@
         </div>
     </div>
 
-    <!-- DÒNG 1: BỘ LỌC & TÌM KIẾM -->
-    <div class="filter-section p-3 mb-3" style="background-color: #f8f9fa; border-radius: 12px;">
-        <div class="row g-2 align-items-center">
-            <div class="col-md-3">
-                <div class="input-group">
-                    <span class="input-group-text bg-white border-0"><i class="bi bi-search"></i></span>
-                    <input type="text" class="form-control bg-white border-0" id="keySearch" placeholder="Tìm tên lộ trình...">
-                </div>
-            </div>
-
-            <div class="col-md-3 d-none" id="adminFilterGroup">
-                <select class="form-select bg-white border-0" id="filterTeacherId">
-                    <option value="0">Tất cả giảng viên</option>
-                </select>
-            </div>
-
-            <div class="col-md-2">
-                <select class="form-select bg-white border-0" id="isActive">
-                    <option value="-1">Trạng thái</option>
-                    <option value="1">Hoạt động</option>
-                    <option value="0">Tạm ẩn/Khóa</option>
-                </select>
-            </div>
-
-            <div class="col-md-4 d-flex gap-2">
-                <button class="btn btn-dark px-4 rounded-pill fw-bold shadow-sm flex-grow-1" onclick="RoadMap.loadData(1)">
-                    <i class="bi bi-funnel-fill me-1"></i> LỌC DỮ LIỆU
-                </button>
-                <button class="btn btn-white border rounded-circle shadow-sm d-flex align-items-center justify-content-center" 
-                        onclick="RoadMap.resetFilter()" title="Làm mới" style="width: 38px; height: 38px; background: white;">
-                    <i class="bi bi-arrow-clockwise"></i>
-                </button>
+   <div class="filter-section p-3 mb-3" style="background-color: #f8f9fa; border-radius: 12px;">
+    <div class="row g-2 align-items-center">
+        <div class="col-md-3">
+            <div class="input-group">
+                <span class="input-group-text bg-white border-0"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control bg-white border-0" id="keySearch" placeholder="Tìm tên lộ trình...">
             </div>
         </div>
+
+        <div class="col-md-3 d-none" id="adminFilterGroup">
+            <select class="form-select bg-white border-0" id="filterTeacherId">
+                <option value="0">Tất cả giảng viên</option>
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <select class="form-select bg-white border-0" id="isActive">
+                <option value="-1">Trạng thái</option>
+                <option value="1">Hoạt động</option>
+                <option value="0">Tạm ẩn/Khóa</option>
+            </select>
+        </div>
+
+        <div class="col-md-4 d-flex gap-2">
+            <button class="btn btn-dark px-3 rounded-pill fw-bold shadow-sm" onclick="RoadMap.loadData(1)">
+                <i class="bi bi-funnel-fill me-1"></i> LỌC DỮ LIỆU
+            </button>
+            
+            <button class="btn btn-white border rounded-circle shadow-sm d-flex align-items-center justify-content-center" 
+                    onclick="RoadMap.resetFilter()" title="Làm mới" style="width: 38px; height: 38px; background: white;">
+                <i class="bi bi-arrow-clockwise"></i>
+            </button>
+        </div>
     </div>
+</div>
 <!-- DÒNG 2: THAO TÁC HÀNG LOẠT & NÚT CHỨC NĂNG -->
 <div class="d-flex justify-content-between align-items-center px-1">
     

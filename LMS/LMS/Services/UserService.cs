@@ -1,4 +1,6 @@
-﻿using LMS.DTOs.Request;
+﻿using CloudinaryDotNet;
+using LMS.Data;
+using LMS.DTOs.Request;
 using LMS.DTOs.Respone;
 using LMS.Enums;
 using LMS.Models;
@@ -16,10 +18,14 @@ namespace LMS.Services
     {
         private readonly IUserRepository userRepository;
         private readonly ICloudinaryService cloudinaryService;
-        public UserService(IUserRepository userRepository, ICloudinaryService cloudinaryService)
+        private readonly ApplicationDbContext _context;
+        private readonly INotificationService notificationService;
+        public UserService(IUserRepository userRepository, ICloudinaryService cloudinaryService, ApplicationDbContext applicationDbContext, INotificationService notificationService)
         {
             this.userRepository = userRepository;
             this.cloudinaryService = cloudinaryService;
+            _context = applicationDbContext;
+            this.notificationService = notificationService;
         }
         public async Task<MyProfileResponseDTO> GetFullProfileDataAsync(int userId)
         {
@@ -299,6 +305,60 @@ namespace LMS.Services
         {
             if (ids == null || !ids.Any()) return false;
             return await userRepository.HardDeleteBulkAsync(ids);
+        }
+        public async Task<(bool IsSuccess, string Message)> CreateWithdrawalRequestAsync(int teacherId, WithdrawRequestDTO requestDto)
+        {
+            var teacher = await _context.Users.FindAsync(teacherId);
+            if (teacher == null)
+            {
+                return (false, "Không tìm thấy thông tin tài khoản.");
+            }
+
+            if (teacher.WalletBalance < requestDto.Amount)
+            {
+                return (false, "Số dư trong ví không đủ để thực hiện giao dịch này.");
+            }
+
+            try
+            {
+                // 1. GIAM TIỀN VÍ
+                teacher.WalletBalance -= requestDto.Amount;
+
+                // 2. Khởi tạo Record lịch sử
+                var withdrawalRecord = new WithdrawalRequestModel
+                {
+                    UserId = teacherId,
+                    Amount = requestDto.Amount,
+                    BankName = requestDto.BankName,
+                    AccountNumber = requestDto.AccountNumber,
+                    AccountName = requestDto.AccountName.Trim().ToUpper(),
+                    Status = WithdrawalStatusEnum.Pending
+                };
+
+                // 3. Đưa lệnh Thêm và Cập nhật vào Context
+                _context.WithdrawalRequests.Add(withdrawalRecord);
+                _context.Users.Update(teacher);
+
+                await _context.SaveChangesAsync();
+                string teacherMsg = $"Giảng viên <b>{teacher.FullName}</b> vừa đặt lệnh rút {requestDto.Amount:N0} VNĐ.";
+                string url = "/admin/withdrawals"; 
+                int adminUserId = 1029;
+
+                await notificationService.SendNotificationAsync(
+                    adminUserId, 
+                    teacher.Id,  
+                    teacherMsg,
+                    NotificationTypeEnum.WithdrawalRequest, 
+                    url,
+                    null
+                );
+
+                return (true, "Tạo lệnh rút tiền thành công. Vui lòng chờ Admin phê duyệt!");
+            }
+            catch (Exception ex)
+            {
+                return (false, "Lỗi hệ thống khi xử lý giao dịch. Vui lòng thử lại sau.");
+            }
         }
     }
 }

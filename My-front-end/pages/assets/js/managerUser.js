@@ -14,8 +14,8 @@ const Toast = Swal.mixin({
 var Manager = {
     config: {
         pageSize: 10,
-        apiUrl: "http://127.0.0.1:5000/api/user",
-        apiUrlEnroll: "http://127.0.0.1:5000/api/Enroll"
+        apiUrl: "https://lms-u2jn.onrender.com/api/user",
+        apiUrlEnroll: "https://lms-u2jn.onrender.com/api/Enroll"
     },
     roleId: 0,
     tempCourses: {},
@@ -140,7 +140,7 @@ var Manager = {
     try {
         const token = localStorage.getItem("jwt_token"); // Hoặc "access_token" tùy bác lưu
         if (!token) return;
-        const response = await fetch('http://127.0.0.1:5000/api/course/lookup', {
+        const response = await fetch('https://lms-u2jn.onrender.com/api/course/lookup', {
             method: 'GET',
             headers: { 
                 "Authorization": "Bearer " + token,
@@ -254,7 +254,7 @@ var Manager = {
                     </td>
                     <td class="text-center">
                         <div class="btn-group shadow-sm">
-                            <button onclick="Manager.openDetail(${item.id})" class="btn btn-sm btn-light border" title="Xem chi tiết">
+                            <button onclick="Manager.openDetail(${item.id}, ${item.roleId})" class="btn btn-sm btn-light border" title="Xem chi tiết">
                                 <i class="bi bi-eye text-primary"></i>
                             </button>
                             <button onclick="Manager.openEdit(${item.id})" class="btn btn-sm btn-light border" title="Chỉnh sửa">
@@ -488,56 +488,197 @@ openCourseModal: function(userId, fullName) {
             }
         });
     },
-   openCreateModal: function () {
-        this.resetForm();
-        $('#modalTitle').text('Thêm Người Dùng Mới');
+// ==========================================
+    // HÀM openDetail ĐÃ FIX LỖI HIỂN THỊ TAB
+    // ==========================================
+    openDetail: async function (id, roleId) {
+        if ($('#frmUser').length > 0) {
+            $('#frmUser')[0].reset(); 
+        }
+        $('#userDetail-history-body').empty(); 
         
-        // 1. Mở khóa Email để nhập khi thêm mới
-        $('#emailInput').prop('readonly', false).removeClass('bg-light'); 
-        
-        // 2. ẨN dòng Ngày tạo đi (vì chưa có user thì lấy đâu ra ngày tạo)
-        $('#createdAtContainer').hide();
-        
-        $('#passArea').show();
-        this.setReadOnly(false);
-        $('.modal-footer').show();
-        bootstrap.Modal.getOrCreateInstance('#userModal').show();
-    },
-
-    openEdit: async function (id) {
-        this.resetForm();
-        $('#modalTitle').text('Cập Nhật Người Dùng');
-        
-        // 1. Vô hiệu hóa Email (Chỉ đọc) khi sửa
-        $('#email').prop('readonly', true).addClass('bg-light'); 
-        
-        // 2. HIỆN dòng Ngày tạo lên
-        $('#createdAtContainer').show();
-        
-        $('#passArea').hide();
-        this.setReadOnly(false);
-        $('.modal-footer').show();
-
-        bootstrap.Modal.getOrCreateInstance('#userModal').show();
-        await this.loadDetail(id);
-    },
-
-    openDetail: async function (id) {
-        this.resetForm();
         $('#modalTitle').text('Chi Tiết Người Dùng');
-        
-        // 1. Xem chi tiết thì đương nhiên Email phải là Chỉ đọc
         $('#emailInput').prop('readonly', true).addClass('bg-light');
-        
-        // 2. Hiện Ngày tạo
         $('#createdAtContainer').show();
-        
         $('#passArea').hide();
+        
         this.setReadOnly(true); 
         $('.modal-footer').hide();
+        
+        // Ép kiểu roleId về String để tránh lỗi so sánh (ví dụ truyền vào số 3 thay vì "3")
+        const currentRole = String(roleId);
+        console.log("-> Đang mở chi tiết User ID:", id, "- Role ID nhận được:", currentRole);
+
+        // 1. Hiện thanh menu chuyển Tab tổng
+        // Chỉ cần bỏ d-none và dùng d-flex của Bootstrap thay vì can thiệp css inline
+        $('#userModalTabs').removeClass('d-none').addClass('d-flex');
+        
+        // 2. Kiểm tra vai trò trực tiếp để ẩn/hiện nút Tab 2
+        if (currentRole === "3") {
+            $('#history-tab').closest('li.nav-item').removeClass('d-none'); // Hiện tab
+            console.log("-> Xác nhận Giảng viên: Hiện Tab lịch sử.");
+        } else {
+            $('#history-tab').closest('li.nav-item').addClass('d-none'); // Ẩn đi
+            console.log("-> Tài khoản khác: Ẩn Tab lịch sử.");
+        }
+
+        // 3. Reset trạng thái hiển thị của các Tab Content (Quan trọng)
+        $('.tab-pane').removeClass('show active'); // Xóa trạng thái active của tất cả các tab content
+        $('#tab-info').addClass('show active');    // Kích hoạt lại content của tab thông tin
+
+        // 4. Ép quay về Tab 1 (Nút bấm) làm mặc định ban đầu
+        const tabTarget = document.getElementById('info-tab');
+        if (tabTarget) {
+            bootstrap.Tab.getOrCreateInstance(tabTarget).show();
+        }
+
+        // 5. Gắn sự kiện click vào Tab lịch sử để tải dữ liệu
+        $('#history-tab').off('click').on('click', () => {
+            this.loadUserWithdrawHistory(id, 1);
+        });
+
+        // 6. Hiển thị modal lên màn hình và gọi API load data cá nhân
+        bootstrap.Modal.getOrCreateInstance('#userModal').show();
+        await this.loadDetail(id); 
+    },
+    openEdit: async function (id) {
+        if ($('#frmUser').length > 0) {
+            $('#frmUser')[0].reset(); 
+        }
+        $('#userDetail-history-body').empty(); 
+        
+        $('#modalTitle').text('Cập Nhật Người Dùng');
+        $('#emailInput').prop('readonly', true).addClass('bg-light'); 
+        $('#createdAtContainer').show();
+        $('#passArea').hide();
+        
+        this.setReadOnly(false);
+        $('.modal-footer').show();
+
+        // Ẩn thanh menu Tabs đi bằng d-none và ép về tab thông tin
+        $('#userModalTabs').addClass('d-none');
+        const tabTarget = document.getElementById('info-tab');
+        if (tabTarget) {
+            bootstrap.Tab.getOrCreateInstance(tabTarget).show();
+        }
 
         bootstrap.Modal.getOrCreateInstance('#userModal').show();
         await this.loadDetail(id);
+    },
+
+    // ==========================================
+    // 3. HÀM MỞ THÊM MỚI (CREATE)
+    // ==========================================
+    openCreateModal: function () {
+        if ($('#frmUser').length > 0) {
+            $('#frmUser')[0].reset(); 
+        }
+        $('#createdAtInput').val(''); 
+        $('#userDetail-history-body').empty(); 
+        $('#userDetail-history-pagination').empty(); 
+        
+        $('input[name="isActive"]').prop('checked', true); 
+        $('#roleSelect').val('2'); 
+
+        $('#modalTitle').text('Thêm Người Dùng Mới');
+        $('#emailInput').prop('readonly', false).removeClass('bg-light'); 
+        $('#createdAtContainer').hide();
+        $('#passArea').show();
+        
+        this.setReadOnly(false);
+        $('.modal-footer').show();
+
+        // Ẩn thanh menu Tabs đi bằng d-none và ép về tab thông tin
+        $('#userModalTabs').addClass('d-none');
+        const tabTarget = document.getElementById('info-tab');
+        if (tabTarget) {
+            bootstrap.Tab.getOrCreateInstance(tabTarget).show();
+        }
+
+        bootstrap.Modal.getOrCreateInstance('#userModal').show();
+    },
+    loadUserWithdrawHistory: async function (userId, pageIndex = 1) {
+        const historyBody = document.getElementById('userDetail-history-body');
+        const paginationDiv = document.getElementById('userDetail-history-pagination');
+        
+        // Sửa colspan="5" thành colspan="7"
+        historyBody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Đang tải lịch sử...</td></tr>`;
+        paginationDiv.innerHTML = '';
+
+        const token = localStorage.getItem("jwt_token");
+
+        try {
+            const response = await fetch(`https://lms-u2jn.onrender.com/api/Withdrawal/admin/teacher-history/${userId}?pageIndex=${pageIndex}&pageSize=5`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) throw new Error("Không thể tải lịch sử tài chính.");
+            const result = await response.json();
+
+            historyBody.innerHTML = ''; 
+
+            if (!result.data || result.data.length === 0) {
+                // Sửa colspan="5" thành colspan="7"
+                historyBody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted"><i class="bi bi-info-circle me-1"></i> Tài khoản này chưa có dữ liệu rút tiền.</td></tr>`;
+                return;
+            }
+
+            // Vòng lặp kết xuất dữ liệu
+            result.data.forEach(item => {
+                let badge = '';
+                if (item.status === 0) badge = '<span class="badge bg-warning text-warning bg-opacity-10 rounded-pill px-2 py-1">Chờ duyệt</span>';
+                else if (item.status === 1) badge = '<span class="badge bg-success text-success bg-opacity-10 rounded-pill px-2 py-1">Thành công</span>';
+                else if (item.status === 2) badge = `<span class="badge bg-danger text-danger bg-opacity-10 rounded-pill px-2 py-1" title="${item.note || ''}">Bị hủy</span>`;
+
+                const date = new Date(item.createdAt).toLocaleDateString('vi-VN');
+                const amount = new Intl.NumberFormat('vi-VN').format(item.amount) + " đ";
+                
+                // Lấy số tài khoản và ghi chú (Nếu API không có thì để ---)
+                // Tuỳ API của bạn trả về field tên gì, ở đây mình giả định là accountNumber
+                const accNumber = item.accountNumber || '---'; 
+                const note = item.note || '---';
+
+                const row = `
+                    <tr>
+                        <td class="ps-3 py-2 fw-bold text-secondary text-center">#${item.id}</td>
+                        <td class="py-2 fw-bold text-danger">${amount}</td>
+                        <td class="py-2 text-muted">${item.bankName || '---'}</td>
+                        <td class="py-2 fw-semibold text-dark">${accNumber}</td>
+                        <td class="py-2 text-secondary">${date}</td>
+                        <td class="py-2 text-muted" style="max-width: 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${note}">${note}</td>
+                        <td class="pe-3 py-2 text-center">${badge}</td>
+                    </tr>`;
+                historyBody.insertAdjacentHTML('beforeend', row);
+            });
+
+            this.renderMiniPagination(result.total, pageIndex, userId);
+
+        } catch (error) {
+            // Sửa colspan="5" thành colspan="7"
+            historyBody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-danger">${error.message}</td></tr>`;
+        }
+    },
+    // Hàm phụ render nút phân trang mini cho tab lịch sử
+    renderMiniPagination: function (totalRecords, currentPage, userId) {
+        const pagDiv = document.getElementById('userDetail-history-pagination');
+        const totalPages = Math.ceil(totalRecords / 5); // PageSize cố định là 5 đơn
+        if (totalPages <= 1) return;
+
+        let html = `<div class="btn-group btn-group-sm">`;
+        html += `<button type="button" class="btn btn-outline-secondary" ${currentPage === 1 ? 'disabled' : ''} onclick="UserAdmin.loadUserWithdrawHistory(${userId}, ${currentPage - 1})"><i class="bi bi-chevron-left"></i></button>`;
+        
+        for (let i = 1; i <= totalPages; i++) {
+            html += `<button type="button" class="btn ${currentPage === i ? 'btn-primary' : 'btn-outline-secondary'}" onclick="UserAdmin.loadUserWithdrawHistory(${userId}, ${i})">${i}</button>`;
+        }
+        
+        html += `<button type="button" class="btn btn-outline-secondary" ${currentPage === totalPages ? 'disabled' : ''} onclick="UserAdmin.loadUserWithdrawHistory(${userId}, ${currentPage + 1})"><i class="bi bi-chevron-right"></i></button>`;
+        html += `</div>`;
+
+        pagDiv.innerHTML = html;
     },
 loadDetail: async function (id) {
     try {

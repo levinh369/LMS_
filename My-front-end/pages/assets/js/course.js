@@ -15,7 +15,7 @@ var Course = {
     editDetails: [],
     config: {
         pageSize: 10,
-        apiUrl: "http://127.0.0.1:5000/api/course"
+        apiUrl: "https://lms-u2jn.onrender.com/api/course"
     },
     CourseLevel : {
         0: "Người mới bắt đầu",
@@ -136,53 +136,59 @@ loadTeacherSelect: async function() {
         } catch (error) { console.error("Lỗi load giảng viên:", error); }
     },
 
-    // 3. Lấy dữ liệu khóa học từ Server
-    loadData: async function(page) {
-        const userInfoRaw = localStorage.getItem("user_info");
-        const user = JSON.parse(userInfoRaw);
-        const roleId = user.role;
+   loadData: async function(page) {
+    const userInfoRaw = localStorage.getItem("user_info");
+    const user = JSON.parse(userInfoRaw);
+    const roleId = user.role;
 
-        let queryParams = {
-            page: page,
-            pageSize: this.config.pageSize
-        };
+    let queryParams = {
+        page: page,
+        pageSize: this.config.pageSize
+    };
 
-        // Lấy dữ liệu từ các ô Input khớp với ID trong HTML của bác
-        if (roleId === 1) { // ADMIN
-            queryParams.keySearch = $('#adminKeySearch').val() || '';
-            queryParams.teacherId = $('#adminFilterTeacher').val() || 0;
-            queryParams.fromDate = $('#adminFromDate').val() || '';
-            queryParams.toDate = $('#adminToDate').val() || '';
-            queryParams.isActive = $('#adminIsActive').val() || -1;
-            queryParams.categoryId = $('#adminFilterCategory').val() || 0;
-        } else { // TEACHER
-            queryParams.keySearch = $('#teacherKeySearch').val() || '';
-            queryParams.isActive = $('#teacherIsActive').val() || -1;
-            queryParams.categoryId = $('#teacherFilterCategory').val() || 0
-        }
+    if (roleId === 1) { // ADMIN
+        queryParams.keySearch = $('#adminKeySearch').val() || '';
+        queryParams.teacherId = $('#adminFilterTeacher').val() || 0;
+        queryParams.fromDate = $('#adminFromDate').val() || '';
+        queryParams.toDate = $('#adminToDate').val() || '';
+        queryParams.isActive = $('#adminIsActive').val() || -1;
+        queryParams.categoryId = $('#adminFilterCategory').val() || 0;
+    } else { // TEACHER
+        queryParams.keySearch = $('#teacherKeySearch').val() || '';
+        queryParams.isActive = $('#teacherIsActive').val() || -1;
+        queryParams.categoryId = $('#teacherFilterCategory').val() || 0
+    }
 
-        const params = new URLSearchParams(queryParams);
+    const params = new URLSearchParams(queryParams);
+    const token = localStorage.getItem("jwt_token"); 
 
-        try {
-            const token = localStorage.getItem("jwt_token"); 
-            const response = await fetch(`${this.config.apiUrl}/list-data?${params.toString()}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+    // === BẬT GLOBAL LOADER ===
+    TableLoader.show('#course-table-body');
 
-            if (response.status === 401) return window.location.href = "/pages/auth/login.html";
+    try {
+        const response = await fetch(`${this.config.apiUrl}/list-data?${params.toString()}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.status === 401) return window.location.href = "/pages/auth/login.html";
+        
+        const res = await response.json();
+        if (res.success || res.Success) {
+            const listData = res.data || res.Data;
+            const totalCount = res.total || res.Total;
+            const totalPages = Math.ceil(totalCount / this.config.pageSize);
             
-            const res = await response.json();
-            if (res.success || res.Success) {
-                const listData = res.data || res.Data;
-                const totalCount = res.total || res.Total;
-                const totalPages = Math.ceil(totalCount / this.config.pageSize);
-                
-                this.renderTable(listData, roleId);
-                this.showPaging(totalCount, totalPages, page);
-                $('#total-records').text(totalCount);
-            }
-        } catch (error) { console.error("Lỗi load data:", error); }
-    },
+            this.renderTable(listData, roleId);
+            this.showPaging(totalCount, totalPages, page);
+            $('#total-records').text(totalCount);
+        }
+    } catch (error) { 
+        console.error("Lỗi load data:", error); 
+    } finally {
+        // === TẮT GLOBAL LOADER ===
+        GlobalLoader.hide(); 
+    }
+},
  renderLevelDropdown : function() {
     let html = '';
     for (let key in Course.CourseLevel) {
@@ -294,7 +300,7 @@ loadCategories: async function () {
     }
 
     try {
-        const response = await fetch(`http://127.0.0.1:5000/api/Category`);
+        const response = await fetch(`https://lms-u2jn.onrender.com/api/Category`);
         const result = await response.json(); 
         Course.categories = result.data || []; 
 
@@ -323,61 +329,54 @@ loadCategories: async function () {
 },
 create: async function() {
     var form = $('#frmCourse')[0];
-    var formData = new FormData(form); // Nó sẽ tự động hốt 'ThumbnailFile' vì đã có name
+    var formData = new FormData(form); 
+    
     if (Course.addedDetails && Course.addedDetails.length > 0) {
-            Course.addedDetails.forEach((item, index) => {
-                formData.append(`CourseDetails[${index}].Content`, item.content);
-                formData.append(`CourseDetails[${index}].DetailType`, item.detailType);
-            });
-        }
-    // Checkbox vẫn phải set thủ công vì nó không tự lấy true/false
-    formData.set('IsActive', $('#txtIsActive').is(':checked'));
-    Swal.fire({
-            title: 'Đang xử lý...',
-            text: 'Vui lòng chờ trong giây lát khi hệ thống tải ảnh lên Cloud',
-            allowOutsideClick: false,
-            didOpen: () => {
-                Swal.showLoading(); // Hiển thị spinner quay quay của SweetAlert2
-            }
+        Course.addedDetails.forEach((item, index) => {
+            formData.append(`CourseDetails[${index}].Content`, item.content);
+            formData.append(`CourseDetails[${index}].DetailType`, item.detailType);
         });
-        const btnSave = $('#btnSave');
-        btnSave.prop('disabled', true);
+    }
+    formData.set('IsActive', $('#txtIsActive').is(':checked'));
+
+    const btnSave = $('#btnSave');
+    btnSave.prop('disabled', true);
+    
+    // === BẬT GLOBAL LOADER (Thay cho Swal Spinner) ===
+    GlobalLoader.show(); 
+
     try {
         const response = await $.ajax({
             url: Course.config.apiUrl,
             type: 'POST',
             data: formData,
-            processData: false, // Bắt buộc
-            contentType: false,  // Bắt buộc
+            processData: false, 
+            contentType: false, 
         });
 
-        Swal.fire({
+        Toast.fire({
             icon: 'success',
-            title: 'Thành công!',
-            text: response.message || "Khóa học đã được lưu",
-            timer: 2000,
-            showConfirmButton: false
+            title: response.message || "Khóa học đã được lưu"
         });
+        
         $('#courseModal').modal('hide');
         Course.loadData(1);
         form.reset();
         $('#imgPreview').hide();
         Course.addedDetails = []; 
         $('#listDetails').html('<li class="list-group-item small text-muted text-center py-3">Chưa có chi tiết nào</li>');
-        // ... reload data
     } catch (error) {
         if (error.responseJSON) {
-            // Lỗi từ Server (400, 500...)
             console.error("Lỗi từ Server:", error.responseJSON);
             Swal.fire('Lỗi API', JSON.stringify(error.responseJSON.errors), 'error');
         } else {
-            // Lỗi Logic JS (Ví dụ sai tên biến)
             console.error("Lỗi Logic JS:", error.message);
             Swal.fire('Lỗi hệ thống', 'Có lỗi xảy ra trong mã xử lý giao diện.', 'error');
         }
-    }
-    finally {
+    } finally {
         btnSave.prop('disabled', false); 
+        // === TẮT GLOBAL LOADER ===
+        GlobalLoader.hide(); 
     }
 },
     openUpdateModal: async function(id) {
@@ -448,13 +447,10 @@ create: async function() {
     }
 },
   edit: async function() {
-    const courseId = $('#editCourseId').val(); // Lấy ID chuẩn
-    console.log("Đang gửi ID lên URL:", courseId); // Để bác tự kiểm tra
-
+    const courseId = $('#editCourseId').val(); 
     var form = $('#frmUpdateCourse')[0];
     var formData = new FormData(form); 
 
-    // 1. Ép kiểu IsActive chuẩn boolean cho C#
     formData.set('IsActive', $('#editTxtIsActive').is(':checked'));
     formData.set('Id', courseId); 
     if (Course.editDetails && Course.editDetails.length > 0) {
@@ -463,15 +459,12 @@ create: async function() {
             formData.append(`CourseDetails[${index}].DetailType`, item.detailType);
         });
     }
-    Swal.fire({
-        title: 'Đang lưu thay đổi...',
-        allowOutsideClick: false,
-        didOpen: () => { Swal.showLoading(); }
-    });
+
+    // === BẬT GLOBAL LOADER ===
+    GlobalLoader.show();
 
     try {
         const response = await $.ajax({
-            // 3. Đảm bảo URL có ID số (Ví dụ: /api/course/5)
             url: `${this.config.apiUrl}/${courseId}`, 
             type: 'PUT',
             data: formData,
@@ -479,17 +472,21 @@ create: async function() {
             contentType: false,
         });
 
-        Swal.fire("Thành công!", "Đã cập nhật khóa học", "success");
+        Toast.fire({
+            icon: 'success',
+            title: response.message || "Khóa học đã được cập nhật"
+        });
         $('#updateCourseModal').modal('hide');
-        this.loadData(1);
-
+        this.loadData(1); // Load lại trang 1 (Nếu có biến currentPage thì đổi thành this.loadData(this.currentPage) nhé)
     } catch (error) {
         console.error("Lỗi chi tiết từ Server:", error.responseJSON);
-        // Nếu bị lỗi 400, dòng này sẽ hiện đúng cái IsActive hay ID bị lỗi
         let errorDetail = error.responseJSON?.errors 
                           ? JSON.stringify(error.responseJSON.errors) 
                           : "Cập nhật thất bại";
         Swal.fire("Lỗi!", errorDetail, "error");
+    } finally {
+        // === TẮT GLOBAL LOADER ===
+        GlobalLoader.hide();
     }
 },
 detail: async function(id){
@@ -757,7 +754,7 @@ toggleStatus: function (id) {
             if (result.isConfirmed) {
                 // Gọi API Put
                 $.ajax({
-                    url: `http://127.0.0.1:5000/api/Course/toggle-status/${id}?role=${roleName}`,
+                    url: `https://lms-u2jn.onrender.com/api/Course/toggle-status/${id}?role=${roleName}`,
                     type: 'PUT',
                     contentType: 'application/json',
                     success: function (res) {
@@ -1073,7 +1070,7 @@ resetFilter: function() {
         const selectEl = document.getElementById('trashFilterCategory');
 
         try {
-            const response = await fetch(`http://127.0.0.1:5000/api/Category`);
+            const response = await fetch(`https://lms-u2jn.onrender.com/api/Category`);
             const result = await response.json(); 
             Course.categories = result.data || []; 
             let filterHtml = '<option value="0">-- Tất cả danh mục --</option>';

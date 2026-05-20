@@ -75,7 +75,7 @@ namespace LMS.Services
         // Lưu Username
         new Claim(ClaimTypes.Name, user.FullName),
         new Claim(ClaimTypes.Email, user.Email),
-        new Claim(ClaimTypes.Role, user.Role.RoleName),
+        new Claim(ClaimTypes.Role, ((RoleEnum)user.RoleId).ToString()),
     };
 
             // 3. Tạo chữ ký bảo mật (Signing Credentials)

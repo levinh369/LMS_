@@ -1,3 +1,14 @@
+const Toast = Swal.mixin({
+    toast: true,
+    position: 'top-end',
+    showConfirmButton: false,
+    timer: 3000,
+    timerProgressBar: true,
+    didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer)
+        toast.addEventListener('mouseleave', Swal.resumeTimer)
+    }
+});
 window.DashboardTeacher = {
     onlineCount: 0, // Biến đếm nằm ở đây cho gọn
     revenueChartInstance: null,
@@ -68,7 +79,7 @@ window.DashboardTeacher = {
         const endDate = $("#filter-end-date").val();
 
         // Xây dựng đường dẫn URL kèm Query String lọc ngày tháng
-        let apiUrl = "http://127.0.0.1:5000/api/DashBoard/dashboard-data";
+        let apiUrl = "https://lms-u2jn.onrender.com/api/DashBoard/dashboard-data";
         if (startDate && endDate) {
             apiUrl += `?startDate=${startDate}&endDate=${endDate}`;
         }
@@ -98,7 +109,12 @@ window.DashboardTeacher = {
             }
         });
     },
-
+        openWithDrawModal: function(){
+        $('#withdrawForm')[0].reset();
+        // Course.addedDetails=[];
+        // Course.renderDetails();
+        $('#withdrawModal').modal('show');
+    },
     // 3. Hàm render văn bản, tiền tệ, bảng biểu vào giao diện
     renderDashboardData: function (data) {
         // Hàm phụ hỗ trợ định dạng tiền VNĐ nhanh gọn
@@ -147,7 +163,9 @@ window.DashboardTeacher = {
         
         // Cột 4: Số dư ví khả dụng
         cards.eq(3).find(".stat-value").text(formatVND(data.availableBalance));
-
+        const balance = data.availableBalance; // Lấy số dư từ API trả về
+        const formattedBalance = new Intl.NumberFormat('vi-VN').format(balance);
+        document.getElementById("displayAvailableBalance").innerText = formattedBalance + " VNĐ";
         // --- RENDER BẢNG HIỆU SUẤT KHÓA HỌC (COURSE PERFORMANCE TABLE) ---
         let tableRows = "";
         if (data.coursePerformances && data.coursePerformances.length > 0) {
@@ -340,11 +358,144 @@ window.DashboardTeacher = {
         }
     }
 },
-}
 
-// Gọi init của Dashboard
-document.addEventListener('DOMContentLoaded', () => { 
+}
+document.addEventListener("DOMContentLoaded", function () {
+    
+    // 1. Khởi tạo DashboardTeacher nếu có
     if(window.DashboardTeacher) {
         window.DashboardTeacher.init(); 
+    }
+
+    const withdrawForm = document.getElementById("withdrawForm");
+    const btnSubmit = document.getElementById("btnSubmitWithdraw");
+    const amountInput = document.getElementById("withdrawAmount");
+    
+   if (amountInput) {
+    amountInput.addEventListener("input", function (e) {
+
+        let cursorPosition = this.selectionStart;
+        let originalLength = this.value.length;
+
+        // Xóa sạch mọi ký tự không phải số (Unikey có sinh ra chữ cũng bị xóa luôn)
+        let rawValue = this.value.replace(/\D/g, "");
+        
+        if (rawValue !== "") {
+            this.value = parseInt(rawValue, 10).toLocaleString('en-US');
+        } else {
+            this.value = "";
+        }
+
+        let newLength = this.value.length;
+        cursorPosition = cursorPosition + (newLength - originalLength);
+        
+        this.setSelectionRange(cursorPosition, cursorPosition);
+    });
+}
+
+    // 3. Xử lý Submit Form rút tiền
+    if (withdrawForm) {
+        withdrawForm.addEventListener("submit", async function (e) {
+            e.preventDefault(); 
+
+            // Lấy chuỗi hiển thị và xóa toàn bộ dấu phẩy để lấy số thực
+            const rawAmountStr = amountInput.value.replace(/,/g, '');
+            const amount = parseFloat(rawAmountStr);
+
+            if (isNaN(amount) || amount < 50000) {
+                Toast.fire({
+                    icon: 'error',
+                    title: 'Số tiền rút tối thiểu phải là 50,000 VNĐ.'
+                });
+                amountInput.focus();
+                return;
+            }
+
+            const bankName = document.getElementById("bankName").value;
+            const accountNumber = document.getElementById("accountNumber").value;
+            const accountName = document.getElementById("accountName").value;
+
+            // Đổi UI nút bấm
+            const originalBtnText = btnSubmit.innerHTML;
+            btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang xử lý...';
+            btnSubmit.disabled = true;
+
+            const requestData = {
+                Amount: amount, 
+                BankName: bankName,
+                AccountNumber: accountNumber,
+                AccountName: accountName.trim().toUpperCase() 
+            };
+
+            const token = localStorage.getItem("jwt_token"); 
+
+            try {
+                const response = await fetch('https://lms-u2jn.onrender.com/api/Withdrawal/request', { 
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}` 
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    // Thành công: Bắn Toast xanh lá
+                    Toast.fire({
+                        icon: 'success',
+                        title: result.message || 'Tạo lệnh rút tiền thành công!'
+                    });
+                    if (document.activeElement) {
+                        document.activeElement.blur(); 
+                    }
+                    // Đóng Modal và Reset Form
+                    const modalElement = document.getElementById('withdrawModal');
+                    const modalInstance = bootstrap.Modal.getInstance(modalElement);
+                    modalInstance.hide();
+                    withdrawForm.reset();
+                    
+                    // Cập nhật UI Số dư trực tiếp
+                    const balanceElement = document.getElementById("displayAvailableBalance"); 
+        
+                    if (balanceElement) {
+                        let currentText = balanceElement.innerText.replace(/,/g, '').replace(/\./g, '').replace(/[^\d]/g, '');
+                        let currentBalance = parseFloat(currentText);
+                        
+                        if (!isNaN(currentBalance)) {
+                            let newBalance = currentBalance - amount;
+                            const formattedBalance = new Intl.NumberFormat('vi-VN').format(newBalance);
+                            
+                            // Cập nhật thẻ text chính
+                            balanceElement.innerText = formattedBalance + " VNĐ";
+
+                            // Cập nhật thẻ Card
+                            const statValues = document.querySelectorAll(".stat-value");
+                            if (statValues.length >= 4) {
+                                statValues[3].innerText = formattedBalance + " đ"; 
+                            }
+                        } 
+                    } 
+
+                } else {
+                    // Lỗi nghiệp vụ từ Server
+                    Toast.fire({
+                        icon: 'error',
+                        title: result.message || 'Giao dịch không thành công.'
+                    });
+                }
+            } catch (error) {
+                console.error("Lỗi:", error);
+                Toast.fire({
+                    icon: 'error',
+                    title: 'Lỗi mạng hoặc máy chủ không phản hồi!'
+                });
+            } finally {
+                // Khôi phục nút bấm
+                btnSubmit.innerHTML = originalBtnText;
+                btnSubmit.disabled = false;
+            }
+        });
     }
 });

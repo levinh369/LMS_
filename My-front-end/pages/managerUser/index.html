@@ -158,63 +158,108 @@
                     <h5 class="modal-title fw-bold" id="modalTitle">Thông tin người dùng</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body p-4">
-                    <input type="hidden" id="userId" name="id">
+                <div class="modal-body p-4 pt-0">
+                    
+                    <!-- THANH MENU TABS -->
+                    <ul class="nav nav-tabs nav-fill border-bottom mb-4 d-none" id="userModalTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active fw-bold text-secondary" id="info-tab" data-bs-toggle="tab" data-bs-target="#tab-info" type="button" role="tab">
+                                <i class="bi bi-info-circle me-1"></i> Thông tin tài khoản
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-bold text-secondary" id="history-tab" data-bs-toggle="tab" data-bs-target="#tab-history" type="button" role="tab">
+                                <i class="bi bi-cash-stack me-1"></i> Lịch sử giao dịch
+                            </button>
+                        </li>
+                    </ul>
 
-                    <!-- Avatar Preview -->
-                    <div class="text-center mb-4">
-                        <img id="userAvatarPreview" src="../assets/img/default-avatar.png" 
-                             class="rounded-circle border shadow-sm" 
-                             style="width: 100px; height: 100px; object-fit: cover;">
-                    </div>
+                    <!-- NỘI DUNG TABS -->
+                    <div class="tab-content" id="userModalTabsContent">
+                        
+                        <!-- TAB 1: THÔNG TIN TÀI KHOẢN -->
+                        <div class="tab-pane fade show active" id="tab-info" role="tabpanel">
+                            <input type="hidden" id="userId" name="id">
 
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Họ và tên <span class="text-danger">*</span></label>
-                            <input type="text" id="fullName" name="fullName" class="form-control" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Email <span class="text-danger">*</span></label>
-                            <input type="email" id="emailInput" name="emailInput" class="form-control" required readonly>
-                        </div>
-
-                        <div id="passArea" class="col-md-6">
-                            <label class="form-label fw-semibold">Mật khẩu <span class="text-danger">*</span></label>
-                            <input type="password" id="passwordInput" name="password" class="form-control">
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Vai trò</label>
-                            <select id="modalRoleId" name="roleId" class="form-select">
-                                <option value="1">Quản trị viên</option>
-                                <option value="2">Học viên</option>
-                                <option value="3">Giảng viên</option>
-                            </select>
-                        </div>
-
-                        <div class="col-md-12 mt-3">
-                            <label class="form-label fw-bold d-block">Trạng thái tài khoản</label>
-                            <div class="form-check form-switch p-0 ms-5">
-                                <input class="form-check-input" type="checkbox" id="modalIsActive" checked style="width: 45px; height: 22px;">
-                                <label class="form-check-label ms-3 fw-semibold text-success" id="statusLabel">Đang hoạt động</label>
+                            <!-- Avatar Preview -->
+                            <div class="text-center mb-4">
+                                <img id="userAvatarPreview" src="../assets/img/default-avatar.png" 
+                                     class="rounded-circle border shadow-sm" 
+                                     style="width: 100px; height: 100px; object-fit: cover;">
                             </div>
-                            <div id="createdAtContainer">
-                                <small class="text-muted d-block mt-2">Ngày tạo: <span id="createdAtLabel">--/--/----</span></small>
-                            </div>
-                        </div>
 
-                        <!-- KHU VỰC HIỂN THỊ KHÓA HỌC (CHÈN MỚI) -->
-                        <div class="col-12 mt-4" id="courseProgressArea">
-                            <hr class="text-muted opacity-25">
-                            <label class="form-label fw-bold d-block mb-3">
-                                <i class="bi bi-book-half me-2 text-primary"></i>Khóa học & Tiến độ hoàn thành
-                            </label>
-                            <div id="courseProgressContainer" class="row g-3">
-                                <!-- JS sẽ đổ dữ liệu vào đây -->
+                            <!-- Thêm class m-0 vào đây để vô hiệu hóa lề âm của Bootstrap -->
+                            <div class="row g-3 m-0">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Họ và tên <span class="text-danger">*</span></label>
+                                    <input type="text" id="fullName" name="fullName" class="form-control" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Email <span class="text-danger">*</span></label>
+                                    <input type="email" id="emailInput" name="emailInput" class="form-control" required readonly>
+                                </div>
+
+                                <div id="passArea" class="col-md-6">
+                                    <label class="form-label fw-semibold">Mật khẩu <span class="text-danger">*</span></label>
+                                    <input type="password" id="passwordInput" name="password" class="form-control">
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Vai trò</label>
+                                    <select id="modalRoleId" name="roleId" class="form-select">
+                                        <option value="1">Quản trị viên</option>
+                                        <option value="2">Học viên</option>
+                                        <option value="3">Giảng viên</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-12 mt-3">
+                                    <label class="form-label fw-bold d-block">Trạng thái tài khoản</label>
+                                    <div class="form-check form-switch p-0 ms-5">
+                                        <input class="form-check-input" type="checkbox" id="modalIsActive" checked style="width: 45px; height: 22px;">
+                                        <label class="form-check-label ms-3 fw-semibold text-success" id="statusLabel">Đang hoạt động</label>
+                                    </div>
+                                    <div id="createdAtContainer">
+                                        <small class="text-muted d-block mt-2">Ngày tạo: <span id="createdAtLabel">--/--/----</span></small>
+                                    </div>
+                                </div>
+
+                                <!-- KHU VỰC HIỂN THỊ KHÓA HỌC -->
+                                <div class="col-12 mt-4 px-0" id="courseProgressArea">
+                                    <hr class="text-muted opacity-25">
+                                    <label class="form-label fw-bold d-block mb-3">
+                                        <i class="bi bi-book-half me-2 text-primary"></i>Khóa học & Tiến độ hoàn thành
+                                    </label>
+                                    <div id="courseProgressContainer" class="row g-3 m-0">
+                                        <!-- JS sẽ đổ dữ liệu vào đây -->
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </div>
+<div class="tab-pane fade" id="tab-history" role="tabpanel" style="min-width: 900px;">
+    
+    <div class="table-responsive border rounded-3 w-100">
+        <table class="table table-hover align-middle mb-0 small w-100">
+            <thead class="table-light fw-bold text-muted text-uppercase" style="font-size: 11px;">
+                <tr>
+                    <th class="ps-3 py-2 text-center" style="width: 5%;">Mã GD</th>
+                    <th class="py-2" style="width: 10%;">Số tiền</th>
+                    <th class="py-2" style="width: 10%;">Ngân hàng</th>
+                    <th class="py-2" style="width: 15%;">Số TK</th>
+                    <th class="py-2" style="width: 15%;">Ngày tạo</th>
+                    <th class="py-2" style="width: 35%;">Ghi chú</th>
+                    <th class="pe-3 py-2 text-center" style="width: 10%;">Trạng thái</th>
+                </tr>
+            </thead>
+            <tbody id="userDetail-history-body">
+                </tbody>
+        </table>
+    </div>
+    
+    <div id="userDetail-history-pagination" class="mt-3 d-flex justify-content-end w-100"></div>
+    
+</div>
+                
                 <div class="modal-footer border-top-0 p-4 pt-0">
                     <button type="button" class="btn btn-light fw-bold" data-bs-dismiss="modal">Đóng</button>
                     <button type="button" id="btnSave" onclick="Manager.save()" class="btn btn-primary fw-bold px-4 shadow-sm">

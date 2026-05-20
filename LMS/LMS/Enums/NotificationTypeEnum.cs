@@ -24,5 +24,7 @@ namespace LMS.Enums
         CoursePendingReview = 7,
         [Display(Name = "Yêu cầu đăng ký giảng viên")]
         InstructorApplicationPending = 8,
+        [Display(Name = "Yêu cầu rút tiền")]
+        WithdrawalRequest = 9
     }
 }

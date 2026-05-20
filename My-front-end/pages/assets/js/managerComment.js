@@ -13,7 +13,7 @@ const Toast = Swal.mixin({
 const AdminComment = {
     config: {
         pageSize: 5,
-        apiUrl: "http://127.0.0.1:5000/api/comment", // Check kỹ port nhé bác
+        apiUrl: "https://lms-u2jn.onrender.com/api/comment", // Check kỹ port nhé bác
         token: localStorage.getItem('jwt_token') // Lấy token để authenticate
     },
     currentPage:null,
@@ -304,7 +304,7 @@ sendReply: async function(parentId) {
     const token = localStorage.getItem("jwt_token");
 
     try {
-        const response = await fetch('http://127.0.0.1:5000/api/comment', {
+        const response = await fetch('https://lms-u2jn.onrender.com/api/comment', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -507,7 +507,7 @@ restore: function(id) {
 
 loadCourses: async function(teacherId = 'all') {
     try {
-        let url = `http://127.0.0.1:5000/api/course/by-teacher?teacherId=${teacherId}`;
+        let url = `https://lms-u2jn.onrender.com/api/course/by-teacher?teacherId=${teacherId}`;
         const response = await fetch(url);
         const res = await response.json();
         
@@ -530,7 +530,7 @@ loadCourses: async function(teacherId = 'all') {
 loadTeacherSelect: async function() {
     const token = localStorage.getItem("jwt_token");
     try {
-        const response = await fetch(`http://127.0.0.1:5000/api/course/get-all-teachers`, {
+        const response = await fetch(`https://lms-u2jn.onrender.com/api/course/get-all-teachers`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const res = await response.json();
@@ -566,7 +566,7 @@ loadLessons: async function(courseId) {
         return;
     }
     try {
-        const response = await fetch(`http://127.0.0.1:5000/api/lesson/list-lesson/${courseId}`);
+        const response = await fetch(`https://lms-u2jn.onrender.com/api/lesson/list-lesson/${courseId}`);
         const res = await response.json();
         
         if (res.success && res.data) {
@@ -684,7 +684,7 @@ loadLessons: async function(courseId) {
 // Hàm trung gian gọi API (Khớp với PinRequest ở Controller)
 callPinApi: async function (data, isNew) {
     try {
-        const response = await fetch('http://127.0.0.1:5000/api/comment/pin-handler', {
+        const response = await fetch('https://lms-u2jn.onrender.com/api/comment/pin-handler', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

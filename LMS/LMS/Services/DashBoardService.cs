@@ -25,12 +25,15 @@ namespace LMS.Services
         public async Task<TeacherDashboardResponseDTO> GetDashboardDataAsync(int teacherId, DateTime? startDate, DateTime? endDate)
         {
             var response = new TeacherDashboardResponseDTO();
-            var teacherName = await _context.Users
-            .Where(u => u.Id == teacherId)
-            .Select(u => u.FullName)
-            .FirstOrDefaultAsync();
 
-            response.TeacherName = teacherName ?? "Giảng viên";
+            // SỬA LẠI TẠI ĐÂY: Kéo cả Tên và Số dư ví (WalletBalance) trong 1 lần gọi DB
+            var teacherInfo = await _context.Users
+                .Where(u => u.Id == teacherId)
+                .Select(u => new { u.FullName, u.WalletBalance })
+                .FirstOrDefaultAsync();
+
+            response.TeacherName = teacherInfo?.FullName ?? "Giảng viên";
+
             // 1. XỬ LÝ MỐC NGÀY MẶC ĐỊNH
             DateTime end = endDate ?? DateTime.UtcNow.Date;
             DateTime start = startDate ?? end.AddDays(-6);
@@ -47,6 +50,8 @@ namespace LMS.Services
             if (!hasAnyEnrollment)
             {
                 response.RevenueChangeText = $"Báo cáo từ {start:dd/MM/yyyy} đến {end:dd/MM/yyyy} (Chưa có dữ liệu)";
+                // Vẫn phải trả về số dư ví kể cả khi chưa có học viên nào mua
+                response.AvailableBalance = teacherInfo?.WalletBalance ?? 0m;
                 return response;
             }
 
@@ -57,29 +62,23 @@ namespace LMS.Services
             // ==========================================================
             // 4. THUẬT TOÁN XỬ LÝ HẠNG THÀNH VIÊN ĐỘNG TỪ DATABASE (MỚI)
             // ==========================================================
-            // Kéo tất cả các Rank đang kích hoạt, xếp tăng dần theo mốc doanh thu yêu cầu
             var activeRanks = await _context.Ranks
                 .Where(r => r.IsActive == true && r.IsDeleted == false)
                 .OrderBy(r => r.RequiredRevenue)
                 .ToListAsync();
 
-            // A. Tìm hạng hiện tại: Thằng cao nhất mà mốc RequiredRevenue của nó nhỏ hơn hoặc bằng lifetimeGross của thầy
             var currentRank = activeRanks.LastOrDefault(r => lifetimeGross >= r.RequiredRevenue)
-                              ?? activeRanks.FirstOrDefault(); // Nếu chưa đạt mốc nào, lấy Rank thấp nhất làm mặc định
+                              ?? activeRanks.FirstOrDefault();
 
-            // B. Tìm hạng kế tiếp: Thằng đầu tiên có mốc RequiredRevenue lớn hơn lifetimeGross của thầy
             var nextRank = activeRanks.FirstOrDefault(r => r.RequiredRevenue > lifetimeGross);
 
-            // C. Trích xuất thông tin gán vào biến xử lý tài chính
-            decimal commissionRate = currentRank?.DefaultRate ?? 70; // Lấy tỷ lệ hoa hồng từ DB (Ví dụ: 75)
+            decimal commissionRate = currentRank?.DefaultRate ?? 70;
             string rankName = currentRank?.RankName ?? "HẠNG ĐỒNG";
             string rankTitle = currentRank?.RankName ?? "Bronze Member";
 
-            // Nếu không có hạng kế tiếp (Thầy đã max cấp - Hạng cao nhất hệ thống)
             decimal targetRevenue = nextRank?.RequiredRevenue ?? lifetimeGross;
             string nextRankName = nextRank != null ? nextRank.RankName : "BẬC THẦY 👑";
 
-            // Đổ dữ liệu Hạng động vào DTO trả về cho Frontend
             response.RankName = rankName;
             response.RankTitle = rankTitle;
             response.CommissionRate = commissionRate;
@@ -93,7 +92,10 @@ namespace LMS.Services
             response.TotalGrossRevenue = totalGrossInPeriod;
             response.PlatformFee = totalGrossInPeriod * ((100 - commissionRate) / 100);
             response.NetRevenue = totalGrossInPeriod * (commissionRate / 100);
-            response.AvailableBalance = response.NetRevenue;
+
+            // FIX TẠI ĐÂY: Gán cố định bằng số dư ví thực tế lấy từ DB ở đầu hàm
+            response.AvailableBalance = teacherInfo?.WalletBalance ?? 0m;
+
             response.RevenueChangeText = $"Báo cáo từ {start:dd/MM/yyyy} đến {end:dd/MM/yyyy}";
 
             // 6. XỬ LÝ TRỤC NGÀY ĐỘNG CHO BIỂU ĐỒ CỘT (BAR CHART)
@@ -132,7 +134,7 @@ namespace LMS.Services
                     IsPro = g.First().Course.Price > 0,
                     StudentCount = g.Count(),
                     GrossRevenue = g.Sum(e => e.Course.Price),
-                    NetRevenue = g.Sum(e => e.Course.Price) * (commissionRate / 100) // Đã đổi sang biến động rùi nhé bác
+                    NetRevenue = g.Sum(e => e.Course.Price) * (commissionRate / 100)
                 })
                 .ToListAsync();
 
@@ -143,7 +145,7 @@ namespace LMS.Services
                 .Select(e => new RecentTransactionDTO
                 {
                     Description = $"Học viên: {e.User.FullName}",
-                    Amount = e.Course.Price * (commissionRate / 100), // Đã đổi sang biến động rùi nhé bác
+                    Amount = e.Course.Price * (commissionRate / 100),
                     IsIncome = true
                 })
                 .ToListAsync();

@@ -12,7 +12,7 @@ const Toast = Swal.mixin({
 var RoadMap = {
     currentPage : 0,
     config: {
-        apiUrl: "http://127.0.0.1:5000/api/roadmap",
+        apiUrl: "https://lms-u2jn.onrender.com/api/roadmap",
         pageSize : 10
     },
     init: function () {
@@ -114,7 +114,7 @@ var RoadMap = {
     loadTeacherSelect: async function() {
         const token = localStorage.getItem("jwt_token");
         try {
-            const response = await fetch(`http://127.0.0.1:5000/api/course/get-all-teachers`, {
+            const response = await fetch(`https://lms-u2jn.onrender.com/api/course/get-all-teachers`, {
             method: 'GET',
             headers: { 
                 'Authorization': `Bearer ${token}`,
@@ -786,7 +786,7 @@ handleGoToDetail: async function(courseId) {
 
     try {
         const res = await $.ajax({
-            url: `http://127.0.0.1:5000/api/course/course-detail/${courseId}`,
+            url: `https://lms-u2jn.onrender.com/api/course/course-detail/${courseId}`,
             type: 'GET',
             headers: { 'Authorization': `Bearer ${token}` } // QUAN TRỌNG: Phải có dòng này
         });
@@ -1133,7 +1133,7 @@ restoreBulk: function() {
     loadTeacherSelect: async function() {
         const token = localStorage.getItem("jwt_token");
         try {
-            const response = await fetch(`http://127.0.0.1:5000/api/course/get-all-teachers`, {
+            const response = await fetch(`https://lms-u2jn.onrender.com/api/course/get-all-teachers`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const res = await response.json();

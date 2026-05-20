@@ -2,9 +2,9 @@ var Home = {
     allCourses: [],
     config: {
         pageSize: 5,
-        apiUrl: "http://127.0.0.1:5000/api/course",
-        apiUrlCate : "http://127.0.0.1:5000/api/category",
-        apiUrlRoadMap : "http://127.0.0.1:5000/api/roadMap"
+        apiUrl: "https://lms-u2jn.onrender.com/api/course",
+        apiUrlCate : "https://lms-u2jn.onrender.com/api/category",
+        apiUrlRoadMap : "https://lms-u2jn.onrender.com/api/roadMap"
     },
 
     // Hàm khởi tạo - Gọi khi trang load xong

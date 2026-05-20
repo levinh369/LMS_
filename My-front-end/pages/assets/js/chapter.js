@@ -2,7 +2,7 @@ const chapter = {
     currentCourseId: 0, // Lưu ID khóa học đang chọn
     config: {
         pageSize: 10,
-        apiUrl: "http://127.0.0.1:5000/api/chapter"
+        apiUrl: "https://lms-u2jn.onrender.com/api/chapter"
     },
     openModal: async function(courseId) {
         chapter.currentCourseId = courseId;
@@ -250,7 +250,7 @@ chapterTrash: {
 
     loadData: async function(page) {
         const pageSize = 10; // Hoặc lấy từ config của bạn
-        const url = `http://127.0.0.1:5000/api/Chapter/list-deleted?courseId=${chapter.currentCourseId}&page=${page}&pageSize=${pageSize}`;
+        const url = `https://lms-u2jn.onrender.com/api/Chapter/list-deleted?courseId=${chapter.currentCourseId}&page=${page}&pageSize=${pageSize}`;
 
         try {
             const response = await fetch(url);

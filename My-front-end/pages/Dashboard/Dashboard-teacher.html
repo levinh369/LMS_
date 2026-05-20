@@ -268,7 +268,7 @@
         <div class="stat-card">
             <div class="stat-label">Số dư khả dụng</div>
             <div class="stat-value">0đ</div>
-            <button class="btn btn-sm text-white mt-2" style="background: var(--primary); border: none; padding: 4px 12px;">Rút tiền</button>
+            <button class="btn btn-sm text-white mt-2" style="background: var(--primary); border: none; padding: 4px 12px;" onclick="DashboardTeacher.openWithDrawModal()">Rút tiền</button>
         </div>
     </section>
 
@@ -363,7 +363,97 @@
         </div>
     </div>
 </div>
+<!-- Modal Yêu Cầu Rút Tiền -->
+<!-- Modal Yêu Cầu Rút Tiền -->
+<div class="modal fade" id="withdrawModal" tabindex="-1" aria-labelledby="withdrawModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow" style="border-radius: 16px;">
+            <!-- Header -->
+            <div class="modal-header bg-white border-bottom-0 pt-4 pb-0 px-4">
+                <h5 class="modal-title fw-bold text-dark fs-4" id="withdrawModalLabel">
+                    💸 Yêu cầu rút tiền
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
 
+            <!-- Body -->
+            <div class="modal-body px-4 pb-4 pt-3">
+                <!-- Khu vực hiển thị số dư -->
+                <div class="p-3 mb-4 rounded-3 d-flex align-items-center" style="background-color: #f8f9fa; border: 1px solid #e9ecef;">
+                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 48px; height: 48px;">
+                        <i class="bi bi-wallet2 fs-5"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small fw-semibold mb-1">SỐ DƯ KHẢ DỤNG</div>
+                        <strong class="fs-4 text-primary" id="displayAvailableBalance">Đang tải...</strong>
+                    </div>
+                </div>
+
+                <form id="withdrawForm">
+                    <!-- Form Số tiền (Đã độ lại UI) -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold small text-muted">SỐ TIỀN CẦN RÚT <span class="text-danger">*</span></label>
+                        <div class="input-group input-group-lg shadow-sm">
+                            <!-- Đổi type="number" thành type="text" để gõ được dấu phẩy -->
+                            <input type="text" class="form-control fw-bold text-dark fs-5" 
+                                   id="withdrawAmount" name="amount" 
+                                   placeholder="50,000" autocomplete="off" required>
+                            <span class="input-group-text bg-light fw-bold text-secondary border-start-0">VNĐ</span>
+                        </div>
+                        <div class="form-text text-danger small mt-2" id="amountErrorText"><i class="bi bi-info-circle"></i> Tối thiểu 50,000 VNĐ.</div>
+                    </div>
+
+                    <!-- Form Chọn Ngân hàng -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">NGÂN HÀNG <span class="text-danger">*</span></label>
+                        <select class="form-select form-select-lg bg-light fs-6" id="bankName" name="bankName" required>
+                            <option value="" disabled selected>-- Chọn ngân hàng --</option>
+                            <option value="VCB">Vietcombank (VCB)</option>
+                            <option value="MB">MBBank (MB)</option>
+                            <option value="TCB">Techcombank (TCB)</option>
+                            <option value="BIDV">BIDV</option>
+                            <option value="CTG">VietinBank (CTG)</option>
+                            <option value="VPB">VPBank (VPB)</option>
+                            <option value="ACB">ACB</option>
+                            <option value="TPB">TPBank (TPB)</option>
+                            <option value="VIB">VIB</option>
+                            <option value="AGRIBANK">Agribank (VBA)</option>
+                        </select>
+                    </div>
+
+                    <div class="row gx-3">
+                        <!-- Form Số tài khoản -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold small text-muted">SỐ TÀI KHOẢN <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-lg bg-light fs-6" 
+                                   id="accountNumber" name="accountNumber" 
+                                   placeholder="VD: 123456789" required>
+                        </div>
+
+                        <!-- Form Tên chủ thẻ -->
+                        <div class="col-md-6 mb-4">
+                            <label class="form-label fw-bold small text-muted">TÊN CHỦ TÀI KHOẢN <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-lg bg-light text-uppercase fs-6" 
+                                   id="accountName" name="accountName" 
+                                   placeholder="VD: LE VAN A" required>
+                        </div>
+                    </div>
+
+                    <!-- Footer & Nút bấm (Đã xếp lại ngang cho sang) -->
+                    <div class="d-flex justify-content-end gap-2 border-top pt-4">
+                        <button type="button" class="btn btn-light fw-semibold px-4" data-bs-dismiss="modal" style="border-radius: 8px; border: 1px solid #dee2e6;">
+                            Hủy
+                        </button>
+                        <button type="submit" class="btn btn-primary fw-semibold px-4 shadow-sm" id="btnSubmitWithdraw" style="border-radius: 8px;">
+                            Xác nhận rút tiền
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
@@ -372,7 +462,7 @@
 <script src="../assets/js/admin-loader.js"></script>
 <script src="../assets/js/dashBoard-teacher.js"></script>
 <script src="../assets/js/notification.js"></script>
-
+<script src="../assets/js/common.js"></script>
 <script>
 </script>
 </body>

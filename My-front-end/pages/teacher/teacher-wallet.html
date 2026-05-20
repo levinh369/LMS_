@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ví & Rút Tiền - Giảng Viên</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-body: #f1f5f9;
+            --text-main: #334155;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+        }
+
+        body { background-color: var(--bg-body); font-family: 'Inter', sans-serif; color: var(--text-main); }
+        
+        /* Layout & Cards */
+        .card-modern { border-radius: 20px; border: 1px solid rgba(0,0,0,0.03); background: #fff; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01); transition: transform 0.2s ease; }
+        
+        /* Wallet Card (Thẻ đen xịn sò) */
+        .wallet-card { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-radius: 20px; position: relative; overflow: hidden; border: none; box-shadow: 0 15px 30px -5px rgba(15, 23, 42, 0.4); }
+        .wallet-card::after { content: ''; position: absolute; right: -10%; top: -20%; width: 200px; height: 200px; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%); border-radius: 50%; }
+        .wallet-card::before { content: ''; position: absolute; left: -10%; bottom: -30%; width: 250px; height: 250px; background: radial-gradient(circle, rgba(79, 70, 229, 0.2) 0%, rgba(255,255,255,0) 70%); border-radius: 50%; }
+        .wallet-card-content { position: relative; z-index: 2; }
+
+        /* Nút bấm hiện đại */
+        .btn-primary-custom { background-color: var(--primary); color: white; border-radius: 12px; padding: 12px 24px; font-weight: 600; border: none; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.3); }
+        .btn-primary-custom:hover { background-color: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.4); color: white; }
+
+        /* Bảng hiển thị chuyên nghiệp */
+        .table-custom { margin-bottom: 0; }
+        .table-custom th { border-bottom: 1px solid var(--border-color); color: var(--text-muted); font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 16px; background: transparent; }
+        .table-custom td { padding: 16px; border-bottom: 1px solid #f8fafc; vertical-align: middle; }
+        .table-custom tbody tr { transition: background-color 0.2s; }
+        .table-custom tbody tr:hover { background-color: #f8fafc; }
+
+        /* Badges trạng thái Fintech */
+        .badge-ft { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+        .badge-ft::before { content: ''; display: block; width: 6px; height: 6px; border-radius: 50%; }
+        
+        .ft-pending { background: #fef3c7; color: #b45309; }
+        .ft-pending::before { background: #f59e0b; }
+        
+        .ft-success { background: #dcfce7; color: #15803d; }
+        .ft-success::before { background: #22c55e; }
+        
+        .ft-danger { background: #fee2e2; color: #b91c1c; }
+        .ft-danger::before { background: #ef4444; }
+
+        /* Inputs & Form */
+        .form-control-custom { border-radius: 12px; border: 1px solid var(--border-color); padding: 12px 16px; font-size: 0.95rem; background-color: #f8fafc; transition: all 0.2s; }
+        .form-control-custom:focus { background-color: #fff; border-color: var(--primary); box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1); }
+        .modal-content-custom { border-radius: 24px; border: none; overflow: hidden; }
+        
+        .bank-icon-box { width: 36px; height: 36px; border-radius: 10px; background: #f1f5f9; display: flex; align-items: center; justify-content: center; color: var(--primary); font-size: 1.1rem; }
+    </style>
+</head>
+<body>
+<div id="sidebar-placeholder"></div>
+<div class="container py-5 max-w-7xl">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end mb-5 gap-3">
+        <div>
+            <h2 class="fw-bold text-dark m-0 letter-spacing-tight">Tổng quan tài chính</h2>
+            <p class="text-muted mt-1 mb-0">Quản lý dòng tiền và lịch sử giao dịch của bạn</p>
+        </div>
+      
+    </div>
+
+    <div class="row g-4 mb-5">
+        <div class="col-lg-4 col-md-6">
+            <div class="wallet-card h-100 p-4 d-flex flex-column justify-content-between">
+                <div class="wallet-card-content">
+                    <div class="d-flex justify-content-between align-items-start mb-4">
+                        <div class="text-white-50 small fw-semibold text-uppercase tracking-wider">Số dư khả dụng</div>
+                        <i class="bi bi-wallet2 text-white opacity-50 fs-4"></i>
+                    </div>
+                    <h1 class="text-white fw-bold mb-1" style="font-size: 2.5rem; letter-spacing: -1px;">
+                        <span id="stat-available">0 đ</span>
+                    </h1>
+                    <div class="text-white-50 small mt-3">
+                        <i class="bi bi-shield-check me-1"></i> An toàn & Bảo mật
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 col-md-6">
+            <div class="card-modern h-100 p-4">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="text-muted small fw-bold text-uppercase">Đang xử lý</div>
+                    <div class="p-2 bg-warning bg-opacity-10 rounded-3 text-warning">
+                        <i class="bi bi-hourglass-split"></i>
+                    </div>
+                </div>
+                <h2 class="fw-bold text-dark mb-1">
+                    <span id="stat-pending">0 đ</span>
+                </h2>
+                <div class="text-muted small mt-2 d-flex align-items-center">
+                    <span class="text-warning fw-semibold me-1" id="stat-pending-count">0</span> lệnh đang chờ Admin duyệt
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 col-md-12">
+            <div class="card-modern h-100 p-4">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="text-muted small fw-bold text-uppercase">Đã rút thành công</div>
+                    <div class="p-2 bg-success bg-opacity-10 rounded-3 text-success">
+                        <i class="bi bi-graph-up-arrow"></i>
+                    </div>
+                </div>
+                <h2 class="fw-bold text-dark mb-1">
+                    <span id="stat-withdrawn">0 đ</span>
+                </h2>
+                <div class="text-muted small mt-2 d-flex align-items-center">
+                    <i class="bi bi-check-circle-fill text-success me-1"></i> Tổng doanh thu đã thanh toán
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-modern">
+        <div class="d-flex justify-content-between align-items-center p-4 border-bottom">
+            <h6 class="fw-bold text-dark m-0 fs-5">Lịch sử giao dịch</h6>
+            
+            <div class="dropdown">
+                <button class="btn btn-sm btn-light text-muted fw-semibold rounded-pill px-3 border" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-filter me-1"></i> Lọc trạng thái
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2" style="border-radius: 12px; min-width: 200px;">
+                    <li><a class="dropdown-item fw-semibold py-2" href="javascript:void(0)" onclick="withdrawTeacher.filter(-1)"><i class="bi bi-grid text-muted me-2"></i>Tất cả giao dịch</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item fw-semibold text-warning py-2" href="javascript:void(0)" onclick="withdrawTeacher.filter(0)"><i class="bi bi-hourglass-split me-2"></i>Đang chờ duyệt</a></li>
+                    <li><a class="dropdown-item fw-semibold text-success py-2" href="javascript:void(0)" onclick="withdrawTeacher.filter(1)"><i class="bi bi-check-circle me-2"></i>Đã thành công</a></li>
+                    <li><a class="dropdown-item fw-semibold text-danger py-2" href="javascript:void(0)" onclick="withdrawTeacher.filter(2)"><i class="bi bi-x-circle me-2"></i>Bị từ chối</a></li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table table-custom align-middle">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Mã GD</th>
+                        <th>Khách hàng / Nhận tiền</th>
+                        <th>Số tiền</th>
+                        <th>Ngày tạo</th>
+                        <th>Trạng thái</th>
+                        <th class="pe-4">Ghi chú</th>
+                    </tr>
+                </thead>
+                <tbody id="teacher-history-body">
+                    </tbody>
+            </table>
+        </div>
+        
+        <div class="p-4 d-flex justify-content-between align-items-center border-top">
+    <div class="text-muted small">Tổng số: <strong id="total-records" class="text-dark">0</strong> bản ghi</div>
+    <nav><ul id="paging-ul" class="pagination pagination-sm m-0 shadow-sm rounded-3"></ul></nav>
+</div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/twbs-pagination/1.4.2/jquery.twbsPagination.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+<script src="../assets/js/teacher-wallet.js"></script>
+<script src="../assets/js/admin-loader.js"></script>
+
+</body>
+</html>

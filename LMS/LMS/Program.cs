@@ -50,6 +50,8 @@ builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IWithDrawRepository, WithDrawRepository>();
+builder.Services.AddScoped<IWithdrawalService, WithdrawalService>();
 builder.Services.AddScoped<IRankService, RankService>();
 builder.Services.AddScoped<IRankRepository, RankRepository>();
 builder.Services.AddSignalR(options =>

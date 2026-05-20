@@ -10,7 +10,7 @@ const Toast = Swal.mixin({
     }
 });
 const Rank = {
-    baseUrl: 'http://127.0.0.1:5000/api/Rank',
+    baseUrl: 'https://lms-u2jn.onrender.com/api/Rank',
     init: function () {
         this.loadDashboard();
         this.registerEvents();

@@ -1,7 +1,7 @@
 const AdminOrder = {
     config: {
         pageSize: 10,
-        apiUrl: "http://127.0.0.1:5000/api/order" // Đúng Route bác đã viết ở Controller
+        apiUrl: "https://lms-u2jn.onrender.com/api/order" // Đúng Route bác đã viết ở Controller
     },
 
     init: function () {

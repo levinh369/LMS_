@@ -33,6 +33,7 @@
         // ==========================================
         // 5. DANH SÁCH CHI TIẾT (TABLES & LISTS)
         // ==========================================
+        public Decimal WalletBalance {  get; set; }
         public List<CoursePerformanceDTO> CoursePerformances { get; set; } = new();
         public List<RecentTransactionDTO> RecentTransactions { get; set; } = new();
     }

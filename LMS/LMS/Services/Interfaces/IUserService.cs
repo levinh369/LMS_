@@ -27,6 +27,7 @@ namespace LMS.Services.Interfaces
         Task<bool> RestoreBulkAsync(List<int> ids);
         Task<bool> HardDeleteBulkAsync(List<int> ids);
         Task<bool> SoftDeleteBulkAsync(List<int> ids);
+        Task<(bool IsSuccess, string Message)> CreateWithdrawalRequestAsync(int teacherId, WithdrawRequestDTO requestDto);
 
     }
 }

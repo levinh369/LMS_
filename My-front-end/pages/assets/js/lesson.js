@@ -17,7 +17,7 @@ var Lesson = {
     currentCourseId : 0,
     isChapterNameLoaded: false,
     config: {
-        apiUrl: "http://127.0.0.1:5000/api/Lesson"
+        apiUrl: "https://lms-u2jn.onrender.com/api/Lesson"
     },
     
     // Hàm khởi tạo - Gọi khi trang load xong
@@ -527,7 +527,7 @@ openDetailModal: async function (id) {
     $('.video-placeholder').removeClass('d-none');
 
     try {
-        const response = await fetch(`http://127.0.0.1:5000/api/Lesson/${id}`);
+        const response = await fetch(`https://lms-u2jn.onrender.com/api/Lesson/${id}`);
         if (!response.ok) throw new Error('Không lấy được dữ liệu bài học');
         
         const item = await response.json(); 
@@ -790,7 +790,7 @@ delete: async function(id) {
 
         try {
             console.log("Gọi API lấy danh mục lần đầu");
-            const response = await fetch(`http://127.0.0.1:5000/api/Lesson`);
+            const response = await fetch(`https://lms-u2jn.onrender.com/api/Lesson`);
             Lesson.categories = await response.json(); 
             console.log(Lesson.categories)
             let filterHtml = '<option value="">Tất cả danh mục</option>';

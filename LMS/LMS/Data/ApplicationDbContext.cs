@@ -26,6 +26,7 @@ namespace LMS.Data
         public DbSet<OrderModel> Orders { get; set; }
         public DbSet<RankModel> Ranks { get; set; }
         public DbSet<InstructorApplicationModel> InstructorApplications { get; set; }
+        public DbSet<WithdrawalRequestModel> WithdrawalRequests { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
