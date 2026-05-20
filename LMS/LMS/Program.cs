@@ -14,6 +14,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.AspNetCore.Http; // Thêm dòng này để nhận diện CookieSecurePolicy
+Environment.SetEnvironmentVariable("DOTNET_hostBuilder:reloadConfigOnChange", "false")
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
     Args = args
