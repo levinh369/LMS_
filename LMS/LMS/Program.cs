@@ -78,10 +78,14 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.SetIsOriginAllowed(origin => true) // Cho phép tất cả các nguồn truy cập
+        policy.WithOrigins(
+                  "https://lms-azure-mu.vercel.app", // Link Vercel thật
+                  "http://127.0.0.1:5500",           // Để test ở máy nhà
+                  "http://localhost:5500"
+              )
               .AllowAnyHeader()
               .AllowAnyMethod()
-              .AllowCredentials(); // Giữ cái này để dùng được SignalR/Hub
+              .AllowCredentials(); // Dùng cái này thì WithOrigins phải rõ ràng
     });
 });
 builder.Services.AddAuthentication(options =>
