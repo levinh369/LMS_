@@ -100,6 +100,48 @@ namespace LMS.Repositories
         {
             await _context.SaveChangesAsync();
         }
-        
+
+        public void Update(WithdrawalRequestModel entity)
+        {
+            _context.WithdrawalRequests.Update(entity);
+        }
+        public async Task<List<WithdrawalRequestModel>> GetAllWithdrawalsForExportAsync(string keySearch, int status, DateTime? fromDate, DateTime? toDate)
+        {
+            // 1. Khởi tạo query và BẮT BUỘC phải Include User để lấy FullName, Email...
+            var query = _context.WithdrawalRequests
+                .Include(x => x.User)
+                .AsQueryable();
+
+            // 2. Tìm kiếm theo Từ khóa (Hỗ trợ tìm theo tên Giảng viên hoặc Email)
+            if (!string.IsNullOrEmpty(keySearch))
+            {
+                keySearch = keySearch.ToLower();
+                query = query.Where(x =>
+                    (x.User.FullName != null && x.User.FullName.ToLower().Contains(keySearch)) ||
+                    (x.User.Email != null && x.User.Email.ToLower().Contains(keySearch)) ||
+                    (x.BankName != null && x.BankName.ToLower().Contains(keySearch)) ||
+                    (x.AccountNumber != null && x.AccountNumber.Contains(keySearch))
+                );
+            }
+            // Lọc theo Khoảng thời gian yêu cầu rút tiền
+            if (fromDate.HasValue)
+            {
+                query = query.Where(x => x.CreatedAt >= fromDate.Value);
+            }
+            if (toDate.HasValue)
+            {
+                // Cộng thêm 1 ngày để quét hết đến 23:59:59 của ngày kết thúc
+                query = query.Where(x => x.CreatedAt < toDate.Value.AddDays(1));
+            }
+            // 3. Lọc theo Trạng thái của lệnh rút tiền (-1 là lấy tất cả)
+            if (status != -1)
+            {
+                // Ép kiểu int về Enum để so sánh tương thích với DB
+                query = query.Where(x => x.Status == (WithdrawalStatusEnum)status);
+            }
+
+            // 4. Sắp xếp theo ngày tạo mới nhất lên đầu để Admin dễ đối soát đơn gần đây
+            return await query.OrderByDescending(x => x.CreatedAt).ToListAsync();
+        }
     }
 }

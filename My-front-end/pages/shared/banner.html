@@ -10,44 +10,60 @@
         </div>
     </div>
 
-    <div class="d-flex align-items-center gap-1">
-        <a href="/dashboard/index.html" class="nav-menu-item" id="btn-nav-dashboard">
-            <i class="bi bi-graph-up-arrow"></i>
-            <span>Thống kê</span>
-        </a>
-        <a href="/category/index.html" class="nav-menu-item" id="btn-nav-category">
-            <i class="bi bi-tags"></i>
-            <span>Danh mục</span>
-        </a>
-        <a href="/course/index.html" class="nav-menu-item" id="btn-nav-course">
-            <i class="bi bi-book"></i>
-            <span>Khóa học</span>
-        </a>
-        <a href="/road_map/index.html" class="nav-menu-item" id="btn-nav-roadmap">
-            <i class="bi bi-map"></i>
-            <span>Lộ trình</span>
-        </a>
-        <a href="/managerUser/index.html" class="nav-menu-item" id="btn-nav-user">
-            <i class="bi bi-people"></i>
-            <span>Người dùng</span>
-        </a>
-        <a href="/manager-rank/index.html" class="nav-menu-item admin-only" id="btn-nav-rank">
+  <div class="d-flex align-items-center gap-1">
+    <a href="/dashboard/index.html" class="nav-menu-item" id="btn-nav-dashboard">
+        <i class="bi bi-graph-up-arrow"></i>
+        <span>Thống kê</span>
+    </a>
+    <a href="/category/index.html" class="nav-menu-item" id="btn-nav-category">
+        <i class="bi bi-tags"></i>
+        <span>Danh mục</span>
+    </a>
+    <a href="/course/index.html" class="nav-menu-item" id="btn-nav-course">
+        <i class="bi bi-book"></i>
+        <span>Khóa học</span>
+    </a>
+    <a href="/road_map/index.html" class="nav-menu-item" id="btn-nav-roadmap">
+        <i class="bi bi-map"></i>
+        <span>Lộ trình</span>
+    </a>
+    <a href="/managerUser/index.html" class="nav-menu-item" id="btn-nav-user">
+        <i class="bi bi-people"></i>
+        <span>Người dùng</span>
+    </a>
+    <a href="/manager-rank/index.html" class="nav-menu-item" id="btn-nav-rank">
         <i class="bi bi-award"></i>
         <span>Hạng giảng viên</span>
     </a>
-        <a href="/manager-comment/index.html" class="nav-menu-item" id="btn-nav-comment">
-            <i class="bi bi-chat-dots"></i>
-            <span>Bình luận</span>
-        </a>
-        <a href="/order/index.html" class="nav-menu-item" id="btn-nav-order">
-            <i class="bi bi-cash-stack"></i>
-            <span>Đơn hàng</span>
-        </a>
-      <a href="/withdraw/index.html" class="nav-menu-item" id="btn-nav-order">
-    <i class="bi bi-bank2"></i>
-    <span>Yêu cầu rút tiền</span>
-</a>
-    </div>
+    <a href="/manager-comment/index.html" class="nav-menu-item" id="btn-nav-comment">
+        <i class="bi bi-chat-dots"></i>
+        <span>Bình luận</span>
+    </a>
+    <a href="/order/index.html" class="nav-menu-item" id="btn-nav-order">
+        <i class="bi bi-cash-stack"></i>
+        <span>Đơn hàng</span>
+    </a>
+<a href="/withdraw/index.html" class="nav-menu-item" id="btn-nav-withdraw">
+        <div class="position-relative d-inline-block">
+            <i class="bi bi-bank2"></i>
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none" id="badge-withdraw-count" style="font-size: 0.65rem;">0</span>
+        </div>
+        <span>Yêu cầu rút tiền</span>
+    </a>
+    
+    <a href="/teacher/teacher-wallet.html" class="nav-menu-item" id="btn-nav-withdraw-history">
+        <i class="bi bi-clock-history"></i>
+        <span>Lịch sử rút tiền</span>
+    </a>
+    
+    <a href="/managerUser/admin-approvals.html" class="nav-menu-item" id="btn-nav-teacher-request">
+        <div class="position-relative d-inline-block">
+            <i class="bi bi-person-check"></i>
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none" id="badge-teacher-count" style="font-size: 0.65rem;">0</span>
+        </div>
+        <span>Duyệt giảng viên</span>
+    </a>
+</div>
 
     <div class="d-flex align-items-center gap-3 border-start border-white border-opacity-10 ps-3">
         

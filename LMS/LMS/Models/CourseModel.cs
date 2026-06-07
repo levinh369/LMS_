@@ -26,6 +26,8 @@ namespace LMS.Models
         public CategoryModel Category { get; set; }
         [StringLength(20)]
         public string? LockedByRole { get; set; }
+        [StringLength(20)]
+        public string? DeletedByRole { get; set; }
         public ICollection<LessonModel> Lessons { get; set; } = new List<LessonModel>();
         public ICollection<CourseDetailModel> CourseDetails { get; set; } = new List<CourseDetailModel>();
         public ICollection<ChapterModel> Chapters { get; set; } = new List<ChapterModel>();

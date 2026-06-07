@@ -3,11 +3,13 @@ using LMS.Data;
 using LMS.DTOs.Request;
 using LMS.DTOs.Respone;
 using LMS.Enums;
+using LMS.Hub;
 using LMS.Models;
 using LMS.Repositories;
 using LMS.Repositories.Interfaces;
 using LMS.Services.Interfaces;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
 using System.Linq.Expressions;
@@ -20,12 +22,16 @@ namespace LMS.Services
         private readonly ICloudinaryService cloudinaryService;
         private readonly ApplicationDbContext _context;
         private readonly INotificationService notificationService;
-        public UserService(IUserRepository userRepository, ICloudinaryService cloudinaryService, ApplicationDbContext applicationDbContext, INotificationService notificationService)
+        private readonly IHubContext<NotificationHub> _hubContext;
+        private readonly IDashboardService _dashboardService;
+        public UserService(IUserRepository userRepository, ICloudinaryService cloudinaryService, ApplicationDbContext applicationDbContext, INotificationService notificationService, IHubContext<NotificationHub> hubContext, IDashboardService dashboardService)
         {
             this.userRepository = userRepository;
             this.cloudinaryService = cloudinaryService;
             _context = applicationDbContext;
             this.notificationService = notificationService;
+            _hubContext = hubContext;
+            _dashboardService = dashboardService;
         }
         public async Task<MyProfileResponseDTO> GetFullProfileDataAsync(int userId)
         {
@@ -321,7 +327,7 @@ namespace LMS.Services
 
             try
             {
-                // 1. GIAM TIỀN VÍ
+                // 1. GIẢM TIỀN VÍ
                 teacher.WalletBalance -= requestDto.Amount;
 
                 // 2. Khởi tạo Record lịch sử
@@ -340,23 +346,60 @@ namespace LMS.Services
                 _context.Users.Update(teacher);
 
                 await _context.SaveChangesAsync();
-                string teacherMsg = $"Giảng viên <b>{teacher.FullName}</b> vừa đặt lệnh rút {requestDto.Amount:N0} VNĐ.";
-                string url = "/admin/withdrawals"; 
-                int adminUserId = 1029;
 
-                await notificationService.SendNotificationAsync(
-                    adminUserId, 
-                    teacher.Id,  
-                    teacherMsg,
-                    NotificationTypeEnum.WithdrawalRequest, 
-                    url,
-                    null
-                );
+                // ==========================================
+                // 4. GỬI THÔNG BÁO TỰ ĐỘNG CHO TẤT CẢ ADMIN
+                // ==========================================
+                string teacherMsg = $"Giảng viên <b>{teacher.FullName}</b> vừa đặt lệnh rút {requestDto.Amount:N0} VNĐ.";
+                string url = "/withdraw/index.html";
+
+                // Quét tìm RoleId của Admin
+                var adminRoleId = await _context.Roles
+                    .Where(r => r.RoleName == "Admin")
+                    .Select(r => r.Id)
+                    .FirstOrDefaultAsync();
+
+                if (adminRoleId > 0)
+                {
+                    // Lấy ra toàn bộ danh sách User đang làm Admin
+                    var adminIds = await _context.Users
+                        .Where(u => u.RoleId == adminRoleId)
+                        .Select(u => u.Id)
+                        .ToListAsync();
+
+                    // Rải thông báo cho từng Admin
+                    foreach (var adminId in adminIds)
+                    {
+                        await notificationService.SendNotificationAsync(
+                            adminId,
+                            teacher.Id,
+                            teacherMsg,
+                            NotificationTypeEnum.WithdrawalRequest,
+                            url,
+                            null
+                        );
+                    }
+                }
+
+                // ==========================================
+                // 5. BẮN TÍN HIỆU SIGNALR ĐỂ NHẢY SỐ (CHẤM ĐỎ)
+                // ==========================================
+                try
+                {
+                    var pendingCounts = await _dashboardService.GetPendingCountsAsync();
+                    await _hubContext.Clients.Group("AdminGroup")
+                        .SendAsync("ReceiveAdminNotificationCount", pendingCounts.WithdrawCount, pendingCounts.TeacherCount);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[SignalR Error] Lỗi khi bắn thông báo rút tiền: {ex.Message}");
+                }
 
                 return (true, "Tạo lệnh rút tiền thành công. Vui lòng chờ Admin phê duyệt!");
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[Withdrawal Error]: {ex.Message}");
                 return (false, "Lỗi hệ thống khi xử lý giao dịch. Vui lòng thử lại sau.");
             }
         }

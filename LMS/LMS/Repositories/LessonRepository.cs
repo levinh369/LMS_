@@ -147,5 +147,81 @@ namespace LMS.Repositories
                 })
                 .ToListAsync();
         }
+        // --- HÀM LẤY DỮ LIỆU ĐỂ CHECK QUYỀN (QUAN TRỌNG: Phải Include Course) ---
+        public async Task<LessonModel> GetByIdWithIgnoreFilterAsync(int id)
+        {
+            return await _context.Lessons
+                .IgnoreQueryFilters()
+                .Include(l => l.Chapter).ThenInclude(c => c.Course)
+                .FirstOrDefaultAsync(l => l.Id == id);
+        }
+
+        public async Task<List<LessonModel>> GetListByIdsWithIgnoreFilterAsync(List<int> ids)
+        {
+            return await _context.Lessons
+                .IgnoreQueryFilters()
+                .Include(l => l.Chapter).ThenInclude(c => c.Course)
+                .Where(l => ids.Contains(l.Id))
+                .ToListAsync();
+        }
+
+        // --- CÁC HÀM XỬ LÝ ĐƠN LẺ ---
+        public async Task SoftDeleteAsync(LessonModel entity, string deletedByRole)
+        {
+            entity.IsDeleted = true;
+            entity.DeletedByRole = deletedByRole;
+            entity.UpdatedAt = DateTime.UtcNow.AddHours(7);
+            _context.Lessons.Update(entity);
+            await _context.SaveChangesAsync();
+        }
+
+        public new virtual async Task RestoreAsync(LessonModel entity)
+        {
+            entity.IsDeleted = false;
+            entity.DeletedByRole = null;
+            entity.UpdatedAt = DateTime.UtcNow.AddHours(7);
+            _context.Lessons.Update(entity);
+            await _context.SaveChangesAsync();
+        }
+
+        public new virtual async Task HardDeleteAsync(LessonModel entity)
+        {
+            _context.Lessons.Remove(entity);
+            await _context.SaveChangesAsync();
+        }
+
+        // --- CÁC HÀM XỬ LÝ NHIỀU BẰNG LIST<INT> MÀ BÁC YÊU CẦU ---
+        public virtual async Task<bool> UpdateDeleteStatusBulkAsync(List<int> ids, bool isDeleted, string deletedByRole)
+        {
+            var lessons = await _context.Lessons
+                .IgnoreQueryFilters()
+                .Where(x => ids.Contains(x.Id))
+                .ToListAsync();
+
+            foreach (var lesson in lessons)
+            {
+                lesson.IsDeleted = isDeleted;
+                lesson.DeletedByRole = deletedByRole; // Cập nhật người xóa (Admin hay Teacher)
+
+                if (isDeleted) lesson.UpdatedAt = DateTime.UtcNow.AddHours(7);
+                else lesson.UpdatedAt = DateTime.UtcNow.AddHours(7);
+            }
+
+            _context.Lessons.UpdateRange(lessons);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public new virtual async Task<bool> HardDeleteBulkAsync(List<int> ids)
+        {
+            var lessons = await _context.Lessons
+                .IgnoreQueryFilters()
+                .Where(x => ids.Contains(x.Id))
+                .ToListAsync();
+
+            _context.Lessons.RemoveRange(lessons);
+            await _context.SaveChangesAsync();
+            return true;
+        }
     }
 }

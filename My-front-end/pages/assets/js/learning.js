@@ -54,7 +54,7 @@ var Learn = {
     lessonId: null // Nhớ gán giá trị này khi khởi tạo bài học: this.commentState.lessonId = ID_BÀI_HỌC;
 },
     config: {
-        apiUrl: "https://lms-u2jn.onrender.com/api/Course" 
+        apiUrl: "http://127.0.0.1:5000/api/Course" 
     },
     lessonsCache: {},
   init: function() {
@@ -483,7 +483,7 @@ startHeartbeat: function(lessonId, type = 'youtube') {
     const token = localStorage.getItem("jwt_token");
     try {
         const res = await $.ajax({
-            url: `https://lms-u2jn.onrender.com/api/comment/lesson/${lessonId}`,
+            url: `http://127.0.0.1:5000/api/comment/lesson/${lessonId}`,
             type: 'GET',
             headers: token ? { 'Authorization': `Bearer ${token}` } : {}
         });
@@ -722,7 +722,7 @@ loadParentComments: async function(isLoadMore = false) {
 
     try {
         const res = await $.ajax({
-            url: `https://lms-u2jn.onrender.com/api/comment/lesson/${this.commentState.lessonId}/parents?page=${this.commentState.page}&limit=${this.commentState.limit}`,
+            url: `http://127.0.0.1:5000/api/comment/lesson/${this.commentState.lessonId}/parents?page=${this.commentState.page}&limit=${this.commentState.limit}`,
             type: 'GET',
             headers: { "Authorization": "Bearer " + localStorage.getItem("jwt_token") }
         });
@@ -772,7 +772,7 @@ loadReplies: async function(parentId, btnElement) {
     try {
         const res = await $.ajax({
             // Sử dụng lessonId truyền từ frontend như bạn đã tối ưu
-            url: `https://lms-u2jn.onrender.com/api/comment/${parentId}/replies?lessonId=${self.commentState.lessonId}&page=${page}&limit=${limit}`,
+            url: `http://127.0.0.1:5000/api/comment/${parentId}/replies?lessonId=${self.commentState.lessonId}&page=${page}&limit=${limit}`,
             type: 'GET',
             headers: { "Authorization": "Bearer " + localStorage.getItem("jwt_token") }
         });
@@ -826,7 +826,7 @@ postComment: async function(parentId = null) {
 
     try {
         const res = await $.ajax({
-            url: 'https://lms-u2jn.onrender.com/api/comment',
+            url: 'http://127.0.0.1:5000/api/comment',
             type: 'POST',
             contentType: 'application/json',
             headers: { "Authorization": "Bearer " + localStorage.getItem("jwt_token") },
@@ -993,7 +993,7 @@ saveEdit: async function(id) {
     try {
         const token = localStorage.getItem("jwt_token");
         await $.ajax({
-            url: `https://lms-u2jn.onrender.com/api/comment/update/${id}`,
+            url: `http://127.0.0.1:5000/api/comment/update/${id}`,
             type: 'PUT',
             contentType: 'application/json',
             headers: { 'Authorization': `Bearer ${token}` },
@@ -1038,7 +1038,7 @@ deleteComment: async function(id) {
 
                 const token = localStorage.getItem("jwt_token");
                 const res = await $.ajax({
-                    url: `https://lms-u2jn.onrender.com/api/comment/delete/${id}`,
+                    url: `http://127.0.0.1:5000/api/comment/delete/${id}`,
                     type: 'PUT', // Giữ nguyên PUT vì bác đang làm Soft Delete (Cập nhật IsDeleted)
                     contentType: 'application/json',
                     headers: { 'Authorization': `Bearer ${token}` },
@@ -1210,7 +1210,7 @@ handleReaction: async function(commentId, type, btn) {
     try {
         // --- BƯỚC 3: GỌI API NGẦM ---
         const res = await $.ajax({
-            url: `https://lms-u2jn.onrender.com/api/comment/handleLike/${commentId}`,
+            url: `http://127.0.0.1:5000/api/comment/handleLike/${commentId}`,
             type: 'POST',
             contentType: 'application/json',
             headers: { 'Authorization': `Bearer ${token}` },
@@ -1255,7 +1255,7 @@ showReactionDetails: async function(commentId) {
     $body.html('<div class="text-center p-5"><div class="spinner-border text-primary"></div></div>');
 
     try {
-        const res = await $.get(`https://lms-u2jn.onrender.com/api/comment/getReactions/${commentId}`);
+        const res = await $.get(`http://127.0.0.1:5000/api/comment/getReactions/${commentId}`);
         this.currentCommentReactions = res.data || res;
         this.renderReactionTabs(this.currentCommentReactions);
         this.renderUserListInModal(0); // Mặc định hiện tất cả

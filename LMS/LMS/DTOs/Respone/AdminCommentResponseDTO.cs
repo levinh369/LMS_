@@ -32,4 +32,10 @@
         public bool IsTeacher { get; set; }
         public List<AdminCommentResponseDTO> Replies { get; set; } = new List<AdminCommentResponseDTO>();
     }
+    public class CommentStatsDto
+    {
+        public int TotalComments { get; set; }
+        public List<int> Last7DaysCount { get; set; } = new List<int>(); // Mảng 7 phần tử cho biểu đồ
+        public double AveragePerDay { get; set; } // Dùng để tính "Tỷ lệ tương tác Cao/Thấp"
+    }
 }

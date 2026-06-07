@@ -18,11 +18,15 @@
     }
     public class OrderAdminDetailDTO : OrderResponeDTO
     {
-        public string PaymentMethod { get; set; } // VNPay, Momo, Cash...
-        public string TransactionId { get; set; } // Mã giao dịch từ VNPay
-        public string BankCode { get; set; }      // Ngân hàng thanh toán
+        public string PaymentMethod { get; set; } 
+        public string TransactionId { get; set; } 
+        public string BankCode { get; set; }   
         public string OrderDescription { get; set; }
-        public DateTime? ShippedDate { get; set; }
-        // Bác có thể thêm thông tin IP hoặc UserAgent nếu cần soi log
+        public string TranSactionStatus {  get; set; }
+        public string TeacherName { get; set; }
+        public decimal TotalAmount { get; set; }
+        public decimal AdminAmount { get; set; }
+        public decimal TeacherAmount { get; set; }
+        public int AppliedRate { get; set; }
     }
 }

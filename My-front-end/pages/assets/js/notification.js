@@ -3,24 +3,25 @@ window.NotificationApp = {
     currentSkip: 0,
     limit:10,
     // 1. Khởi tạo SignalR
-   init: function () {
+  init: function () {
         if (this.connection) return;
         const token = localStorage.getItem("jwt_token") || localStorage.getItem("token");
         
         this.connection = new signalR.HubConnectionBuilder()
-            .withUrl("https://lms-u2jn.onrender.com/notificationHub", { accessTokenFactory: () => token })
+            .withUrl("http://127.0.0.1:5000/notificationHub", { accessTokenFactory: () => token })
             .withAutomaticReconnect()
             .build();
-       this.connection.on("ReceiveNotification", (data) => {
+
+        this.connection.on("ReceiveNotification", (data) => {
             console.log("🔔 SignalR nhận tin:", data);
             this.renderNotification(data);
         });
+
         // 1. Nhận tin Online
         this.connection.on("UserIsOnline", (userData) => {
             console.log("🟢 Có người online:", userData);
             let user = typeof userData === 'string' ? { userId: userData, userName: "User " + userData } : userData;
             
-            // KiỂM TRA: Nếu trang hiện tại có object DashboardTeacher và có hàm thì gọi
             if (window.DashboardTeacher && typeof window.DashboardTeacher.updateOnlineStatus === 'function') {
                 window.DashboardTeacher.updateOnlineStatus(user, true);
             }
@@ -30,9 +31,33 @@ window.NotificationApp = {
         this.connection.on("UserIsOffline", (userId) => {
             console.log("⚪ Có người offline:", userId);
             
-            // KiỂM TRA và GỌI
             if (window.DashboardTeacher && typeof window.DashboardTeacher.updateOnlineStatus === 'function') {
                 window.DashboardTeacher.updateOnlineStatus({ userId: userId }, false);
+            }
+        });
+
+        // 📍 THÊM MỚI: Nhận tín hiệu đếm số lượng thông báo cho Admin
+        this.connection.on("ReceiveAdminNotificationCount", (withdrawCount, teacherCount) => {
+            console.log("🔴 Admin nhận số lượng Real-time:", withdrawCount, teacherCount);
+            
+            // Cập nhật UI Badge Rút tiền (JQuery tự động bỏ qua nếu phần tử không tồn tại trên trang)
+            const $badgeWithdraw = $("#badge-withdraw-count");
+            if ($badgeWithdraw.length) {
+                if (withdrawCount > 0) {
+                    $badgeWithdraw.text(withdrawCount > 99 ? '99+' : withdrawCount).removeClass("d-none");
+                } else {
+                    $badgeWithdraw.addClass("d-none");
+                }
+            }
+
+            // Cập nhật UI Badge Duyệt giảng viên
+            const $badgeTeacher = $("#badge-teacher-count");
+            if ($badgeTeacher.length) {
+                if (teacherCount > 0) {
+                    $badgeTeacher.text(teacherCount > 99 ? '99+' : teacherCount).removeClass("d-none");
+                } else {
+                    $badgeTeacher.addClass("d-none");
+                }
             }
         });
 
@@ -43,7 +68,7 @@ window.NotificationApp = {
             // Chỉ gọi Backend nếu DashboardTeacher tồn tại
             if (window.DashboardTeacher && typeof window.DashboardTeacher.updateOnlineStatus === 'function') {
                 try {
-                    const activeUsers = await this.connection.invoke("GetActiveUsers", ""); // Đã truyền đủ 1 tham số
+                    const activeUsers = await this.connection.invoke("GetActiveUsers", ""); 
                     if (activeUsers && activeUsers.length > 0) {
                         activeUsers.forEach(user => {
                             let u = typeof user === 'string' ? { userId: user, userName: "User " + user } : user;
@@ -88,7 +113,7 @@ fetchNotifications: function (isLoadMore = false) {
     }
 
     $.ajax({
-        url: `https://lms-u2jn.onrender.com/api/Notification/GetNotif?skip=${this.currentSkip}&limit=${this.limit}`,
+        url: `http://127.0.0.1:5000/api/Notification/GetNotif?skip=${this.currentSkip}&limit=${this.limit}`,
         type: 'GET',
         headers: { "Authorization": "Bearer " + token },
         success: (res) => {
@@ -151,7 +176,7 @@ fetchNotifications: function (isLoadMore = false) {
     }
 
     $.ajax({
-        url: "https://lms-u2jn.onrender.com/api/Notification/unread-count",
+        url: "http://127.0.0.1:5000/api/Notification/unread-count",
         type: "GET",
         headers: { 
             "Authorization": "Bearer " + token // Đây là chìa khóa để hết lỗi 401
@@ -173,7 +198,7 @@ markAllRead: async function() {
     if (!token) return;
 
     try {
-        const response = await fetch(`https://lms-u2jn.onrender.com/api/notification/mark-all`, {
+        const response = await fetch(`http://127.0.0.1:5000/api/notification/mark-all`, {
             method: 'POST', 
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -207,15 +232,23 @@ generateNotifHtml: function(data) {
     const isRead = data.isRead === true;
     
     // 1. Cấu hình giao diện cho từng loại thông báo (Dựa trên Enum của bác)
-    const config = {
-        1: { emoji: "💬", color: "#0866ff", label: "Phản hồi" },    // CommentReply
-        2: { emoji: "❤️", color: "#e41e3f", label: "Cảm xúc" },    // LikeComment (Emoji động bên dưới)
-        3: { emoji: "📌", color: "#673ab7", label: "Ghim" },       // CommentPinned
-        4: { emoji: "🎓", color: "#28a745", label: "Học viên mới" }, // NewEnrollment
-        5: { emoji: "❓", color: "#fd7e14", label: "Câu hỏi mới" }, // NewComment
-        6: { emoji: "✅", color: "#198754", label: "Đã duyệt" },   // CourseApproved
-        7: { emoji: "⏳", color: "#00bcd4", label: "Chờ duyệt" }    // CoursePendingReview
-    };
+   const config = {
+    1: { emoji: "💬", color: "#0866ff", label: "Phản hồi" },    // CommentReply
+    2: { emoji: "❤️", color: "#e41e3f", label: "Cảm xúc" },     // LikeComment 
+    3: { emoji: "📌", color: "#673ab7", label: "Ghim" },        // CommentPinned
+    4: { emoji: "🎓", color: "#28a745", label: "Học viên mới" },  // NewEnrollment
+    5: { emoji: "❓", color: "#fd7e14", label: "Câu hỏi mới" },  // NewComment
+    6: { emoji: "✅", color: "#198754", label: "Đã duyệt" },    // CourseApproved
+    7: { emoji: "⏳", color: "#00bcd4", label: "Chờ duyệt" },    // CoursePendingReview
+    
+    // ==========================================
+    // THÊM CÁC TYPE MỚI CHO LUỒNG TÀI CHÍNH & GIẢNG VIÊN
+    // ==========================================
+    8: { emoji: "📝", color: "#17a2b8", label: "Đăng ký GV" },  // InstructorApplicationPending (Màu xanh lam thông tin)
+    9: { emoji: "💰", color: "#ffc107", label: "Y/c Rút tiền" },  // WithdrawalRequest (Màu vàng của tiền)
+    10: { emoji: "🚨", color: "#dc3545", label: "Khiếu nại" },    // WithdrawalDispute (Màu đỏ báo động)
+    11: { emoji: "🔄", color: "#fd7e14", label: "Hoàn tiền" }     // WithdrawalDisputeResolved (Màu cam quay đầu)
+};
 
     // 2. Xử lý Emoji cho Reaction (Type 2)
     const reactionEmojiMap = { 1: "👍", 2: "❤️", 3: "😆", 4: "😮", 5: "😢", 6: "😡" };
@@ -268,7 +301,7 @@ handleRedirect: async function(notifId, url) {
     const token = localStorage.getItem("jwt_token");
     
     try {
-        fetch(`https://lms-u2jn.onrender.com/api/notification/mark-read/${notifId}`, {
+        fetch(`http://127.0.0.1:5000/api/notification/mark-read/${notifId}`, {
             method: 'POST', 
             headers: { 'Authorization': `Bearer ${token}` }
         });

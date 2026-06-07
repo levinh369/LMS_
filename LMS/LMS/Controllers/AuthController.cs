@@ -63,7 +63,7 @@ namespace LMS.Controllers
             var avatar = result.Principal.FindFirst("picture")?.Value ?? result.Principal.FindFirst("image")?.Value;
 
             var user = await userService.GetOrCreateExternalUserAsync(email, name, avatar, externalId, provider);
-            var token = authService.GenerateJwtToken(user);
+            var tokens = authService.GenerateTokens(user);
 
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
 
@@ -75,12 +75,13 @@ namespace LMS.Controllers
             string separator = finalBaseUrl.Contains("?") ? "&" : "?";
 
             var finalRedirectUrl = $"{finalBaseUrl}{separator}" +
-                       $"token={token}" +
-                       $"&userId={user.Id}" +
-                       $"&username={Uri.EscapeDataString(user.FullName)}" +
-                       $"&email={Uri.EscapeDataString(user.Email ?? "")}" +
-                       $"&avatar={Uri.EscapeDataString(user.AvatarUrl ?? "")}" +
-                       $"&role={user.RoleId}";
+                 $"token={tokens.AccessToken}" +
+                 $"&refreshToken={tokens.RefreshToken}" + 
+                 $"&userId={user.Id}" +
+                 $"&username={Uri.EscapeDataString(user.FullName)}" +
+                 $"&email={Uri.EscapeDataString(user.Email ?? "")}" +
+                 $"&avatar={Uri.EscapeDataString(user.AvatarUrl ?? "")}" +
+                 $"&role={user.RoleId}";
 
             return Redirect(finalRedirectUrl);
         }
@@ -99,6 +100,89 @@ namespace LMS.Controllers
             var properties = new AuthenticationProperties { RedirectUri = redirectUrl };
 
             return Challenge(properties, provider);
+        }
+        [HttpPost("forgot-password")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Email))
+                return BadRequest(new { Success = false, Message = "Email không được để trống!" });
+
+            try
+            {
+                // Gọi xuống Service để xử lý
+                await authService.ForgotPasswordAsync(request.Email);
+
+                // Trả về báo thành công
+                return Ok(new { Success = true, Message = "Mã xác nhận đã được gửi đến email của bạn." });
+            }
+            catch (Exception ex)
+            {
+                // Có thể là lỗi "Email không tồn tại" hoặc lỗi không gửi được mail
+                return BadRequest(new { Success = false, Message = ex.Message });
+            }
+        }
+        [HttpPost("verify-otp")]
+        [AllowAnonymous]
+        public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.OtpCode))
+                return BadRequest(new { Success = false, Message = "Thiếu thông tin xác thực!" });
+
+            try
+            {
+                // Gọi Service kiểm tra mã và hạn sử dụng
+                await authService.VerifyOtpAsync(request.Email, request.OtpCode);
+                return Ok(new { Success = true, Message = "Mã xác nhận hợp lệ." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Success = false, Message = ex.Message });
+            }
+        }
+
+        [HttpPost("reset-password")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 6)
+                return BadRequest(new { Success = false, Message = "Mật khẩu mới phải có ít nhất 6 ký tự!" });
+
+            try
+            {
+                // Gọi Service để đổi mật khẩu
+                await authService.ResetPasswordAsync(request.Email, request.OtpCode, request.NewPassword);
+                return Ok(new { Success = true, Message = "Mật khẩu đã được đặt lại thành công." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Success = false, Message = ex.Message });
+            }
+        }
+        [HttpPost("refresh-token")]
+        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequestDTO request)
+        {
+            if (string.IsNullOrEmpty(request.RefreshToken))
+            {
+                return BadRequest(new { success = false, message = "Không tìm thấy Refresh Token!" });
+            }
+
+            try
+            {
+                // Giao toàn bộ việc nặng nhọc cho Service
+                var response = await authService.RefreshTokenAsync(request);
+
+                return Ok(new
+                {
+                    success = true,
+                    accessToken = response.AccessToken,
+                    refreshToken = response.RefreshToken
+                });
+            }
+            catch (Exception ex)
+            {
+                return Unauthorized(new { success = false, message = ex.Message });
+            }
         }
     }
 }

@@ -105,7 +105,7 @@ namespace LMS.Services
                 Name = c.Name,
                 Description = c.Description,
                 IsActive = c.IsActive,
-                CreateAt = c.CreatedAt
+                UpdateAt = c.UpdatedAt
             }).ToList();
 
             return (dtoList, total);
@@ -137,6 +137,23 @@ namespace LMS.Services
             categgory.UpdatedAt = DateTime.UtcNow;
             categgory.IsActive = dto.IsActive;
             await categoryRepository.UpdateAsync(categgory);
+        }
+        public async Task<bool> RestoreBulkAsync(List<int> ids)
+        {
+            if (ids == null || !ids.Any()) return false;
+            return await categoryRepository.UpdateDeleteStatusBulkAsync(ids, false);
+        }
+
+        public async Task<bool> SoftDeleteBulkAsync(List<int> ids)
+        {
+            if (ids == null || !ids.Any()) return false;
+            return await categoryRepository.UpdateDeleteStatusBulkAsync(ids, true);
+        }
+
+        public async Task<bool> HardDeleteBulkAsync(List<int> ids)
+        {
+            if (ids == null || !ids.Any()) return false;
+            return await categoryRepository.HardDeleteBulkAsync(ids);
         }
     }
 }

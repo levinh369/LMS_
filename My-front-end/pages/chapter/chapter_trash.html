@@ -26,11 +26,17 @@
             overflow: hidden;
         }
         .trash-header { 
-            background: linear-gradient(135deg, #1e1e2d 0%, #3f4254 100%); 
-            color: white; 
-            padding: 2.5rem; 
-            border-radius: 1rem; 
-            margin-bottom: 2rem; 
+            background-color: #ffffff; 
+            color: #3f4254; /* Chữ xám đậm cho dễ đọc */
+            padding: 1.5rem 2rem; 
+            border-radius: 15px; 
+            border-left: 6px solid var(--danger-color); /* Viền đỏ bên trái */
+            margin-bottom: 1.5rem; 
+        }
+
+        /* Thêm xíu CSS cho cái text-muted trong header */
+        .trash-header .text-muted {
+            color: #a1a5b7 !important;
         }
         .table thead th { 
             background-color: #f9fafb;
@@ -63,16 +69,45 @@
 </head>
 <body>
     <div id="sidebar-placeholder"></div>
-    <div class="container py-5">
-        <div class="trash-header d-flex justify-content-between align-items-center shadow-sm">
+<div class="container py-5">
+    
+    <div class="trash-header shadow-sm bg-white p-4 mb-4" style="border-radius: 15px; border-left: 6px solid #dc3545;">
+        
+        <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h1 class="h3 mb-1 fw-bold"><i class="bi bi-trash3-fill me-2 text-danger"></i> Thùng rác Chương</h1>
-                <p class="mb-0 opacity-75">Quản lý và khôi phục các chương học đã xóa tạm thời</p>
+                <h3 class="fw-bold mb-1"><i class="bi bi-trash3-fill me-2 text-danger"></i>THÙNG RÁC CHƯƠNG HỌC</h3>
+                <p class="text-muted small mb-0">Quản lý các chương đã tạm xóa. Bạn có thể khôi phục hoặc xóa vĩnh viễn.</p>
             </div>
-            <a href="chapter_index.html" class="btn btn-light fw-bold px-4">
-                <i class="bi bi-arrow-left me-2"></i>Quay lại
+            <a href="/course/index.html" class="btn btn-outline-secondary rounded-pill px-4 fw-bold">
+                <i class="bi bi-arrow-left"></i> QUAY LẠI
             </a>
         </div>
+
+        <div class="row g-3 align-items-end">
+            <div class="col-md-5"> 
+                <div class="position-relative">
+                    <label class="form-label fw-bold small text-muted">Tìm theo tiêu đề</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-search"></i></span>
+                        <input type="text" id="chapterTrashKeySearch" class="form-control bg-light border-start-0" placeholder="Nhập tiêu đề chương học...">
+                    </div>
+                    
+                 
+                </div>
+            </div>
+           <div class="col-md-2">
+    <div class="d-flex gap-2">
+        <button onclick="chapter.chapterTrash.resetFilter()" class="btn btn-outline-secondary btn-sm flex-fill fw-bold rounded-pill shadow-sm" title="Xóa bộ lọc" style="height: 31px; line-height: 1;">
+            <i class="bi bi-arrow-clockwise me-1"></i> LÀM MỚI
+        </button>
+        
+        <button onclick="chapter.chapterTrash.loadData(1)" class="btn btn-primary btn-sm flex-fill fw-bold rounded-pill shadow-sm" style="height: 31px; line-height: 1;">
+            <i class="bi bi-funnel-fill me-1"></i> LỌC
+        </button>
+    </div>
+</div>
+        </div>
+    </div>
 
         <div class="card">
             <div class="card-body p-0">
@@ -82,8 +117,9 @@
                             <tr>
                                 <th class="ps-4" style="width: 80px">ID</th>
                                 <th>Tiêu đề chương</th>
-                                <th style="width: 150px">Thứ tự</th>
-                                <th style="width: 180px">Ngày xóa tạm</th>
+                                <th style="width: 120px">Thứ tự</th>
+                                <th style="width: 120px">Trạng thái</th>
+                                <th style="width: 150px">Ngày xóa tạm</th>
                                 <th class="text-end pe-4" style="width: 120px">Hành động</th>
                             </tr>
                         </thead>
@@ -93,8 +129,8 @@
                     </table>
                 </div>
             </div>
-            <div class="p-4 d-flex justify-content-between align-items-center border-top bg-light-subtle">
-                <div class="text-muted small">Hiển thị: <strong id="total-records">0</strong> chương học</div>
+           <div class="p-4 d-flex justify-content-between align-items-center border-top">
+                <div class="text-muted small">Tổng số: <strong id="total-records">0</strong> bản ghi</div>
                 <nav><ul id="paging-ul" class="pagination pagination-sm m-0"></ul></nav>
             </div>
         </div>
@@ -106,6 +142,7 @@
     <!-- Giả định các file JS nghiệp vụ của bạn -->
     <script src="../assets/js/admin-loader.js"></script>
     <script src="../assets/js/chapter.js"></script>
+    <script src="../assets/js/global-loader.js"></script>
     <script>
         $(document).ready(function() {
 

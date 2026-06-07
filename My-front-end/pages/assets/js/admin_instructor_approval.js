@@ -116,10 +116,26 @@ const AdminApp = {
             const row = `
                 <tr id="row-${app.id}">
                     <td class="ps-4 fw-bold text-dark">ID: ${app.id}</td>
-                    <td>
-                        <div class="fw-bold text-dark">${app.fullName || 'Chưa rõ tên'}</div>
-                        <div class="small text-muted">${app.email || ''}</div>
-                    </td>
+                 <td>
+    <div class="d-flex align-items-center gap-3">
+        <img
+            src="${app.avatarUrl || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(app.fullName || 'User')}"
+            alt="${app.fullName}"
+            class="rounded-circle border shadow-sm"
+            style="width: 48px; height: 48px; object-fit: cover;"
+            onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(app.fullName || 'User')}'"
+        >
+
+        <div>
+            <div class="fw-bold text-dark">
+                ${app.fullName || 'Chưa rõ tên'}
+            </div>
+            <div class="small text-muted">
+                ${app.email || ''}
+            </div>
+        </div>
+    </div>
+</td>
                     <td><div class="truncate-text text-muted" title="${app.bio}">${app.bio || ''}</div></td>
                     <td><div class="truncate-text text-muted" title="${app.experience}">${app.experience || ''}</div></td>
                     <td class="text-center">
@@ -157,44 +173,50 @@ const AdminApp = {
         </li>`;
     },
 
-   approve: async function(id, name) {
-    Swal.fire({
-        title: `Phê duyệt hồ sơ?`,
-        text: `Bạn có chắc chắn muốn cấp quyền giảng viên cho ${name}?`,
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#198754',
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: 'Đồng ý Duyệt',
-        cancelButtonText: 'Hủy'
-    }).then(async (result) => {
-        if (result.isConfirmed) {
-            const token = localStorage.getItem(this.config.tokenKey);
-            try {
-                // SỬA LỖI 404: Đảo {id} lên trước /approve cho khớp C#
-                const response = await fetch(`${this.config.apiUrl}/${id}/approve`, { 
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+approve: async function(id, name) {
+        Swal.fire({
+            title: `Phê duyệt hồ sơ?`,
+            text: `Bạn có chắc chắn muốn cấp quyền giảng viên cho ${name}?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#198754',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Đồng ý Duyệt',
+            cancelButtonText: 'Hủy'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                const token = localStorage.getItem(this.config.tokenKey);
+                try {
+                    // 📍 BẬT GLOBAL LOADER TRƯỚC KHI GỌI API
+                    if (typeof GlobalLoader !== 'undefined') GlobalLoader.show();
 
-                if (response.ok) {
-                    // SỬA LỖI TOAST: Parse JSON để lấy message từ C# trả về
-                    const data = await response.json(); 
-                    
-                    // Ném data.message vào SweetAlert2 (Toast)
-                    this.showToast(data.message, 'success'); 
-                    
-                    this.loadData(this.config.currentPage);
-                } else {
-                    const err = await response.json();
-                    this.showToast(err.message || 'Lỗi khi duyệt.', 'error');
+                    // SỬA LỖI 404: Đảo {id} lên trước /approve cho khớp C#
+                    const response = await fetch(`${this.config.apiUrl}/${id}/approve`, { 
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+
+                    if (response.ok) {
+                        // SỬA LỖI TOAST: Parse JSON để lấy message từ C# trả về
+                        const data = await response.json(); 
+                        
+                        // Ném data.message vào SweetAlert2 (Toast)
+                        this.showToast(data.message, 'success'); 
+                        
+                        this.loadData(this.config.currentPage);
+                    } else {
+                        const err = await response.json();
+                        this.showToast(err.message || 'Lỗi khi duyệt.', 'error');
+                    }
+                } catch (error) {
+                    this.showToast('Lỗi kết nối máy chủ.', 'error');
+                } finally {
+                    // 📍 TẮT GLOBAL LOADER (Đảm bảo luôn chạy dù thành công hay lỗi)
+                    if (typeof GlobalLoader !== 'undefined') GlobalLoader.hide();
                 }
-            } catch (error) {
-                this.showToast('Lỗi kết nối máy chủ.', 'error');
             }
-        }
-    });
-},
+        });
+    },
 
     // 2. Mở Modal Từ chối
     openRejectModal: function(id, name) {
@@ -302,7 +324,7 @@ const AdminApp = {
                 // Đổ dữ liệu vào Modal
                 document.getElementById('detailFullName').innerText = app.fullName || 'Chưa cập nhật';
                 document.getElementById('detailEmail').innerText = app.email || 'Chưa cập nhật';
-                
+                document.getElementById('detailAvatar').src = app.avatarUrl || '/images/default-avatar.png';
                 // Format ngày (Ví dụ: 15/05/2026 09:40)
                 const dateObj = new Date(app.appliedAt);
                 document.getElementById('detailAppliedAt').innerText = isNaN(dateObj.getTime()) ? app.appliedAt : dateObj.toLocaleString('vi-VN');
@@ -338,7 +360,9 @@ const AdminApp = {
             title: message
         });
     }
+    
 };
+
 
 // Chạy ứng dụng khi DOM tải xong
 document.addEventListener('DOMContentLoaded', () => {

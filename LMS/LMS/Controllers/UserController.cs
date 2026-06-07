@@ -12,6 +12,7 @@ using System.Security.Claims;
 
 namespace LMS.Controllers
 {
+    [Authorize(Roles = "Admin")]
     [Route("api/[controller]")]
     [ApiController]
     public class UserController : ControllerBase
@@ -21,6 +22,7 @@ namespace LMS.Controllers
         {
             this.userService = uservice;
         }
+        [AllowAnonymous]
         [Authorize]
         [HttpGet("my-profile")]
         public async Task<IActionResult> GetProfile()
@@ -34,6 +36,7 @@ namespace LMS.Controllers
 
             return Ok(profileData);
         }
+        [AllowAnonymous]
         [Authorize]
         [HttpGet("settings-data")]
         public async Task<IActionResult> GetUserSettings()
@@ -55,6 +58,7 @@ namespace LMS.Controllers
             }
             return Ok(result);
         }
+        [AllowAnonymous]
         [Authorize]
         [HttpPost("update-profile")]
         public async Task<IActionResult> UpdateProfile([FromForm] UpdateProfileRequestDTO model)
@@ -130,7 +134,7 @@ namespace LMS.Controllers
                 message = "Cập nhật thông tin thành công"
             });
         }
-
+        [Authorize(Roles = "Admin, Teacher")]
         [HttpGet("{id}")]
         public async Task<IActionResult> GetUserAsync(int id)
         {
@@ -170,6 +174,7 @@ namespace LMS.Controllers
                 message = "Thêm tài khoản thành công!"
             });
         }
+        [AllowAnonymous]
         [HttpGet("my-orders")]
         public async Task<IActionResult> GetMyOrders()
         {

@@ -15,7 +15,7 @@ var Course = {
     editDetails: [],
     config: {
         pageSize: 10,
-        apiUrl: "https://lms-u2jn.onrender.com/api/course"
+        apiUrl: "http://127.0.0.1:5000/api/course"
     },
     CourseLevel : {
         0: "Người mới bắt đầu",
@@ -23,26 +23,26 @@ var Course = {
         2: "Nâng cao"
     },
     // 1. Hàm khởi tạo chính
-    init: function () {
-        debugger
+init: function () {
+        // debugger; // Bác nhớ comment/xóa dòng này khi code chạy ngon rồi nhé kẻo lên production bị khựng
         const userInfoRaw = localStorage.getItem("user_info");
         if (userInfoRaw) {
             const user = JSON.parse(userInfoRaw);
-            const roleId = user.role; // 1: Admin, 3: Teacher
+            const roleId = parseInt(user.role); // Parse luôn sang Int cho chắc cốp khi so sánh ===
 
             // Hiển thị Header bảng và Section lọc tương ứng
             this.renderHeader(roleId);
 
-            if (roleId === 1) {
+            if (roleId === 1) { // Admin
                 $('#admin-section').show();
                 $('#teacher-section').remove();
-                this.loadTeacherSelect(); // Chỉ Admin mới load list giảng viên
-            } else if (roleId === 3) {
+                this.loadTeacherSelect(); 
+            } else if (roleId === 3) { // Teacher
                 $('#teacher-section').show();
                 $('#admin-section').remove();
             }
         } else {
-            // Nếu chưa login thì đá về trang chủ hoặc login
+            // Chưa login đá về trang đăng nhập
             window.location.href = "/pages/auth/login.html";
             return;
         }
@@ -52,16 +52,18 @@ var Course = {
         this.loadCategories();
         this.renderLevelDropdown();
     },
-registerCheckboxEvents: function () {
+
+    registerCheckboxEvents: function () {
         const _this = this;
 
+        // Bắt sự kiện check tất cả
         $(document).off('change', '#check-all').on('change', '#check-all', function () {
             const isChecked = $(this).prop('checked');
             $('.item-check').prop('checked', isChecked);
             _this.toggleBulkActions();
         });
 
-        // Sự kiện từng ô lẻ
+        // Bắt sự kiện từng ô lẻ
         $(document).off('change', '.item-check').on('change', '.item-check', function () {
             const total = $('.item-check').length;
             const checked = $('.item-check:checked').length;
@@ -69,6 +71,7 @@ registerCheckboxEvents: function () {
             _this.toggleBulkActions();
         });
     },
+
     toggleBulkActions: function () {
         const selectedCount = $('.item-check:checked').length;
         const $bulkArea = $('#bulk-actions');
@@ -76,14 +79,11 @@ registerCheckboxEvents: function () {
 
         if (selectedCount > 0) {
             $countDisplay.text(selectedCount);
+            // Hiện lên không làm giật bảng
             $bulkArea.css({ 'visibility': 'visible', 'opacity': '1' });
         } else {
-            $bulkArea.css('opacity', '0');
-            setTimeout(() => {
-                if ($('.item-check:checked').length === 0) {
-                    $bulkArea.css('visibility', 'hidden');
-                }
-            }, 200);
+            // Ẩn đi nhưng vẫn giữ nguyên khoảng trống layout
+            $bulkArea.css({ 'opacity': '0', 'visibility': 'hidden' });
             $('#check-all').prop('checked', false);
         }
     },
@@ -92,14 +92,16 @@ registerCheckboxEvents: function () {
         $('.item-check, #check-all').prop('checked', false);
         this.toggleBulkActions();
     },
+
     registerEvents: function () {
-    this.registerCheckboxEvents()
+        this.registerCheckboxEvents();
+
         // 1. Sự kiện Lọc/Tìm kiếm
         $('#btnSearch').off('click').on('click', function () {
             Course.loadData(1);
         });
 
-        // 2. Tách riêng sự kiện change thumbnail
+        // 2. Sự kiện preview ảnh thumbnail
         $(document).off('change', '#editFileThumbnail').on('change', '#editFileThumbnail', function() {
             const file = this.files[0];
             if (file) {
@@ -114,9 +116,28 @@ registerCheckboxEvents: function () {
             e.preventDefault();
             Course.edit(); 
         });
-
     },
+resetSearch: function () {
+    const userInfoRaw = localStorage.getItem("user_info");
+    if (userInfoRaw) {
+        const user = JSON.parse(userInfoRaw);
+        const roleId = parseInt(user.role);
 
+        if (roleId === 1) {
+            $('#adminKeySearch').val('');
+            $('#adminFilterTeacher').val('0');
+            $('#adminFilterCategory').val('0');
+            $('#adminIsActive').val('-1');
+            $('#adminFromDate').val('');
+            $('#adminToDate').val('');
+        } else if (roleId === 3) {
+            $('#teacherKeySearch').val('');
+            $('#teacherFilterCategory').val(''); 
+            $('#teacherIsActive').val('-1');
+        }
+    }
+    this.loadData(1);
+},
 
 loadTeacherSelect: async function() {
         const token = localStorage.getItem("jwt_token");
@@ -201,7 +222,7 @@ loadTeacherSelect: async function() {
 renderHeader: function(roleId) {
         let html = `
             <tr>
-            ${roleId === 3 ? '<th class="ps-4" style="width: 50px;"><input class="form-check-input" type="checkbox" id="check-all"></th>' : ''}
+          <th class="ps-4" style="width: 50px;"><input class="form-check-input" type="checkbox" id="check-all"></th>
                 <th class="ps-4" style="width: 80px;">Ảnh</th>
                 <th>Tiêu đề</th>
                 ${roleId === 1 ? '<th>Giảng viên</th>' : ''}
@@ -215,73 +236,97 @@ renderHeader: function(roleId) {
         $('#table-head').html(html);
     },
 
-    // 5. Render nội dung bảng
+  // 5. Render nội dung bảng
 renderTable: function (data, roleId) {
     let html = '';
     
+    // Ép kiểu cho an toàn
+    const currentRole = parseInt(roleId);
+
     if (!data || data.length === 0) {
         html = `<tr><td colspan="10" class="text-center py-4 text-muted">Không tìm thấy khóa học nào</td></tr>`;
     } else {
         data.forEach(item => {
             const formattedPrice = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.price);
             const levelName = this.CourseLevel[item.level] || 'Chưa xác định';
+            
+            // Kiểm tra xem khóa học có đang bị Admin niêm phong không
             const isLockedByAdmin = item.lockedByRole === 'Admin';
+            
+            // Biến này xác định xem Teacher có bị chặn thao tác không
+            const isBlockedForTeacher = currentRole !== 1 && isLockedByAdmin;
 
             html += `
                 <tr>
-                ${roleId === 3 ? `
+                
+                <td class="ps-4 text-center">
+                    ${isBlockedForTeacher 
+                        ? '<i class="bi bi-dash text-muted" title="Bị niêm phong, không thể chọn"></i>' 
+                        : `<input class="form-check-input item-check" type="checkbox" value="${item.courseId}">`
+                    }
+                </td>
+                
                 <td class="ps-4">
-                    <input class="form-check-input item-check" type="checkbox" value="${item.courseId}">
-                </td>` : ''}
-                    <td class="ps-4">
-                        <img src="${item.thumbnailUrl || '../assets/img/default.png'}" style="width:70px; height:45px; object-fit:cover; border-radius:8px">
-                    </td>
-                    <td>
-                        <div class="fw-bold text-dark">${item.title}</div>
-                        <small class="text-muted">ID: ${item.courseId}</small>
-                    </td>
-                    
-                    ${roleId === 1 ? `<td><div class="small fw-bold">${item.instructorName || 'Chưa rõ'}</div><small class="text-muted">ID: ${item.instructorId}</small></td>` : ''}
-                    
-                    <td><span class="badge bg-light text-primary border">${item.categoryName || 'N/A'}</span></td>
+                    <img src="${item.thumbnailUrl || '../assets/img/default.png'}" style="width:70px; height:45px; object-fit:cover; border-radius:8px">
+                </td>
+                
+                <td>
+                    <div class="fw-bold text-dark">${item.title}</div>
+                    <small class="text-muted">ID: ${item.courseId}</small>
+                </td>
+                
+                ${currentRole === 1 ? `<td><div class="small fw-bold">${item.instructorName || 'Chưa rõ'}</div><small class="text-muted">ID: ${item.instructorId}</small></td>` : ''}
+                
+                <td><span class="badge bg-light text-primary border">${item.categoryName || 'N/A'}</span></td>
 
-                   <td><span class="small text-secondary"><i class="bi bi-bar-chart-fill me-1"></i>${levelName}</span></td>
+                <td><span class="small text-secondary"><i class="bi bi-bar-chart-fill me-1"></i>${levelName}</span></td>
 
-                    <td class="text-center"><div class="fw-bold">${item.totalChapters || 0}</div></td>
-                    <td class="fw-bold text-danger">${item.price === 0 ? 'Miễn phí' : formattedPrice}</td>
-                    
-<td class="text-center">
-    <button class="btn btn-sm px-3 py-1 rounded-pill fw-bold shadow-sm transition-all
-            ${isLockedByAdmin ? 'btn-outline-danger' : (item.isActive ? 'btn-light-success text-success border-success' : 'btn-light-secondary text-secondary border-secondary')} 
-            ${roleId !== 1 && isLockedByAdmin ? 'opacity-50' : ''}" 
-            style="min-width: 110px; font-size: 0.75rem; border: 1.5px solid !important; line-height: 1.2;"
-            onclick="${roleId !== 1 && isLockedByAdmin 
-                ? "Swal.fire({icon: 'error', title: 'Bị chặn', text: 'Khóa học này đã bị Admin niêm phong!', confirmButtonColor: '#d33'})" 
-                : `Course.toggleStatus(${item.courseId})`}"
-            ${roleId !== 1 && isLockedByAdmin ? 'disabled' : ''}>
-        
-        <i class="bi ${isLockedByAdmin ? 'bi-shield-lock-fill' : (item.isActive ? 'bi-check-circle-fill' : 'bi-pause-circle-fill')} me-1"></i>
-        <span>${isLockedByAdmin ? 'Niêm phong' : (item.isActive ? 'Hoạt động' : 'Tạm ẩn')}</span>
-    </button>
-</td>
+                <td class="text-center"><div class="fw-bold">${item.totalChapters || 0}</div></td>
+                
+                <td class="fw-bold text-danger">${item.price === 0 ? 'Miễn phí' : formattedPrice}</td>
+                
+                <td class="text-center">
+                    <button class="btn btn-sm px-3 py-1 rounded-pill fw-bold shadow-sm transition-all
+                            ${isLockedByAdmin ? 'btn-outline-danger' : (item.isActive ? 'btn-light-success text-success border-success' : 'btn-light-secondary text-secondary border-secondary')} 
+                            ${isBlockedForTeacher ? 'opacity-50' : ''}" 
+                            style="min-width: 110px; font-size: 0.75rem; border: 1.5px solid !important; line-height: 1.2;"
+                            onclick="${isBlockedForTeacher 
+                                ? "Swal.fire({icon: 'error', title: 'Bị chặn', text: 'Khóa học này đã bị Admin niêm phong!', confirmButtonColor: '#d33'})" 
+                                : `Course.toggleStatus(${item.courseId})`}"
+                            ${isBlockedForTeacher ? 'disabled' : ''}>
+                        
+                        <i class="bi ${isLockedByAdmin ? 'bi-shield-lock-fill' : (item.isActive ? 'bi-check-circle-fill' : 'bi-pause-circle-fill')} me-1"></i>
+                        <span>${isLockedByAdmin ? 'Niêm phong' : (item.isActive ? 'Hoạt động' : 'Tạm ẩn')}</span>
+                    </button>
+                </td>
 
-                    <td class="text-center">
-                        <div class="d-flex justify-content-center gap-2">
-                            <button class="btn btn-sm btn-outline-info" onclick="Course.detail(${item.courseId})" title="Xem chi tiết"><i class="bi bi-eye"></i></button>
-                            <button class="btn btn-sm btn-outline-primary" onclick="chapter.openModal(${item.courseId})" title="Quản lý bài học"><i class="bi bi-journal-text"></i></button> 
-                            <button class="btn btn-sm btn-outline-warning" onclick="Course.openUpdateModal(${item.courseId})" title="Chỉnh sửa"><i class="bi bi-pencil-square"></i></button>
-                            
-                            ${roleId === 3 ? `
-                                <button class="btn btn-sm btn-outline-danger ${isLockedByAdmin ? 'opacity-50' : ''}" 
-                                         onclick="${isLockedByAdmin ? "Swal.fire('Bị chặn', 'Khóa học đang bị niêm phong, không thể xóa lúc này!', 'warning')" : `Course.delete(${item.courseId})`}" 
-                                         ${isLockedByAdmin ? 'disabled' : ''}
-                                         title="Xóa tạm">
-                                    <i class="bi bi-trash3-fill"></i>
-                                </button>
-                            ` : ``}
-                        </div>
-                    </td>
-                </tr>`;
+                <td class="text-center">
+                    <div class="d-flex justify-content-center gap-2">
+                        <button class="btn btn-sm btn-outline-info" onclick="Course.detail(${item.courseId})" title="Xem chi tiết">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        
+                        <button class="btn btn-sm btn-outline-primary" onclick="chapter.openModal(${item.courseId})" title="Quản lý bài học">
+                            <i class="bi bi-journal-text"></i>
+                        </button> 
+                        
+                        <button class="btn btn-sm btn-outline-warning ${isBlockedForTeacher ? 'opacity-50' : ''}" 
+                                onclick="${isBlockedForTeacher ? "Swal.fire('Bị chặn', 'Không thể chỉnh sửa khóa học đang bị niêm phong!', 'warning')" : `Course.openUpdateModal(${item.courseId})`}" 
+                                ${isBlockedForTeacher ? 'disabled' : ''}
+                                title="Chỉnh sửa">
+                            <i class="bi bi-pencil-square"></i>
+                        </button>
+                        
+                        <button class="btn btn-sm btn-outline-danger ${isBlockedForTeacher ? 'opacity-50' : ''}" 
+                                onclick="${isBlockedForTeacher ? "Swal.fire('Bị chặn', 'Khóa học đang bị niêm phong, không thể xóa lúc này!', 'warning')" : `Course.delete(${item.courseId})`}" 
+                                ${isBlockedForTeacher ? 'disabled' : ''}
+                                title="Xóa tạm">
+                            <i class="bi bi-trash3-fill"></i>
+                        </button>
+                    </div>
+                </td>
+                
+            </tr>`;
         });
     }
     $('#course-table-body').html(html);
@@ -300,7 +345,7 @@ loadCategories: async function () {
     }
 
     try {
-        const response = await fetch(`https://lms-u2jn.onrender.com/api/Category`);
+        const response = await fetch(`http://127.0.0.1:5000/api/Category`);
         const result = await response.json(); 
         Course.categories = result.data || []; 
 
@@ -381,12 +426,11 @@ create: async function() {
 },
     openUpdateModal: async function(id) {
     try {
-        const response = await fetch(`${this.config.apiUrl}/${id}`);
-        if (!response.ok) throw new Error('Không lấy được dữ liệu');
-        const res = await response.json();
+        const res = await $.ajax({
+            url: `${this.config.apiUrl}/${id}`,
+            type: 'GET'
+        });
         const item = res.data || res;
-
-        // Kiểm tra trạng thái niêm phong
         const isLockedByAdmin = item.lockedByRole === 'Admin';
 
         // Đổ dữ liệu vào các field cơ bản
@@ -474,7 +518,7 @@ create: async function() {
 
         Toast.fire({
             icon: 'success',
-            title: response.message || "Khóa học đã được cập nhật"
+            title: response.message || "Khóa học đã được cập"
         });
         $('#updateCourseModal').modal('hide');
         this.loadData(1); // Load lại trang 1 (Nếu có biến currentPage thì đổi thành this.loadData(this.currentPage) nhé)
@@ -491,9 +535,10 @@ create: async function() {
 },
 detail: async function(id){
      try {
-        const response = await fetch(`${this.config.apiUrl}/${id}`);
-        if (!response.ok) throw new Error('Không lấy được dữ liệu');
-        const res = await response.json();
+       const res = await $.ajax({
+            url: `${this.config.apiUrl}/${id}`,
+            type: 'GET'
+        });
         const item = res.data || res;      
         $('#dtlId').text(item.courseId);
         $('#dtlCategory').text(item.categoryName)
@@ -599,30 +644,48 @@ detail: async function(id){
 delete: async function(id) {
     const result = await Swal.fire({
         title: "Bạn có chắc muốn xóa?",
-        text: "Thao tác này sẽ không thể hoàn tác!",
+        text: "Khóa học sẽ được chuyển vào thùng rác!", // Sửa lại cho chuẩn logic xóa mềm
         icon: "warning",
         showCancelButton: true,
         confirmButtonColor: "#d33",
         cancelButtonColor: "#3085d6",
-        confirmButtonText: "Xóa ngay",
+        confirmButtonText: "Đồng ý xóa",
         cancelButtonText: "Hủy"
     });
+
     if (result.isConfirmed) {
         try {
+            // 1. Bật màn hình loading
+            GlobalLoader.show();
+
+            // 2. Lấy token
+            const token = localStorage.getItem("jwt_token");
+
             const res = await $.ajax({
                 url: `${Course.config.apiUrl}/${id}`,
-                type: "DELETE"
+                type: "DELETE",
+                headers: {
+                    "Authorization": "Bearer " + token 
+                }
             });
+            
+            // Hiện thông báo thành công
             Toast.fire({
-                            icon: 'success',
-                            title: 'Khôi phục khóa học thành công!' 
-                        });
-
+                icon: 'success',
+                title: res.Message || res.message || 'Xóa khóa học thành công!' 
+            });
             Course.loadData(1);
 
         } catch (error) {
             console.error("Lỗi khi xóa:", error);
-            Toast.fire("Lỗi!", "Không thể xóa bản ghi này.", "error");
+            const errorMsg = error.responseJSON?.Message || error.responseJSON?.message || "Không thể xóa bản ghi này.";
+            Toast.fire({
+                icon: 'error',
+                title: errorMsg
+            });
+        } finally {
+        
+            GlobalLoader.hide();
         }
     }
 },
@@ -754,7 +817,7 @@ toggleStatus: function (id) {
             if (result.isConfirmed) {
                 // Gọi API Put
                 $.ajax({
-                    url: `https://lms-u2jn.onrender.com/api/Course/toggle-status/${id}?role=${roleName}`,
+                    url: `http://127.0.0.1:5000/api/Course/toggle-status/${id}?role=${roleName}`,
                     type: 'PUT',
                     contentType: 'application/json',
                     success: function (res) {
@@ -851,13 +914,20 @@ trash: {
            const url = `${Course.config.apiUrl}/list-deleted?page=${page}&pageSize=${pageSize}&keySearch=${encodeURIComponent(keySearch)}&categoryId=${categoryId}`;
             try {
                 const token = localStorage.getItem("jwt_token");
+                const userInfoRaw = localStorage.getItem("user_info");
+                
+                let currentRole = 0;
+                if (userInfoRaw) {
+                    const user = JSON.parse(userInfoRaw);
+                    currentRole = parseInt(user.role); // Ép kiểu số nguyên để so sánh cho chuẩn
+                }
                 const response = await fetch(url, {
                     headers: { "Authorization": "Bearer " + token }
                 });
                 const res = await response.json();
 
                 if (res.success || res.Success) {
-                    this.renderTable(res.data || res.Data);
+                    this.renderTable(res.data || res.Data, currentRole);
                     this.showPaging(res.total || res.Total, page);
                 }
             } catch (error) {
@@ -865,42 +935,73 @@ trash: {
             }
         },
 
-        renderTable: function(data) {
-            const tbody = document.getElementById('course-trash-table-body');
-            if (!tbody) return;
+       renderTable: function(data, roleId) {
+    const tbody = document.getElementById('course-trash-table-body');
+    if (!tbody) return;
 
-            let html = '';
-            if (!data || data.length === 0) {
-                html = '<tr><td colspan="5" class="text-center py-5 text-muted">Thùng rác trống</td></tr>';
+    let html = '';
+    if (!data || data.length === 0) {
+        html = '<tr><td colspan="6" class="text-center py-5 text-muted">Thùng rác trống</td></tr>';
+    } else {
+        data.forEach(item => {
+            // 1. Kiểm tra xem có phải Teacher đang xem khóa học do Admin xóa không
+            const isDeletedByAdmin = item.deletedByRole === 'Admin';
+            const isBlockedForTeacher = roleId === 3 && isDeletedByAdmin; // Giả sử 3 là Teacher
+
+            // 2. Render logic Nút bấm
+            let actionButtons = '';
+            
+            if (isBlockedForTeacher) {
+                // Nếu bị Admin xóa -> Hiện nút khóa, bấm vào hiện cảnh báo chứ không gọi API
+                actionButtons = `
+                    <button class="btn-action text-secondary opacity-50 me-1" style="cursor: not-allowed; border: none; background: transparent;" 
+                            onclick="Swal.fire({icon: 'error', title: 'Bị chặn', text: 'Khóa học này do Admin xóa vì vi phạm, bạn không thể can thiệp!'})" 
+                            title="Khóa bởi Admin">
+                        <i class="bi bi-shield-lock-fill fs-5"></i>
+                    </button>
+                `;
             } else {
-                data.forEach(item => {
-                    html += `
-                    <tr>
-                     <td class="ps-4">
-                        <input class="form-check-input item-check" type="checkbox" value="${item.courseId}">
-                    </td>
-                        <td class="ps-4">
-                            <img src="${item.thumbnailUrl || '/assets/img/default-course.png'}" class="course-img shadow-sm">
-                        </td>
-                        <td>
-                            <div class="fw-bold text-dark">${item.title}</div>
-                            <small class="text-muted">ID: ${item.courseId}</small>
-                        </td>
-                        <td><span class="badge bg-light text-dark border">${item.categoryName || 'N/A'}</span></td>
-                        <td><span class="text-danger small fw-bold">${new Date(item.deletedAt || item.updatedAt).toLocaleDateString('vi-VN')}</span></td>
-                        <td class="text-center">
-                            <button class="btn-action btn-restore me-1" onclick="Course.trash.restore(${item.courseId})" title="Khôi phục">
-                                <i class="bi bi-arrow-counterclockwise"></i>
-                            </button>
-                            <button class="btn-action btn-delete" onclick="Course.trash.hardDelete(${item.courseId})" title="Xóa vĩnh viễn">
-                                <i class="bi bi-trash3-fill"></i>
-                            </button>
-                        </td>
-                    </tr>`;
-                });
+                // Trạng thái bình thường -> Hiện nút Khôi phục & Xóa vĩnh viễn
+                actionButtons = `
+                    <button class="btn-action btn-restore me-1 text-success" style="border: none; background: transparent;" 
+                            onclick="Course.trash.restore(${item.courseId})" title="Khôi phục">
+                        <i class="bi bi-arrow-counterclockwise fs-5"></i>
+                    </button>
+                    <button class="btn-action btn-delete text-danger" style="border: none; background: transparent;" 
+                            onclick="Course.trash.hardDelete(${item.courseId})" title="Xóa vĩnh viễn">
+                        <i class="bi bi-trash3-fill fs-5"></i>
+                    </button>
+                `;
             }
-            tbody.innerHTML = html;
-        },
+
+            // 3. Render Badge trạng thái (Thêm 1 cột để User dễ nhìn)
+            let statusBadge = isDeletedByAdmin 
+                ? `<span class="badge bg-danger-subtle text-danger border border-danger">Admin Xóa</span>`
+                : `<span class="badge bg-secondary-subtle text-secondary border border-secondary">Đã xóa mềm</span>`;
+
+            html += `
+            <tr>
+                <td class="ps-4">
+                    ${isBlockedForTeacher ? '<i class="bi bi-dash text-muted"></i>' : `<input class="form-check-input item-check" type="checkbox" value="${item.courseId}">`}
+                </td>
+                <td class="ps-4">
+                    <img src="${item.thumbnailUrl || '/assets/img/default-course.png'}" class="course-img shadow-sm" style="width: 60px; height: 40px; object-fit: cover; border-radius: 4px;">
+                </td>
+                <td>
+                    <div class="fw-bold text-dark">${item.title}</div>
+                    <small class="text-muted">ID: ${item.courseId}</small>
+                </td>
+                <td><span class="badge bg-light text-dark border">${item.categoryName || 'N/A'}</span></td>
+                <td>${statusBadge}</td>
+                <td><span class="text-danger small fw-bold">${new Date(item.updatedAt).toLocaleDateString('vi-VN')}</span></td>
+                <td class="text-center">
+                    ${actionButtons}
+                </td>
+            </tr>`;
+        });
+    }
+    tbody.innerHTML = html;
+},
 resetFilter: function() {
     // 1. Reset ô tìm kiếm về rỗng
     $('#trashKeySearch').val('');
@@ -936,7 +1037,7 @@ resetFilter: function() {
             });
         },
 
-        hardDelete: function(id) {
+      hardDelete: function(id) {
             Swal.fire({
                 title: 'Xóa vĩnh viễn?',
                 text: "Dữ liệu sẽ bị xóa sạch khỏi hệ thống và không thể khôi phục!",
@@ -947,13 +1048,70 @@ resetFilter: function() {
                 cancelButtonText: 'Hủy'
             }).then(async (result) => {
                 if (result.isConfirmed) {
-                    const response = await fetch(`${Course.config.apiUrl}/hard-delete/${id}`, { method: 'DELETE' });
-                    const res = await response.json();
-                    if (res.success || res.Success) {
-                        Toast.fire('Đã xóa!', 'Khóa học đã bị xóa vĩnh viễn.', 'success');
-                        this.loadData(1);
-                    } else {
-                        Toast.fire('Thất bại!', res.message || 'Có lỗi xảy ra.', 'error');
+                    try {
+                        // 1. Lấy token
+                        const token = localStorage.getItem("jwt_token");
+                        
+                        // 2. Gắn vào headers
+                        const response = await fetch(`${Course.config.apiUrl}/hard-delete/${id}`, { 
+                            method: 'DELETE',
+                            headers: {
+                                "Authorization": "Bearer " + token
+                            }
+                        });
+                        
+                        const res = await response.json();
+                        if (res.success || res.Success) {
+                            Toast.fire('Thành công!', 'Khóa học đã bị xóa vĩnh viễn.', 'success');
+                            this.loadData(1);
+                        } else {
+                            Toast.fire('Thất bại!', res.message || 'Có lỗi xảy ra.', 'error');
+                        }
+                    } catch (error) {
+                        console.error("Lỗi xóa vĩnh viễn:", error);
+                        Toast.fire('Lỗi!', 'Không thể kết nối đến máy chủ.', 'error');
+                    }
+                }
+            });
+        }, 
+
+        restore: function(id) {
+            Swal.fire({
+                title: 'Khôi phục khóa học?',
+                text: "Khóa học này sẽ quay lại danh sách hiển thị chính.",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#198754',
+                confirmButtonText: 'Đồng ý',
+                cancelButtonText: 'Hủy'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        // 1. Lấy token
+                        const token = localStorage.getItem("jwt_token");
+
+                        // 2. Gắn vào headers
+                        const response = await fetch(`${Course.config.apiUrl}/restore/${id}`, { 
+                            method: 'POST',
+                            headers: {
+                                "Authorization": "Bearer " + token
+                            }
+                        });
+                        
+                        const res = await response.json();
+                        if (res.success || res.Success) {
+                            Toast.fire({
+                                icon: 'success',
+                                title: 'Khôi phục khóa học thành công!' 
+                            });
+                            Course.uncheckAll();
+                            this.loadData(1);
+                        } else {
+                            Toast.fire('Thất bại!', res.message || 'Có lỗi xảy ra.', 'error');
+                        }
+                    } catch (error) {
+                        console.error("Lỗi khôi phục:", error);
+                        Toast.fire('Lỗi!', 'Không thể kết nối đến máy chủ.', 'error');
                     }
                 }
             });
@@ -1021,7 +1179,7 @@ resetFilter: function() {
             if (ids.length === 0) return;
 
             Swal.fire({
-                title: `Xóa vĩnh viễn ${ids.length} mục?`,
+                title: `Xóa vĩnh viễn ${ids.length} khóa học?`,
                 text: "Dữ liệu khóa học sẽ bị xóa sạch hoàn toàn, hành động này không thể hoàn tác!",
                 icon: 'warning',
                 showCancelButton: true,
@@ -1038,7 +1196,7 @@ resetFilter: function() {
                         });
                         const res = await response.json();
                         if (res.success || res.Success) {
-                            Toast.fire({ icon: 'success', title: `Đã xóa vĩnh viễn ${ids.length} mục.` });
+                            Toast.fire({ icon: 'success', title: `Đã xóa vĩnh viễn ${ids.length} khóa học.` });
                             this.loadData(1);
                         } else {
                             Toast.fire('Thất bại!', res.message || 'Có lỗi xảy ra.', 'error');
@@ -1054,23 +1212,37 @@ resetFilter: function() {
         getSelectedIds: function() {
             return Array.from($('.item-check:checked')).map(cb => parseInt($(cb).val()));
         },
-          showPaging: function(totalCount, currentPage) {
-            const totalPages = Math.ceil(totalCount / Course.config.pageSize);
-            $('#paging-ul').twbsPagination('destroy');
-            if (totalPages > 0) {
-                $('#paging-ul').twbsPagination({
-                    totalPages: totalPages,
-                    startPage: currentPage,
-                    visiblePages: 5,
-                    onPageClick: (event, page) => { if (page !== currentPage) this.loadData(page); }
-                });
+          showPaging: function (totalCount, totalPages, currentPage) {
+            $('#total-records').text(totalCount);
+            if (totalPages <= 1) {
+                $('#paging-ul').empty();
+                $('#paging-ul').removeData("twbs-pagination");
+                $('#paging-ul').unbind("page");
+                return;
             }
-        },
+            $('#paging-ul').twbsPagination('destroy');
+
+            // 4. Khởi tạo phân trang
+            $('#paging-ul').twbsPagination({
+                totalPages: totalPages,
+                visiblePages: 5,
+                startPage: currentPage,
+                first: '<i class="bi bi-chevron-double-left"></i>', // Dùng Bootstrap Icon cho đồng bộ
+                prev: '<i class="bi bi-chevron-left"></i>',
+                next: '<i class="bi bi-chevron-right"></i>',
+                last: '<i class="bi bi-chevron-double-right"></i>',
+                onPageClick: function (event, page) {
+                    if (page !== currentPage) {
+                        Course.loadData(page); // Gọi lại hàm load dữ liệu của bạn
+                    }
+                }
+            });
+},
      loadCategoriesTrash: async function () {
         const selectEl = document.getElementById('trashFilterCategory');
 
         try {
-            const response = await fetch(`https://lms-u2jn.onrender.com/api/Category`);
+            const response = await fetch(`http://127.0.0.1:5000/api/Category`);
             const result = await response.json(); 
             Course.categories = result.data || []; 
             let filterHtml = '<option value="0">-- Tất cả danh mục --</option>';

@@ -61,16 +61,6 @@ namespace LMS.Services
             await lessonRepository.AddAsync(lesson);
         }
 
-        public async Task DeleteAsync(int id)
-        {
-            var exist = await GetByIdOrThrowAsync(id);
-            if (exist.IsDeleted)
-            {
-                throw new Exception("Khóa học đã bị xóa trước đó rồi");
-            }
-            await lessonRepository.DeleteAsync(exist);
-        }
-
         public async Task<IEnumerable<LessonResponseDTO>> GetAllAsync()
         {
             var courses = await lessonRepository.GetAllAsync();
@@ -235,6 +225,7 @@ namespace LMS.Services
                 IsPreview = c.IsPreview,
                 FormattedDuration = FormatDuration(c.Duration),
                 OrderIndex = c.OrderIndex,
+                LockedByRole = c.LockedByRole
             }).ToList();
             return (modelList, total);
         }
@@ -397,43 +388,154 @@ namespace LMS.Services
                 IsPreview = c.IsPreview,
                 FormattedDuration = FormatDuration(c.Duration),
                 OrderIndex = c.OrderIndex,
+                DeletedByRole = c.DeletedByRole
 
             }).ToList();
 
             return (dtoList, total);
         }
 
-        public async Task HardDeleteAsync(int id)
+        // --- HÀM GÁC CỔNG DÙNG CHUNG ---
+        private void CheckLessonAccess(LessonModel entity, string role, int userId, string action)
         {
-            var entity = await lessonRepository.GetByIdAsync(id);
-            if (entity == null)
-                throw new Exception("Bài học không tồn tại");
+            var currentRole = role?.ToLower();
+            if (currentRole == "admin" || currentRole == "1") return; // Admin có toàn quyền
+
+            // 1. Kiểm tra chính chủ (Bắt buộc phải Include Chapter -> Course ở Repo)
+            if (entity.Chapter?.Course?.TeacherId != userId)
+                throw new Exception($"Lỗi phân quyền: Bạn không có quyền thao tác trên bài học #{entity.Id}");
+
+            // 2. Kiểm tra niêm phong của Admin
+            if (action == "DELETE" && (entity.LockedByRole?.ToLower() == "admin" || entity.LockedByRole == "1"))
+                throw new Exception($"Bài học #{entity.Id} đang bị Admin niêm phong!");
+
+            if ((action == "RESTORE" || action == "HARD_DELETE") &&
+                (entity.DeletedByRole?.ToLower() == "admin" || entity.DeletedByRole == "1"))
+                throw new Exception($"Bài học #{entity.Id} do Admin xóa, bạn không thể can thiệp!");
+        }
+
+        // --- CÁC HÀM ĐƠN LẺ ---
+        public async Task DeleteAsync(int id, string role, int userId)
+        {
+            // Cần dùng hàm có IgnoreQueryFilters để lỡ nó nằm trong thùng rác còn biết
+            var exist = await lessonRepository.GetByIdWithIgnoreFilterAsync(id);
+            if (exist == null) throw new Exception("Bài học không tồn tại!");
+            if (exist.IsDeleted) throw new Exception("Bài học đã bị xóa trước đó rồi!");
+
+            CheckLessonAccess(exist, role, userId, "DELETE");
+
+            // Nếu là Admin xóa thì đánh dấu lại để Teacher không khôi phục được
+            string deletedByRole = (role?.ToLower() == "admin" || role == "1") ? "Admin" : null;
+            await lessonRepository.SoftDeleteAsync(exist, deletedByRole);
+        }
+
+        public async Task HardDeleteAsync(int id, string role, int userId)
+        {
+            var entity = await lessonRepository.GetByIdWithIgnoreFilterAsync(id);
+            if (entity == null) throw new Exception("Bài học không tồn tại");
+
+            CheckLessonAccess(entity, role, userId, "HARD_DELETE");
             await lessonRepository.HardDeleteAsync(entity);
         }
 
-        public async Task RestoreAsync(int id)
+        public async Task RestoreAsync(int id, string role, int userId)
         {
-            var entity = await lessonRepository.GetByIdAsync(id);
-            if (entity == null)
-                throw new Exception("Bài học không tồn tại");
+            var entity = await lessonRepository.GetByIdWithIgnoreFilterAsync(id);
+            if (entity == null) throw new Exception("Bài học không tồn tại");
+
+            CheckLessonAccess(entity, role, userId, "RESTORE");
             await lessonRepository.RestoreAsync(entity);
         }
-        public async Task<bool> RestoreBulkAsync(List<int> ids)
+
+        // --- CÁC HÀM XỬ LÝ NHIỀU (BULK) - VẪN DÙNG LIST<INT> ---
+        public async Task<bool> SoftDeleteBulkAsync(List<int> ids, string role, int userId)
         {
             if (ids == null || !ids.Any()) return false;
-            return await lessonRepository.UpdateDeleteStatusBulkAsync(ids, false);
+
+            // 1. Lấy dữ liệu lên để check
+            var entities = await lessonRepository.GetListByIdsWithIgnoreFilterAsync(ids);
+            var validIds = new List<int>();
+
+            // 2. Lọc ra các ID hợp lệ
+            foreach (var entity in entities)
+            {
+                if (entity.IsDeleted) continue;
+                try { CheckLessonAccess(entity, role, userId, "DELETE"); validIds.Add(entity.Id); }
+                catch { continue; } // Bỏ qua bài học không có quyền
+            }
+
+            if (!validIds.Any()) throw new Exception("Không có bài học nào hợp lệ để xóa!");
+
+            // 3. Đẩy list ID hợp lệ xuống Repo
+            string deletedByRole = (role?.ToLower() == "admin" || role == "1") ? "Admin" : null;
+            return await lessonRepository.UpdateDeleteStatusBulkAsync(validIds, true, deletedByRole);
         }
 
-        public async Task<bool> SoftDeleteBulkAsync(List<int> ids)
+        public async Task<bool> RestoreBulkAsync(List<int> ids, string role, int userId)
         {
             if (ids == null || !ids.Any()) return false;
-            return await lessonRepository.UpdateDeleteStatusBulkAsync(ids, true);
+
+            var entities = await lessonRepository.GetListByIdsWithIgnoreFilterAsync(ids);
+            var validIds = new List<int>();
+
+            foreach (var entity in entities)
+            {
+                if (!entity.IsDeleted) continue;
+                try { CheckLessonAccess(entity, role, userId, "RESTORE"); validIds.Add(entity.Id); }
+                catch { continue; }
+            }
+
+            if (!validIds.Any()) throw new Exception("Không có bài học nào hợp lệ để khôi phục!");
+
+            // Khôi phục thì clear cái DeletedByRole đi
+            return await lessonRepository.UpdateDeleteStatusBulkAsync(validIds, false, null);
         }
 
-        public async Task<bool> HardDeleteBulkAsync(List<int> ids)
+        public async Task<bool> HardDeleteBulkAsync(List<int> ids, string role, int userId)
         {
             if (ids == null || !ids.Any()) return false;
-            return await lessonRepository.HardDeleteBulkAsync(ids);
+
+            var entities = await lessonRepository.GetListByIdsWithIgnoreFilterAsync(ids);
+            var validIds = new List<int>();
+
+            foreach (var entity in entities)
+            {
+                try { CheckLessonAccess(entity, role, userId, "HARD_DELETE"); validIds.Add(entity.Id); }
+                catch { continue; }
+            }
+
+            if (!validIds.Any()) throw new Exception("Không có bài học nào hợp lệ để xóa vĩnh viễn!");
+
+            return await lessonRepository.HardDeleteBulkAsync(validIds);
+        }
+        public async Task<bool> ChangeStatusAsync(int id, string role, int userId)
+        {
+            var entity = await lessonRepository.GetByIdWithIgnoreFilterAsync(id);
+
+            if (entity == null || entity.IsDeleted)
+                throw new Exception("Bài học không tồn tại hoặc đã bị xóa!");
+
+            CheckLessonAccess(entity, role, userId, "UPDATE");
+
+            entity.IsActive = !entity.IsActive;
+            entity.UpdatedAt = DateTime.UtcNow.AddHours(7);
+
+            string roleName = (role == "1" || role?.ToLower() == "admin") ? "Admin" : "Teacher";
+
+            if (roleName == "Admin")
+            {
+                entity.LockedByRole = !entity.IsActive ? "Admin" : null;
+            }
+            else
+            {
+                if (entity.LockedByRole != "Admin")
+                {
+                    entity.LockedByRole = null;
+                }
+            }
+            await lessonRepository.UpdateAsync(entity);
+
+            return entity.IsActive;
         }
     }
 }

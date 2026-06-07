@@ -1,71 +1,82 @@
 
 var Auth = {
     config: {
-        apiUrl: "https://lms-u2jn.onrender.com/api/Auth"
+        apiUrl: "http://127.0.0.1:5000/api/Auth"
     },
     
-login: async function(btn) {
-    const $btn = $(btn);
-    const $form = $btn.closest('form');
-    const $errorDiv = $form.find('.login-error');
-    
-    // 1. Tránh click liên tục khi đang tải
-    if ($btn.hasClass('is-loading')) return;
-
-    // Reset trạng thái báo lỗi
-    $errorDiv.hide().text("");
-
-    const loginData = {
-        email: $form.find('#loginEmail').val(),
-        password: $form.find('#loginPassword').val()
-    };
-
-    // 2. HIỆU ỨNG LOADING: Đổi nội dung nút bấm
-    const oldBtnHtml = $btn.html();
-    $btn.addClass('is-loading').prop('disabled', true);
-    $btn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang xác thực...');
-
-    try {
-        const response = await $.ajax({
-            url: `${Auth.config.apiUrl}/login`,
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify(loginData),
-        });
-
-        // Lưu thông tin đăng nhập
-        AuthHelper.saveAuth(response); 
-
-        const urlParams = new URLSearchParams(window.location.search);
-        const courseId = urlParams.get('id');
-
-        Swal.fire({
-            icon: 'success',
-            title: 'Đăng nhập thành công!',
-            text: courseId ? 'Đang tự động ghi danh cho bạn...' : 'Chào mừng bạn quay lại!',
-            timer: 1500,
-            showConfirmButton: false
-        }).then(() => {
-            if (courseId) {
-                window.location.href = `/learn/learning.html?id=${courseId}`;
-            } else {
-                window.location.href = "/index.html";
-            }
-        });
-
-    } catch (error) {
-        // 3. KẾT THÚC LOADING NẾU LỖI
-        $btn.removeClass('is-loading').prop('disabled', false).html(oldBtnHtml);
-
-        const errorMsg = error.responseJSON?.message || "Sai tài khoản hoặc mật khẩu";
-        $errorDiv.text(errorMsg).fadeIn(); 
+    login: async function(btn) {
+        const $btn = $(btn);
+        const $form = $btn.closest('form');
+        const $errorDiv = $form.find('.login-error');
         
-        $form.closest('.modal-content').addClass('animate__animated animate__shakeX');
-        setTimeout(() => {
-            $form.closest('.modal-content').removeClass('animate__animated animate__shakeX');
-        }, 500);
-    }
-},
+        // 1. Tránh click liên tục khi đang tải
+        if ($btn.hasClass('is-loading')) return;
+
+        // Reset trạng thái báo lỗi
+        $errorDiv.hide().text("");
+
+        const loginData = {
+            email: $form.find('#loginEmail').val(),
+            password: $form.find('#loginPassword').val()
+        };
+        debugger
+        // 2. HIỆU ỨNG LOADING: Đổi nội dung nút bấm
+        const oldBtnHtml = $btn.html();
+        $btn.addClass('is-loading').prop('disabled', true);
+        $btn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang xác thực...');
+
+        try {
+            const response = await $.ajax({
+                url: `${Auth.config.apiUrl}/login`,
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(loginData),
+            });
+
+            // Lưu thông tin đăng nhập vào localStorage
+            AuthHelper.saveAuth(response); 
+
+            // Kiểm tra thông tin khóa học từ URL điều hướng ghi danh
+            const urlParams = new URLSearchParams(window.location.search);
+            const courseId = urlParams.get('id');
+
+            const roleId = parseInt(response.role || response.Role || 0);
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Đăng nhập thành công!',
+                text: courseId ? 'Đang tự động ghi danh cho bạn...' : 'Chào mừng bạn quay lại!',
+                timer: 1500,
+                showConfirmButton: false
+            }).then(() => {
+                if (courseId) {
+                    // Ưu tiên 1: Học viên click mua khóa học bên ngoài -> Đá thẳng vào lớp học
+                    window.location.href = `/learn/learning.html?id=${courseId}`;
+                } else {
+                    // Ưu tiên 2: Điều hướng theo vai trò (Role-based Redirect)
+                    if (roleId === 1) {
+                        window.location.href = "/pages/dashboard/index.html"; // Admin -> Thống kê hệ thống
+                    } else if (roleId === 3) {
+                        window.location.href = "/pages/dashboard/Dashboard-teacher.html";    // Teacher -> Khóa học của tôi
+                    } else {
+                        window.location.href = "/pages/index.html";            // Student/Guest -> Trang chủ
+                    }
+                }
+            });
+
+        } catch (error) {
+            // 3. KẾT THÚC LOADING NẾU LỖI
+            $btn.removeClass('is-loading').prop('disabled', false).html(oldBtnHtml);
+
+            const errorMsg = error.responseJSON?.message || error.responseJSON?.Message || "Sai tài khoản hoặc mật khẩu";
+            $errorDiv.text(errorMsg).fadeIn(); 
+            
+            $form.closest('.modal-content').addClass('animate__animated animate__shakeX');
+            setTimeout(() => {
+                $form.closest('.modal-content').removeClass('animate__animated animate__shakeX');
+            }, 500);
+        }
+    },
 
     register: async function() {
         let form;
@@ -74,12 +85,13 @@ login: async function(btn) {
         } else {
             form = $('#modalRegisterForm');
         }
-       var registerData = {
-        FullName: form.find('#fullName').val() || form.find('input[name="FullName"]').val(),
-        Email: form.find('#email').val() || form.find('input[name="Email"]').val(),
-        Password: form.find('#password').val() || form.find('input[name="password"]').val(),
-        CourseId: $('#currentCourseId').val() || 0
-    };
+        
+        var registerData = {
+            FullName: form.find('#fullName').val() || form.find('input[name="FullName"]').val(),
+            Email: form.find('#email').val() || form.find('input[name="Email"]').val(),
+            Password: form.find('#password').val() || form.find('input[name="password"]').val(),
+            CourseId: $('#currentCourseId').val() || 0
+        };
 
         try {
             const response = await $.ajax({
@@ -88,9 +100,13 @@ login: async function(btn) {
                 contentType: 'application/json',
                 data: JSON.stringify(registerData),
             });
-            debugger
+            
             // Đăng ký xong tự động lưu Token để vào học luôn
             AuthHelper.saveAuth(response); 
+
+            // BÓC TÁCH ROLE SAU KHI ĐĂNG KÝ TỰ ĐỘNG LOGIN
+            const userData = response.user || response.User || {};
+            const roleId = parseInt(userData.role || userData.Role || 0);
 
             Swal.fire({
                 icon: 'success',
@@ -103,29 +119,33 @@ login: async function(btn) {
                 if (courseId && courseId !== 0 && courseId !== "0") {
                     window.location.href = `/learn/learning.html?id=${courseId}`;
                 } else {
-                    window.location.href = "/index.html";
+                     if (roleId === 1) {
+                        window.location.href = "/pages/dashboard/index.html"; // Admin -> Thống kê hệ thống
+                    } else if (roleId === 3) {
+                        window.location.href = "/pages/dashboard/Dashboard-teacher.html";    // Teacher -> Khóa học của tôi
+                    } else {
+                        window.location.href = "/pages/index.html";            // Student/Guest -> Trang chủ
+                    }
                 }
             });
         } catch (error) {
             Swal.fire({
                 icon: 'error',
                 title: 'Lỗi đăng ký!',
-                text: error.responseJSON || "Email đã tồn tại hoặc dữ liệu không hợp lệ"
+                text: error.responseJSON?.message || error.responseJSON?.Message || "Email đã tồn tại hoặc dữ liệu không hợp lệ"
             });
         }
     },
-loginWithSocial: function(provider) {
-    const courseId = new URLSearchParams(window.location.search).get('id');
-    
-    // SỬA CHỖ NÀY: Thay localhost thành link Vercel của ông
-    const frontendDomain = "https://lms-azure-mu.vercel.app"; 
-    
-    let returnUrl = courseId 
-        ? `${frontendDomain}/Home/detail.html?id=${courseId}`
-        : `${frontendDomain}/auth/login-success.html`;
 
-    const backendUrl = `https://lms-u2jn.onrender.com/api/auth/external-login?provider=${provider}&returnUrl=${encodeURIComponent(returnUrl)}`;
-    window.location.href = backendUrl;
-}
-   
+    loginWithSocial: function(provider) {
+        const courseId = new URLSearchParams(window.location.search).get('id');
+        const frontendDomain = "https://lms-azure-mu.vercel.app"; 
+        
+        let returnUrl = courseId 
+            ? `${frontendDomain}/Home/detail.html?id=${courseId}`
+            : `${frontendDomain}/auth/login-success.html`;
+
+        const backendUrl = `http://127.0.0.1:5000/api/auth/external-login?provider=${provider}&returnUrl=${encodeURIComponent(returnUrl)}`;
+        window.location.href = backendUrl;
+    }
 };

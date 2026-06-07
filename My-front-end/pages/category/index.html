@@ -77,80 +77,103 @@
         </div>
     </div>
 
-    <div class="card shadow-sm border-0">
-    <div class="card-body p-4">
-        <div class="row g-3">
-            <div class="col-lg-3 col-md-6">
-                <label class="form-label fw-bold text-dark small">Từ khóa</label>
-                <div class="input-group shadow-sm-soft">
-                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text" id="keySearch" class="form-control border-start-0" placeholder="Tên danh mục...">
-                </div>
-            </div>
-
-            <div class="col-lg-2 col-md-3 col-6">
-                <label class="form-label fw-bold text-dark small">Từ ngày</label>
-                <input type="date" id="fromDate" class="form-control">
-            </div>
-
-            <div class="col-lg-2 col-md-3 col-6">
-                <label class="form-label fw-bold text-dark small">Đến ngày</label>
-                <input type="date" id="toDate" class="form-control">
-            </div>
-
-            <div class="col-lg-2 col-md-6">
-                <label class="form-label fw-bold text-dark small">Trạng thái</label>
-                <select id="isActive" class="form-select">
-                    <option value="-1">Tất cả</option>
-                    <option value="1">Hoạt động</option>
-                    <option value="0">Khóa</option>
-                </select>
-            </div>
-
-            <div class="col-lg-3 col-md-6 d-flex align-items-end gap-2">
-                <button onclick="Category.loadData(1)" class="btn btn-primary w-100 fw-semibold">
-                    <i class="bi bi-funnel-fill me-1"></i> Lọc
-                </button>
-                <button onclick="Category.resetSearch()" class="btn btn-light border" title="Làm mới">
-                    <i class="bi bi-arrow-clockwise"></i>
-                </button>
+<div class="filter-section p-3 mb-4 shadow-sm border border-light-subtle" style="background-color: #f8f9fa; border-radius: 12px;">
+    <div class="row g-2 align-items-center">
+        <div class="col-lg-3 col-md-4">
+            <div class="input-group shadow-sm" style="border-radius: 8px; overflow: hidden;">
+                <span class="input-group-text bg-white border-0 pe-1"><i class="bi bi-search text-muted small"></i></span>
+                <input type="text" id="keySearch" class="form-control bg-white border-0 py-2 shadow-none" style="font-size: 14px;" placeholder="Tên danh mục...">
             </div>
         </div>
 
-        <hr class="my-4 opacity-25">
-
-        <div class="d-flex justify-content-between align-items-center">
-            <h5 class="mb-0 fw-bold text-dark">Danh sách danh mục</h5>
-            <div class="d-flex gap-2">
-                <button onclick="location.href='/pages/category/category_trash.html'" class="btn btn-outline-danger d-flex align-items-center" title="Thùng rác">
-                    <i class="bi bi-trash3 me-1"></i> <span class="d-none d-sm-inline">Thùng rác</span>
-                </button>
-                <button onclick="Category.openCreateModal()" class="btn btn-success d-flex align-items-center fw-semibold px-4">
-                    <i class="bi bi-plus-lg me-2"></i> Thêm mới
-                </button>
+        <div class="col-lg-2 col-md-4">
+            <div class="shadow-sm" style="border-radius: 8px;">
+                <input type="date" id="fromDate" class="form-control bg-white border-0 py-2 shadow-none" style="font-size: 14px;" title="Từ ngày tạo">
             </div>
+        </div>
+
+        <div class="col-lg-2 col-md-4">
+            <div class="shadow-sm" style="border-radius: 8px;">
+                <input type="date" id="toDate" class="form-control bg-white border-0 py-2 shadow-none" style="font-size: 14px;" title="Đến ngày tạo">
+            </div>
+        </div>
+
+        <div class="col-lg-2 col-md-4">
+            <div class="shadow-sm" style="border-radius: 8px;">
+                <select id="isActive" class="form-select bg-white border-0 py-2 shadow-none" style="font-size: 14px; cursor: pointer;">
+                    <option value="-1">Trạng thái</option>
+                    <option value="1">Hoạt động</option>
+                    <option value="0">Tạm khóa</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-8 d-flex gap-2 justify-content-end align-items-center ms-auto">
+            <button onclick="Category.loadData(1)" class="btn btn-dark px-3 rounded-pill fw-bold shadow-sm d-flex align-items-center justify-content-center" style="height: 38px; font-size: 13px; letter-spacing: 0.5px;">
+                <i class="bi bi-funnel-fill me-1"></i> LỌC DỮ LIỆU
+            </button>
+            
+            <button onclick="Category.resetSearch()" class="btn btn-white border px-3 rounded-pill fw-bold shadow-sm d-flex align-items-center justify-content-center" style="height: 38px; font-size: 13px; background: white;">
+                <i class="bi bi-arrow-clockwise text-dark me-1"></i> LÀM MỚI
+            </button>
         </div>
     </div>
 </div>
-
-    <div class="card shadow-sm">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead>
-                        <tr>
-                            <th class="ps-4">Tên danh mục</th>
-                            <th>Ngày tạo</th>
-                            <th>Mô tả</th>
-                            <th class="text-center">Trạng thái</th>
-                            <th class="text-center">Hành động</th>
-                        </tr>
-                    </thead>
-                    <tbody id="category-table-body">
-                        </tbody>
-                </table>
+<div class="d-flex align-items-center justify-content-between mb-4 px-1" style="height: 38px;">
+    
+    <h5 class="mb-0 fw-bold text-dark d-flex align-items-center" style="letter-spacing: -0.3px;">
+        <i class="bi bi-grid-fill text-primary me-2 fs-5"></i>Cấu trúc Danh mục
+    </h5>
+    
+    <div class="d-flex align-items-center gap-2">
+        
+        <div id="bulk-actions" class="d-flex align-items-center gap-2" style="opacity: 0; pointer-events: none; transition: all 0.25s ease;">
+            <div class="badge bg-danger-subtle text-danger px-3 rounded-pill fw-bold d-flex align-items-center justify-content-center" 
+                 style="height: 38px; font-size: 12px; border: 1px solid rgba(220, 53, 69, 0.15);">
+                <i class="bi bi-check2-circle me-1" style="font-size: 14px;"></i> Đã chọn: <span id="selected-count" class="ms-1">0</span>
             </div>
+            
+            <button id="btn-bulk-delete" class="btn btn-danger fw-bold rounded-pill px-3 shadow-sm border-0 d-flex align-items-center justify-content-center" 
+                    onclick="Category.softDeleteBulk()" style="height: 38px; font-size: 12px; letter-spacing: 0.3px;">
+                <i class="bi bi-trash-fill me-1" style="font-size: 13px;"></i> XÓA MỤC CHỌN
+            </button>
         </div>
+
+        <a href="/pages/category/category_trash.html" class="btn btn-outline-secondary px-3 rounded-pill fw-bold shadow-none d-flex align-items-center justify-content-center" 
+           style="height: 38px; font-size: 12px; border-width: 1px; letter-spacing: 0.3px;">
+            <i class="bi bi-trash3 me-1" style="font-size: 13px;"></i> THÙNG RÁC
+        </a>
+
+        <button onclick="Category.openCreateModal()" class="btn btn-primary px-4 rounded-pill fw-bold shadow-sm d-flex align-items-center justify-content-center" 
+                style="height: 38px; font-size: 13px; letter-spacing: 0.5px;">
+            <i class="bi bi-plus-lg me-1" style="font-size: 14px;"></i> THÊM MỚI
+        </button>
+        
+    </div>
+</div>
+<div class="card shadow-sm border-0" style="border-radius: 12px; overflow: hidden;">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light text-uppercase" style="font-size: 11px; letter-spacing: 0.5px;">
+                    <tr>
+                        <th class="ps-4" style="width: 50px;">
+                            <input class="form-check-input" type="checkbox" id="check-all" style="cursor: pointer;">
+                        </th>
+                        <th>Tên danh mục</th>
+                        <th>Ngày tạo</th>
+                        <th>Mô tả chi tiết</th>
+                        <th class="text-center">Sức chứa</th>
+                        <th class="text-center">Trạng thái</th>
+                        <th class="text-center" style="width: 150px;">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody id="category-table-body">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+</div>
         <div class="card-footer bg-white border-0 p-3">
             <div class="row align-items-center">
                 <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">
@@ -277,6 +300,7 @@
 <script src="../assets/js/category.js"></script>
 <script src="../assets/js/admin-loader.js"></script>
 <script src="../assets/js/common.js"></script>
+<script src="../assets/js/global-loader.js"></script>
 <script>
     $(document).ready(function () {
     Category.init();

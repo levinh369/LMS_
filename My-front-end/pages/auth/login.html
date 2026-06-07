@@ -86,9 +86,9 @@
                         </div>
                         <div class="mb-4">
                             <div class="d-flex justify-content-between">
-                                <label class="form-label fw-semibold">Mật khẩu</label>
-                                <a href="forgot-password.html" class="small text-decoration-none">Quên mật khẩu?</a>
-                            </div>
+                            <label class="form-label fw-semibold">Mật khẩu</label>
+                            <a href="javascript:void(0)" onclick="ForgotPassword.showModal()" class="small text-decoration-none">Quên mật khẩu?</a>
+                        </div>
                             <input type="password" id="loginPassword" class="form-control" placeholder="••••••••" required>
                         </div>
                         
@@ -121,7 +121,51 @@
             </div>
         </div>
     </div>
+<div class="modal fade" id="forgotPasswordModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light border-0">
+                <h5 class="modal-title fw-bold text-primary">Khôi phục mật khẩu</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                
+                <div id="step-email">
+                    <p class="text-muted small mb-3">Vui lòng nhập địa chỉ email bạn đã dùng để đăng ký tài khoản. Chúng tôi sẽ gửi mã xác nhận gồm 6 chữ số.</p>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Địa chỉ Email</label>
+                        <input type="email" id="fp-email" class="form-control" placeholder="nguyenvana@gmail.com">
+                    </div>
+                    <button class="btn btn-primary w-100" onclick="ForgotPassword.sendOtp()">Gửi mã xác nhận</button>
+                </div>
 
+                <div id="step-otp" class="d-none">
+                    <p class="text-muted small mb-3">Mã xác nhận 6 số đã được gửi đến <strong id="fp-show-email" class="text-dark"></strong>. Vui lòng kiểm tra hộp thư (cả mục Spam).</p>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Mã xác nhận (OTP)</label>
+                        <input type="text" id="fp-otp" class="form-control text-center fs-4 letter-spacing-2" placeholder="------" maxlength="6">
+                    </div>
+                    <button class="btn btn-primary w-100 mb-2" onclick="ForgotPassword.verifyOtp()">Xác nhận mã</button>
+                    <button class="btn btn-light w-100 text-muted" onclick="ForgotPassword.backToStep1()">Quay lại</button>
+                </div>
+
+                <div id="step-new-pass" class="d-none">
+                    <p class="text-muted small mb-3">Mã xác nhận hợp lệ. Vui lòng tạo mật khẩu mới cho tài khoản của bạn.</p>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Mật khẩu mới</label>
+                        <input type="password" id="fp-new-password" class="form-control" placeholder="Nhập mật khẩu mới">
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Xác nhận mật khẩu</label>
+                        <input type="password" id="fp-confirm-password" class="form-control" placeholder="Nhập lại mật khẩu mới">
+                    </div>
+                    <button class="btn btn-success w-100" onclick="ForgotPassword.resetPassword()">Đổi mật khẩu</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
     <footer class="py-4 mt-auto">
         <div class="container text-center">
             <p class="text-muted small mb-0">&copy; 2026 LMS Academy. All rights reserved.</p>
@@ -133,5 +177,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="../assets/js/auth.js"></script>
     <script src="../assets/js/common.js"></script>
+    <script src="../assets/js/ForgotPassword.js"></script>
+    <script src="../assets/js/global-loader.js"></script>
 </body>
 </html>

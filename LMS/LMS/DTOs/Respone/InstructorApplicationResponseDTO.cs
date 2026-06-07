@@ -10,5 +10,6 @@
         public string CvUrl { get; set; }
         public string Status { get; set; }
         public DateTime AppliedAt { get; set; }
+        public string AvatarUrl {  get; set; }
     }
 }

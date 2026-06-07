@@ -27,6 +27,10 @@ namespace LMS.Models
         [Column(TypeName = "decimal(18,2)")] // Set chuẩn kiểu tiền tệ dưới SQL Server (18 số, 2 số thập phân)
         public decimal WalletBalance { get; set; } = 0m;
         public string? ExternalId { get; set; } // Lưu ID mà Google/Facebook trả về
+        [StringLength(6)]
+        public string? ResetPasswordOtp { get; set; }
+
+        public DateTime? ResetPasswordOtpExpiry { get; set; }
         public ICollection<EnrollmentModel> Enrollments { get; set; } = new List<EnrollmentModel>();
     }
 

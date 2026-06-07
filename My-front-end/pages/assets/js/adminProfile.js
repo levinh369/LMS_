@@ -1,7 +1,7 @@
 const adminProfile = {
     config: {
-        apiUrl: 'https://lms-u2jn.onrender.com/api/User', // Đổi theo Route thực tế của bác
-        updateUrl: 'https://lms-u2jn.onrender.com/api/User/update-profile'
+        apiUrl: 'http://127.0.0.1:5000/api/User', // Đổi theo Route thực tế của bác
+        updateUrl: 'http://127.0.0.1:5000/api/User/update-profile'
     },
 
     init: function() {

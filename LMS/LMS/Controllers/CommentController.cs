@@ -13,6 +13,7 @@ using System.Security.Claims;
 
 namespace LMS.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class CommentController : ControllerBase
@@ -22,7 +23,42 @@ namespace LMS.Controllers
         {
             this.commentService = commentService;
         }
-        [Authorize]
+        [Authorize(Roles = "Teacher,Admin")]
+        [HttpGet("manager-comment-stats")]
+        public async Task<IActionResult> GetManagerCommentStats(
+       [FromQuery] int? teacherId = null,
+       [FromQuery] int? courseId = null,
+       [FromQuery] int? lessonId = null)
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                int currentUserId = int.TryParse(userIdClaim, out var id) ? id : 0;
+                var currentUserRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
+                int? finalTeacherId;
+
+                if (currentUserRole == "Admin")
+                {
+                    finalTeacherId = teacherId;
+                }
+                else
+                {
+                    finalTeacherId = currentUserId; // Teacher chỉ xem được của họ
+                }
+
+                var stats = await commentService.GetAdminCommentStatsAsync(finalTeacherId, courseId, lessonId);
+
+                return Ok(new
+                {
+                    success = true,
+                    data = stats
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
         [HttpPost]
         public async Task<IActionResult> Post([FromBody] CommentRequestDTO dto)
         {
@@ -52,6 +88,8 @@ namespace LMS.Controllers
                 data = result 
             });
         }
+        [AllowAnonymous]
+        [Authorize]
         [HttpGet("lesson/{lessonId}/parents")]
         public async Task<IActionResult> GetParentComments(int lessonId, [FromQuery] int page = 1, [FromQuery] int limit = 20)
         {
@@ -59,7 +97,8 @@ namespace LMS.Controllers
             var result = await commentService.GetParentCommentsPaginatedAsync(lessonId, currentUserId, page, limit);
             return Ok(new { success = true, result });
         }
-
+        [AllowAnonymous]
+        [Authorize]
         [HttpGet("{parentId}/replies")]
         public async Task<IActionResult> GetReplies(int parentId, [FromQuery] int lessonId, [FromQuery] int page = 1, [FromQuery] int limit = 10)
         {
@@ -97,6 +136,7 @@ namespace LMS.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+        [AllowAnonymous]
         [HttpGet("getReactions/{commentId}")]
         public async Task<IActionResult> getReactions(int commentId)
         {
@@ -170,6 +210,7 @@ namespace LMS.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+        [Authorize(Roles = "Teacher,Admin")]
         [HttpGet("manager-comment")]
         public async Task<IActionResult> GetManagerComments(
      [FromQuery] int page = 1,
@@ -223,8 +264,9 @@ namespace LMS.Controllers
             // Trả về kết quả thành công
             return Ok(new { success = true, message = "Cập nhật trạng thái thành công!" });
         }
+        [Authorize(Roles = "Teacher,Admin")]
         [HttpDelete("{id}")]
-        //[Authorize(Roles = "Admin")] // Chỉ Admin mới được quyền "trảm"
+        
         public async Task<IActionResult> AdminDeleteComment(int id)
         {
             // Gọi xuống Service bác vừa viết
@@ -237,6 +279,7 @@ namespace LMS.Controllers
 
             return Ok(new { success = true, message = "Đã ẩn bình luận thành công!" });
         }
+        [Authorize(Roles = "Teacher,Admin")]
         [HttpPut("restore/{id}")]
         public async Task<IActionResult> Restore(int id)
         {
@@ -245,6 +288,7 @@ namespace LMS.Controllers
 
             return Ok(new { success = true, message = "Đã khôi phục bình luận thành công!" });
         }
+        [Authorize(Roles = "Teacher,Admin")]
         [HttpPost("pin-handler")]
         [Authorize] // Phải login mới được ghim
         public async Task<IActionResult> PinHandler([FromBody] PinRequest request)
@@ -291,6 +335,7 @@ namespace LMS.Controllers
 
             return BadRequest(new { success = false, message = "Lỗi xử lý ghim, bác check lại log nhé!" });
         }
+        [Authorize(Roles = "Teacher,Admin")]
 
         [HttpDelete("hard-delete/{id}")]
         public async Task<IActionResult> HardDelete(int id)

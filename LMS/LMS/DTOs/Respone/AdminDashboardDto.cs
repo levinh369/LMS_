@@ -20,4 +20,9 @@
         public List<string> CourseLabels { get; set; }
         public List<int> CourseData { get; set; }
     }
+    public class PendingCountsDto
+    {
+        public int WithdrawCount { get; set; }
+        public int TeacherCount { get; set; }
+    }
 }

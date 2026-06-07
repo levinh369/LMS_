@@ -26,6 +26,8 @@ namespace LMS.Repositories.Interfaces
         Task HardDeleteAsync(CommentModel comment);
         Task<(List<CommentModel> Comments, int TotalCount)> GetParentCommentsAsync(int lessonId, int userId, int page, int pageSize);
         Task<(List<CommentModel> Comments, int TotalCount)> GetRepliesAsync(int parentId, int userId, int page, int pageSize);
+        Task<Dictionary<DateTime, int>> GetCommentStatsLast7DaysAsync(int? teacherId, int? courseId, int? lessonId);
+        Task<int> GetTotalCommentsAsync(int? teacherId, int? courseId, int? lessonId);
 
-    }
+        }
 }

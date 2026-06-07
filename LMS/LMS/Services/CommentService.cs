@@ -17,7 +17,7 @@ namespace LMS.Services
         private readonly IUserRepository _userRepository;
         private readonly ICourseRepository _courseRepository;
         public CommentService(ICommentRepository commentRepository, INotificationService notificationService, IUserRepository userRepository, ICourseRepository courseRepository)
-        { 
+        {
             _commentRepository = commentRepository;
             this.notificationService = notificationService;
             _userRepository = userRepository;
@@ -109,7 +109,7 @@ namespace LMS.Services
                     Content = request.Content,
                     LessonId = request.LessonId,
                     UserId = adminId,
-                    ParentId = null, 
+                    ParentId = null,
                     IsPinned = true,
                     CreatedAt = DateTime.UtcNow.AddHours(7),
                     IsActive = true
@@ -185,9 +185,9 @@ namespace LMS.Services
             return true;
         }
 
-        public async Task<(List<AdminCommentResponseDTO> Items, int TotalCount)> GetAdminCommentsAsync(int pageIndex, int? courseId, int? lessonId, string? search, string status, int ? teacherId)
+        public async Task<(List<AdminCommentResponseDTO> Items, int TotalCount)> GetAdminCommentsAsync(int pageIndex, int? courseId, int? lessonId, string? search, string status, int? teacherId)
         {
-            return await _commentRepository.GetAdminCommentsAsync(pageIndex, courseId, lessonId, search,status, teacherId);
+            return await _commentRepository.GetAdminCommentsAsync(pageIndex, courseId, lessonId, search, status, teacherId);
         }
 
         public async Task<List<CommentResponseDTO>> GetCommentListAsync(int lessonId, int userId)
@@ -226,7 +226,7 @@ namespace LMS.Services
 
         public async Task<List<CommentReactionDetailResponseDTO>> GetReactionDetailServiceAsync(int commentId)
         {
-            if(commentId <= 0)
+            if (commentId <= 0)
             {
                 {
                     throw new Exception("ID comment không hợp lệ!");
@@ -337,6 +337,33 @@ namespace LMS.Services
                 ReactionStats = c.ReactionStats,
                 IsTeacher = teacherId.HasValue && c.UserId == teacherId.Value
             }).ToList();
+        }
+        public async Task<CommentStatsDto> GetAdminCommentStatsAsync(int? teacherId, int? courseId, int? lessonId)
+        {
+            var total = await _commentRepository.GetTotalCommentsAsync(teacherId, courseId, lessonId);
+            var rawStats = await _commentRepository.GetCommentStatsLast7DaysAsync(teacherId, courseId, lessonId);
+
+            var last7DaysCount = new List<int>();
+
+            for (int i = 6; i >= 0; i--)
+            {
+                var targetDate = DateTime.Today.AddDays(-i);
+                if (rawStats.TryGetValue(targetDate, out int count))
+                {
+                    last7DaysCount.Add(count);
+                }
+                else
+                {
+                    last7DaysCount.Add(0);
+                }
+            }
+
+            return new CommentStatsDto
+            {
+                TotalComments = total,
+                Last7DaysCount = last7DaysCount,
+                AveragePerDay = last7DaysCount.Any() ? last7DaysCount.Average() : 0
+            };
         }
     }
 }

@@ -56,11 +56,14 @@
                     <option value="2">Học viên</option>
                 </select>
             </div>
-            <div class="col-md-3">
-                <button class="btn btn-dark w-100" onclick="Manager.trash.loadData(1)">
-                    <i class="bi bi-filter"></i> LỌC DỮ LIỆU
-                </button>
-            </div>
+         <div class="col-md-3 d-flex gap-2">
+    <button class="btn btn-dark flex-grow-1" onclick="Manager.trash.loadData(1)">
+        <i class="bi bi-filter"></i> LỌC
+    </button>
+    <button class="btn btn-outline-secondary flex-grow-1" onclick="Manager.trash.resetSearch()" title="Làm mới bộ lọc">
+        <i class="bi bi-arrow-clockwise"></i> MỚI
+    </button>
+</div>
         </div>
 
         <div id="bulk-actions" class="bg-light p-3 border rounded-3 d-flex align-items-center justify-content-between" style="display: none;">
@@ -121,6 +124,7 @@
 
 <script src="../assets/js/admin-loader.js"></script>
 <script src="../assets/js/managerUser.js"></script>
+<script src="../assets/js/global-loader.js"></script>
  <script>
         $(document).ready(function() {
             if (typeof Manager !== 'undefined' && Manager.trash) {

@@ -26,5 +26,9 @@ namespace LMS.Models
         public ChapterModel Chapter { get; set; }
         public ICollection<UserProgressModel> UserProgress { get; set; } = new List<UserProgressModel>();
         public int? CourseModelId { get; set; }
+        [StringLength(20)]
+        public string? LockedByRole { get; set; }
+        [StringLength(20)]
+        public string? DeletedByRole { get; set; }
     }
 }

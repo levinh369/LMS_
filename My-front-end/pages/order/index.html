@@ -26,6 +26,34 @@
         }
         .badge-status { font-size: 0.75rem; padding: 6px 12px; border-radius: 8px; font-weight: 600; }
         .user-avatar { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; }
+        @media print {
+    /* 1. Ẩn toàn bộ mọi thứ trên web (Sidebar, Header, Bảng nền...) */
+    body * {
+        visibility: hidden;
+    }
+    
+    /* 2. Chỉ cho phép hiển thị nội dung bên trong Modal */
+    #adminOrderDetailModal .modal-content, 
+    #adminOrderDetailModal .modal-content * {
+        visibility: visible;
+    }
+    
+    /* 3. Bê nguyên cái Modal đặt lên góc trên cùng bên trái tờ giấy A4 */
+    #adminOrderDetailModal .modal-content {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    /* 4. Ẩn luôn phần Footer chứa các nút bấm (In, Đóng) và dấu X tắt Modal */
+    #adminOrderDetailModal .modal-footer,
+    #adminOrderDetailModal .btn-close {
+        display: none !important;
+    }
+}
     </style>
 </head>
 <body>
@@ -42,47 +70,56 @@
         </div>
     </div>
 
-    <div class="card shadow-sm mb-4">
+<div class="card shadow-sm mb-4">
     <div class="card-body p-4">
         <div class="row g-3">
-            <div class="col-md-3">
+            <div class="col-md">
                 <label class="form-label fw-semibold text-muted small">Tìm kiếm</label>
                 <div class="input-group">
                     <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text" id="adminSearch" class="form-control border-start-0" placeholder="Tên khách, mã đơn...">
+                    <input type="text" id="adminSearch" class="form-control border-start-0" placeholder="Tên khách, mã...">
                 </div>
             </div>
 
-            <div class="col-md-2">
+            <div class="col-md" id="teacherFilterContainer">
+                <label class="form-label fw-semibold text-muted small">Giảng viên</label>
+                <select id="adminTeacherFilter" class="form-select bg-light">
+                    <option value="0">Tất cả </option>
+                </select>
+            </div>
+
+            <div class="col-md">
                 <label class="form-label fw-semibold text-muted small">Từ ngày</label>
                 <input type="date" id="adminFromDate" class="form-control bg-light">
             </div>
 
-            <div class="col-md-2">
+            <div class="col-md">
                 <label class="form-label fw-semibold text-muted small">Đến ngày</label>
                 <input type="date" id="adminToDate" class="form-control bg-light">
             </div>
 
-            <div class="col-md-2">
+            <div class="col-md">
                 <label class="form-label fw-semibold text-muted small">Trạng thái</label>
                 <select id="adminStatusFilter" class="form-select bg-light">
-                    <option value="All">Tất cả</option>
-                    <option value="Pending">Chờ thanh toán</option>
-                    <option value="Success">Thành công</option>
-                    <option value="Failed">Thanh toán lỗi</option>
-                    <option value="Cancelled">Đã hủy</option>
+                    <option value="-1">Tất cả</option>
+                    <option value="0">Chờ thanh toán (Pending)</option>
+                    <option value="1">Thành công (Success)</option>
+                    <option value="2">Lỗi (Failed)</option>
+                    <option value="3">Đã hủy (Cancelled)</option>
                 </select>
             </div>
 
-            <div class="col-md-3 d-flex align-items-end gap-2">
-                <button onclick="AdminOrder.applySearch()" class="btn btn-filter flex-grow-1 shadow-sm">
-                    <i class="bi bi-funnel"></i> Lọc
+            <div class="col-md-4 d-flex align-items-end gap-2">
+                <button onclick="AdminOrder.applySearch()" class="btn btn-primary flex-grow-1 shadow-sm d-flex align-items-center justify-content-center gap-2" style="height: 38px;">
+                    <i class="bi bi-funnel"></i> <span>Lọc</span>
                 </button>
-                <button onclick="AdminOrder.resetSearch()" class="btn btn-reset shadow-sm">
-                    <i class="bi bi-arrow-clockwise"></i>
+                
+                <button onclick="AdminOrder.resetSearch()" class="btn btn-light shadow-sm border flex-grow-1 d-flex align-items-center justify-content-center gap-2" style="height: 38px;" title="Làm mới">
+                    <i class="bi bi-arrow-clockwise"></i> <span>Làm mới</span>
                 </button>
-                <button class="btn btn-dark shadow-sm" title="Xuất báo cáo Excel">
-                    <i class="bi bi-file-earmark-excel"></i>
+                
+                <button onclick="AdminOrder.exportExcel()" class="btn btn-success flex-grow-1 shadow-sm d-flex align-items-center justify-content-center gap-2" style="height: 38px;" title="Xuất báo cáo Excel">
+                    <i class="bi bi-file-earmark-excel"></i> <span>Xuất Excel</span>
                 </button>
             </div>
         </div>
@@ -92,27 +129,21 @@
     <div class="card shadow-sm border-0">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead>
-                        <tr>
-                            <th class="ps-4">Mã Đơn</th>
-                            <th>Khách Hàng</th>
-                            <th>Khóa Học</th>
-                            <th>Số Tiền</th>
-                            <th class="text-center">Trạng Thái</th>
-                            <th class="text-center">Hành Động</th>
-                        </tr>
+              <table class="table align-middle table-hover">
+                <thead id="admin-order-table-header">
                     </thead>
-                    <tbody id="admin-order-table-body">
-                        </tbody>
-                </table>
+                <tbody id="admin-order-table-body">
+                    </tbody>
+            </table>
             </div>
-            <div class="p-4 border-top">
-                <div class="small text-muted">Tổng số đơn hàng: <strong id="admin-total-records">0</strong></div>
+            <div class="p-4 d-flex justify-content-between align-items-center border-top">
+                <div class="text-muted small">Tổng số: <strong id="total-records">0</strong> bản ghi</div>
+                <nav><ul id="paging-ul" class="pagination pagination-sm m-0"></ul></nav>
             </div>
         </div>
     </div>
 </div>
+
 <div class="modal fade" id="adminOrderDetailModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content shadow-lg border-0" style="border-radius: 15px;">
@@ -120,34 +151,57 @@
                 <h5 class="modal-title fw-bold"><i class="bi bi-receipt me-2"></i>Chi Tiết Giao Dịch #<span id="dtlOrderCode"></span></h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
+            
             <div class="modal-body p-4">
                 <div class="row g-4">
                     <div class="col-md-6 border-end">
-                        <h6 class="fw-bold text-primary mb-3"><i class="bi bi-person-circle me-2"></i>Thông tin khách hàng</h6>
+                        <h6 class="fw-bold text-primary mb-3"><i class="bi bi-info-circle me-2"></i>Thông tin chung</h6>
+                        
                         <p class="mb-1 text-muted small">Học viên:</p>
-                        <p class="fw-bold mb-3" id="dtlCustomerName"></p>
+                        <p class="fw-bold mb-2 text-dark" id="dtlCustomerName"></p>
+                        
                         <p class="mb-1 text-muted small">Email liên hệ:</p>
-                        <p class="fw-bold mb-3" id="dtlCustomerEmail"></p>
-                        <p class="mb-1 text-muted small">Địa chỉ IP:</p>
-                        <p class="text-dark" id="dtlIpAddress">127.0.0.1 (Localhost)</p>
+                        <p class="fw-bold mb-4 text-dark" id="dtlCustomerEmail"></p>
+
+                        <p class="mb-1 text-muted small">Khóa học:</p>
+                        <p class="fw-bold mb-2 text-primary" id="dtlCourseTitle" style="display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden;"></p>
+                        
+                        <p class="mb-1 text-muted small">Giảng viên phụ trách:</p>
+                        <p class="fw-bold mb-0 text-dark" id="dtlTeacherName"></p>
                     </div>
+
                     <div class="col-md-6">
-                        <h6 class="fw-bold text-primary mb-3"><i class="bi bi-credit-card-2-back me-2"></i>Thông tin thanh toán</h6>
+                        <h6 class="fw-bold text-primary mb-3"><i class="bi bi-wallet2 me-2"></i>Thanh toán & Phân bổ</h6>
+                        
                         <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Khóa học:</span>
-                            <span class="fw-bold text-end" id="dtlCourseTitle"></span>
+                            <span class="text-muted small">Ngày tạo đơn:</span>
+                            <span id="dtlCreatedAt" class="small fw-semibold text-dark"></span>
                         </div>
-                        <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Tổng số tiền:</span>
-                            <span class="fw-bold text-danger" id="dtlAmount"></span>
-                        </div>
-                        <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Ngày tạo đơn:</span>
-                            <span id="dtlCreatedAt"></span>
-                        </div>
-                        <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Trạng thái:</span>
+                        <div class="d-flex justify-content-between mb-3 align-items-center">
+                            <span class="text-muted small">Trạng thái:</span>
                             <span id="dtlStatusBadge"></span>
+                        </div>
+
+                        <div class="bg-light p-3 rounded-3 border">
+                            <div class="d-flex justify-content-between mb-3">
+                                <span class="text-muted fw-bold">Khách thanh toán:</span>
+                                <span class="fw-bold text-danger fs-5" id="dtlAmount"></span>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between mb-2 small">
+                                <span class="text-muted">Tỷ lệ hoa hồng:</span>
+                                <span class="fw-bold text-dark"><span id="dtlAppliedRate">0</span>%</span>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between mb-2 small">
+                                <span class="text-muted">Giảng viên nhận:</span>
+                                <span class="fw-bold text-success" id="dtlTeacherAmount"></span>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between small pt-2 mt-2 border-top border-secondary-subtle" id="adminRevenueRow">
+                                <span class="text-muted">Doanh thu sàn (Admin):</span>
+                                <span class="fw-bold text-primary" id="dtlAdminAmount"></span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -157,14 +211,15 @@
                 <div class="bg-light p-3 rounded-3 border">
                     <h6 class="fw-bold mb-3 small text-uppercase text-muted"><i class="bi bi-terminal me-2"></i>Dữ liệu phản hồi từ VNPay</h6>
                     <div class="row small">
-                        <div class="col-6 mb-2">Mã giao dịch VNPay: <strong id="dtlVnpayTranNo" class="text-primary">N/A</strong></div>
-                        <div class="col-6 mb-2">Mã Ngân hàng: <strong id="dtlBankCode">N/A</strong></div>
-                        <div class="col-12">Nội dung: <em id="dtlOrderDesc" class="text-muted"></em></div>
+                        <div class="col-sm-6 mb-2">Mã giao dịch VNPay: <strong id="dtlVnpayTranNo" class="text-primary">N/A</strong></div>
+                        <div class="col-sm-6 mb-2">Mã trạng thái API: <strong id="dtlTransactionStatus">N/A</strong></div>
+                        <div class="col-12 mt-1">Nội dung: <em id="dtlOrderDesc" class="text-muted"></em></div>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-light fw-bold" data-bs-dismiss="modal">Đóng cửa sổ</button>
+
+            <div class="modal-footer border-0 bg-light" style="border-radius: 0 0 15px 15px;">
+                <button type="button" class="btn btn-outline-secondary fw-bold px-4" data-bs-dismiss="modal">Đóng</button>
                 <button type="button" class="btn btn-primary fw-bold px-4 shadow-sm" onclick="window.print()">
                     <i class="bi bi-printer me-2"></i>In hóa đơn
                 </button>
@@ -175,8 +230,11 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/twbs-pagination/1.4.2/jquery.twbsPagination.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="../assets/js/managerOrder.js"></script>
 <script src="../assets/js/admin-loader.js"></script>
+<script src="../assets/js/global-loader.js"></script>
+<script src="../assets/js/common.js"></script>
 </body>
 </html>

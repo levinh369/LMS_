@@ -35,6 +35,7 @@ namespace LMS.DTOs.Respone
         public bool IsCompleted { get; set; }
         public DateTime UpdatedAt { get; set; }
         public string LockedByRole {  get; set; }
+        public string DeletedByRole {  get; set; }
         
     }
     public class CourseResponeDetailDTO
@@ -50,6 +51,8 @@ namespace LMS.DTOs.Respone
         public bool IsActive { get; set; }
         public DateTime CreateAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+        public string LockedByRole { get; set; }
+        public string DeletedByRole { get; set; }
         public List<LessonResponseDTO> Lessons { get; set; } = new List<LessonResponseDTO>();
     }
     public class CourseLookupDTO

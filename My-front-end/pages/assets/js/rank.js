@@ -10,7 +10,7 @@ const Toast = Swal.mixin({
     }
 });
 const Rank = {
-    baseUrl: 'https://lms-u2jn.onrender.com/api/Rank',
+    baseUrl: 'http://127.0.0.1:5000/api/Rank',
     init: function () {
         this.loadDashboard();
         this.registerEvents();
@@ -28,43 +28,57 @@ const Rank = {
     },
 
     // 1. Load dữ liệu tổng hợp cho trang quản lý
-    loadDashboard: async function () {
-        try {
-            const response = await fetch(`${this.baseUrl}/dashboard`);
-            if (!response.ok) throw new Error('Network response was not ok');
-            
-            const data = await response.json();
+  loadDashboard: async function () {
+    try {
+        // 📍 1. Lấy Token từ kho
+        const token = localStorage.getItem("jwt_token");
 
-            // Đổ dữ liệu vào Widgets
-            this.updateWidgets(data);
+        // 📍 2. Chuyển sang $.ajax để hệ thống tự động kẹp vé thông hành
+        const data = await $.ajax({
+            url: `${this.baseUrl}/dashboard`,
+            type: 'GET',
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
 
-            // Đổ dữ liệu vào Table
-            this.renderTable(data.rankConfigs);
+        // $.ajax đã trả về object 'data' (JSON đã parse) nên xài luôn
+        // Đổ dữ liệu vào Widgets
+        this.updateWidgets(data);
 
-            // Cập nhật Switch
-            const autoSwitch = document.getElementById('autoRankSwitch');
-            if (autoSwitch) autoSwitch.checked = data.isAutoRankingEnabled;
+        // Đổ dữ liệu vào Table
+        this.renderTable(data.rankConfigs);
 
-        } catch (error) {
-            console.error('Lỗi load dashboard:', error);
-            // Toast.error("Không thể tải dữ liệu hạng"); // Nếu bác có dùng thư viện Toast
+        // Cập nhật Switch
+        const autoSwitch = document.getElementById('autoRankSwitch');
+        if (autoSwitch) autoSwitch.checked = data.isAutoRankingEnabled;
+
+    } catch (error) {
+        console.error('Lỗi load dashboard:', error);
+        
+        // Bắt lỗi 401 để báo người dùng biết
+        if (error.status === 401) {
+            console.warn("Phiên đăng nhập hết hạn khi load dashboard!");
+        } else {
+            // Toast.error("Không thể tải dữ liệu hạng"); 
         }
-    },
+    }
+},
 
     // 2. Cập nhật các con số trên thẻ thống kê
-    updateWidgets: function (data) {
-        // Cập nhật số liệu dựa trên cấu trúc HTML bác đã có
-        document.querySelector('.card.border-primary .h5').innerText = data.totalTeachers;
-        document.querySelector('.card.border-success .h5').innerText = this.formatCurrency(data.monthlyPlatformRevenue);
-        
-        const highRankCount = data.rankConfigs
-            .filter(r => r.rankEnum >= 2)
-            .reduce((sum, r) => sum + r.teacherCount, 0);
-            
-        document.querySelector('.card.border-warning .h5').innerText = highRankCount;
-        document.querySelector('.card.border-info .h5').innerText = data.pendingRankRequests;
-    },
+   updateWidgets: function (data) {
+        // 1. Tổng Giảng viên 
+        document.getElementById('widget-total-teachers').innerText = data.totalTeachers;
 
+        // 2. Lợi nhuận sàn tháng này 
+        document.getElementById('widget-monthly-profit').innerText = this.formatCurrency(data.monthlyPlatformRevenue);
+        
+        // 3. Hạng Vàng/KC (Lấy thẳng từ Backend trả về, không cần tính lại)
+        document.getElementById('widget-high-rank').innerText = data.vipTeachersCount;
+        
+        // 4. Giảng viên mới trong tháng 
+        document.getElementById('widget-new-teachers').innerText = data.newTeachersThisMonth;
+    },
     // 3. Render bảng danh sách Rank
     renderTable: function (configs) {
         const tbody = document.getElementById('rank-table-body');
@@ -118,74 +132,101 @@ const Rank = {
         };
 
         try {
-            const response = await fetch(`${this.baseUrl}/ranks/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+            GlobalLoader.show();
+            
+            // 📍 1. Lấy Token từ kho
+            const token = localStorage.getItem("jwt_token");
+
+            // 📍 2. Dùng $.ajax để tự động kẹp vé thông hành
+            const result = await $.ajax({
+                url: `${this.baseUrl}/ranks/${id}`,
+                type: 'PUT',
+                contentType: 'application/json',
+                data: JSON.stringify(payload),
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
             });
 
-            // Parse JSON để lấy nội dung từ Backend
-            const result = await response.json();
-
-            if (response.ok) {
-                // Hiện Toast thông báo thành công màu xanh
-                Toast.fire({
-                    icon: 'success',
-                    title: result.message || 'Cập nhật thành công!'
-                });
-                
-                this.loadDashboard(); // Refresh lại số liệu
-            } else {
-                Toast.fire({
-                    icon: 'error',
-                    title: result.message || 'Cập nhật thất bại. Vui lòng kiểm tra lại!'
-                });
-            }
+            // Nếu $.ajax thành công, 'result' đã là object JSON rồi
+            Toast.fire({
+                icon: 'success',
+                title: result.message || 'Cập nhật thành công!'
+            });
+            
+            this.loadDashboard(); // Refresh lại số liệu
+            
         } catch (error) {
             console.error("Lỗi:", error);
+            
+            // 📍 Xử lý báo lỗi chi tiết
+            let errorMsg = 'Lỗi kết nối đến server!';
+            if (error.responseJSON && error.responseJSON.message) {
+                errorMsg = error.responseJSON.message;
+            } else if (error.status === 401) {
+                errorMsg = 'Phiên đăng nhập hết hạn!';
+            }
+
             Toast.fire({
                 icon: 'error',
-                title: 'Lỗi kết nối đến server!'
+                title: errorMsg
             });
+        } finally {
+            GlobalLoader.hide();
         }
     },
-
     // 5. Mở Modal và load danh sách giảng viên
     showTeacherList: async function (rankEnum, rankName) {
-        const modal = new bootstrap.Modal(document.getElementById('teacherListModal'));
-        document.getElementById('modalRankName').innerText = rankName;
-        const tbody = document.getElementById('modalTeacherTableBody');
+    const modal = new bootstrap.Modal(document.getElementById('teacherListModal'));
+    document.getElementById('modalRankName').innerText = rankName;
+    const tbody = document.getElementById('modalTeacherTableBody');
+    
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center"><div class="spinner-border spinner-border-sm text-primary"></div></td></tr>';
+    modal.show();
+
+    try {
+        // 📍 1. Lấy Token từ kho
+        const token = localStorage.getItem("jwt_token");
+
+        // 📍 2. Chuyển sang $.ajax và kẹp vé thông hành
+        const teachers = await $.ajax({
+            url: `${this.baseUrl}/teachers-by-rank?rank=${rankEnum}`,
+            type: 'GET',
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        // 📍 3. Render dữ liệu
+        tbody.innerHTML = teachers.length > 0 ? teachers.map(u => `
+            <tr>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <img src="${u.avatarUrl || '/assets/img/default-avatar.png'}" 
+                             class="rounded-circle me-2" width="30" height="30" style="object-fit:cover"
+                            onerror="this.onerror=null; this.src='../assets/img/default-avatar.png';">
+                        <span class="small fw-bold">${u.fullName}</span>
+                    </div>
+                </td>
+                <td class="small text-muted">${u.email}</td>
+                <td class="small fw-bold text-success">${this.formatCurrency(u.totalRevenue)}</td>
+                <td class="text-end">
+                    <a href="/pages/managerUser/index.html?openId=${u.userId}" class="btn btn-sm btn-light border">
+                        <i class="bi bi-arrow-right"></i>
+                    </a>
+                </td>
+            </tr>
+        `).join('') : '<tr><td colspan="4" class="text-center p-4">Không có giảng viên nào</td></tr>';
+
+    } catch (error) {
+        console.error("Lỗi tải danh sách giảng viên:", error);
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Lỗi tải danh sách</td></tr>';
         
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center"><div class="spinner-border spinner-border-sm text-primary"></div></td></tr>';
-        modal.show();
-
-        try {
-            const response = await fetch(`${this.baseUrl}/teachers-by-rank?rank=${rankEnum}`);
-            const teachers = await response.json();
-
-            tbody.innerHTML = teachers.length > 0 ? teachers.map(u => `
-                <tr>
-                    <td>
-                        <div class="d-flex align-items-center">
-                            <img src="${u.avatarUrl || '../assets/img/default-avatar.png'}" class="rounded-circle me-2" width="30" height="30" style="object-fit:cover">
-                            <span class="small fw-bold">${u.fullName}</span>
-                        </div>
-                    </td>
-                    <td class="small text-muted">${u.email}</td>
-                    <td class="small fw-bold text-success">${this.formatCurrency(u.totalRevenue)}</td>
-                    <td class="text-end">
-                        <a href="/pages/managerUser/index.html?openId=${u.userId}" class="btn btn-sm btn-light border">
-                            <i class="bi bi-arrow-right"></i>
-                        </a>
-                    </td>
-                </tr>
-            `).join('') : '<tr><td colspan="4" class="text-center p-4">Không có giảng viên nào</td></tr>';
-
-        } catch (error) {
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Lỗi tải danh sách</td></tr>';
+        if (error.status === 401) {
+            console.warn("Token hết hạn khi tải danh sách giảng viên.");
         }
-    },
-
+    }
+},
     // Helpers
     formatCurrency: function (value) {
         return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);

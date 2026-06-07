@@ -2,12 +2,14 @@
 using LMS.Services;
 using LMS.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
 namespace LMS.Controllers
 {
+    [Authorize(Roles = "Admin")]
     [Route("api/[controller]")]
     [ApiController]
     public class InstructorApplicationController : ControllerBase
@@ -42,12 +44,22 @@ namespace LMS.Controllers
                 return BadRequest(new { message = "Lỗi khi lấy danh sách hồ sơ: " + ex.Message });
             }
         }
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteAynsc(int id)
+        {
+            await _instructorService.DeleteAsync(id);
+            return Ok(new
+            {
+                message = "Xóa đơn ứng tuyển thành công"
+            });
+        }
         [HttpGet("{id}")]
         public async Task<IActionResult> GetAppAsync(int id)
         {
             var app = await _instructorService.DetailApplicationAsync(id);
             return Ok(app);
         }
+        [AllowAnonymous]
         [HttpPost("apply")]
         [Authorize] // Bắt buộc user phải đăng nhập
         public async Task<IActionResult> Apply([FromForm] ApplyInstructorRequestDTO dto)
@@ -74,7 +86,6 @@ namespace LMS.Controllers
         }
 
         [HttpGet("pending")]
-        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetPendingApplications()
         {
             try
@@ -88,7 +99,6 @@ namespace LMS.Controllers
             }
         }
         [HttpPost("{id}/approve")]
-        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Approve(int id)
         {
             try
@@ -104,7 +114,6 @@ namespace LMS.Controllers
             }
         }
         [HttpPost("{id}/reject")]
-        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Reject(int id, [FromBody] RejectApplicationRequestDTO dto)
         {
             try

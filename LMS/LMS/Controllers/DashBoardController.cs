@@ -1,6 +1,8 @@
 ﻿using LMS.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace LMS.Controllers
@@ -14,7 +16,27 @@ namespace LMS.Controllers
         {
             _dashboardService = dashboardService;
         }
+        [Authorize]
+        [HttpGet("pending-counts")]
+        public async Task<IActionResult> GetPendingCounts()
+        {
+            try
+            {
+                // Gọi qua tầng Service để lấy data
+                var counts = await _dashboardService.GetPendingCountsAsync();
 
+                return Ok(new
+                {
+                    Success = true,
+                    Data = counts
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Success = false, Message = ex.Message });
+            }
+        }
+        [Authorize(Roles = "Admin")]
         [HttpGet("statistics")]
         public async Task<IActionResult> GetStatistics(DateTime? fromDate, DateTime? toDate)
         {
@@ -24,6 +46,7 @@ namespace LMS.Controllers
             var result = await _dashboardService.GetAdminDashboardData(start, end);
             return Ok(result);
         }
+        [Authorize(Roles = "Teacher")]
         [HttpGet("dashboard-data")]
         public async Task<IActionResult> GetDashboardData([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
         {

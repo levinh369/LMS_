@@ -13,7 +13,7 @@ const Toast = Swal.mixin({
 
 var Apply = {
     config: {
-        apiUrl: 'https://lms-u2jn.onrender.com/api/InstructorApplication',
+        apiUrl: 'http://127.0.0.1:5000/api/InstructorApplication',
         tokenKey: 'jwt_token',
         maxFileSize: 5 * 1024 * 1024 
     },

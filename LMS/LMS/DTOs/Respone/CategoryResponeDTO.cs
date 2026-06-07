@@ -7,5 +7,6 @@
         public string? Description { get; set; }
         public DateTime CreateAt { get; set; }
         public bool IsActive { get; set; }
+        public DateTime UpdateAt {  get; set; }
     }
 }

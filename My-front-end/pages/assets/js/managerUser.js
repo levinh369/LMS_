@@ -14,8 +14,8 @@ const Toast = Swal.mixin({
 var Manager = {
     config: {
         pageSize: 10,
-        apiUrl: "https://lms-u2jn.onrender.com/api/user",
-        apiUrlEnroll: "https://lms-u2jn.onrender.com/api/Enroll"
+        apiUrl: "http://127.0.0.1:5000/api/user",
+        apiUrlEnroll: "http://127.0.0.1:5000/api/Enroll"
     },
     roleId: 0,
     tempCourses: {},
@@ -140,7 +140,7 @@ var Manager = {
     try {
         const token = localStorage.getItem("jwt_token"); // Hoặc "access_token" tùy bác lưu
         if (!token) return;
-        const response = await fetch('https://lms-u2jn.onrender.com/api/course/lookup', {
+        const response = await fetch('http://127.0.0.1:5000/api/course/lookup', {
             method: 'GET',
             headers: { 
                 "Authorization": "Bearer " + token,
@@ -169,7 +169,7 @@ var Manager = {
         const user = JSON.parse(userInfoRaw);
         const roleId = parseInt(user.role);
         const pageSize = this.config.pageSize || 10; 
-
+        TableLoader.show('#user-table-body');
         // Khởi tạo params với các giá trị dùng chung
         const params = new URLSearchParams({
             page: page,
@@ -345,10 +345,14 @@ softDeleteBulk: function() {
         confirmButtonColor: '#d33',
         cancelButtonColor: '#6c757d',
         confirmButtonText: 'Đồng ý xóa',
-        cancelButtonText: 'Hủy',
-        showLoaderOnConfirm: true, 
-        preConfirm: async () => {
+        cancelButtonText: 'Hủy'
+        // BỎ showLoaderOnConfirm và preConfirm đi để tránh xung đột UI
+    }).then(async (result) => {
+        if (result.isConfirmed) {
             try {
+                // 1. BẬT GLOBAL LOADER KHÓA MÀN HÌNH NGAY KHI USER BẤM ĐỒNG Ý
+                GlobalLoader.show();
+
                 const response = await fetch(`${this.config.apiUrl}/soft-delete-bulk`, {
                     method: 'POST',
                     headers: {
@@ -359,53 +363,54 @@ softDeleteBulk: function() {
                 });
                 
                 const res = await response.json();
+                
                 if (!response.ok) {
                     throw new Error(res.Message || res.message || 'Lỗi từ server');
                 }
-                return res;
-            } catch (error) {
-                Swal.showValidationMessage(`Lỗi: ${error.message}`);
-            }
-        },
-        allowOutsideClick: () => !Swal.isLoading()
-    }).then((result) => {
-        // Kiểm tra result.value tồn tại (dữ liệu trả về từ preConfirm)
-        if (result.isConfirmed && result.value) {
-            
-            // Check cả Success (C# mặc định) và success (JSON camelCase)
-            const isSuccess = result.value.Success || result.value.success;
 
-            if (isSuccess) {
-                // Hiển thị thông báo Toast
-                if (typeof Toast !== 'undefined') {
+                const isSuccess = res.Success || res.success;
+                if (isSuccess) {
                     Toast.fire({
                         icon: 'success',
-                        title: result.value.Message || result.value.message || 'Thành công!'
+                        title: res.Message || res.message || 'Thành công!'
                     });
+                    Manager.uncheckAll(); 
+                    Manager.loadData(1); 
                 } else {
-                    Swal.fire('Thành công', result.value.Message || 'Đã chuyển vào thùng rác', 'success');
+                    Toast.fire({
+                        icon: 'error',
+                        title: res.Message || res.message || 'Có lỗi xảy ra'
+                    });
                 }
-
-                // Gọi qua object Manager để đảm bảo chính xác context
-                Manager.uncheckAll(); 
-                Manager.loadData(1); 
-            } else {
-                Swal.fire('Thất bại', result.value.Message || result.value.message || 'Có lỗi xảy ra', 'error');
+            } catch (error) {
+                console.error(error);
+                Toast.fire({
+                    icon: 'error',
+                    title: `Lỗi: ${error.message}`
+                });
+            } finally {
+                // 2. LUÔN LUÔN TẮT GLOBAL LOADER KHI KẾT THÚC
+                GlobalLoader.hide();
             }
         }
     });
 },
 openCourseModal: function(userId, fullName) {
-        $('#managedUserId').val(userId);
-        $('#managedStudentName').text(fullName);
-        // Bốc mảng courses từ biến tạm mà bác đã lưu lúc render bảng
-        const courses = this.tempCourses[userId] || [];
-        this.renderManagedCourses(userId, courses);
-        
-        bootstrap.Modal.getOrCreateInstance('#courseManagementModal').show();
-    },
+    $('#managedUserId').val(userId);
+    $('#managedStudentName').text(fullName);
+    
+    const courses = this.tempCourses[userId] || [];
+    this.renderManagedCourses(userId, courses);
+    
+    // Dọn dẹp các lớp sương mờ bị kẹt (nếu có) do bấm lỗi trước đó
+    $('.modal-backdrop').remove(); 
+    
+    // Bứng Modal ra sát body và bật lên
+    $('#courseManagementModal').appendTo("body").modal('show');
+}, 
 
     renderManagedCourses: function(userId, courses) {
+        debugger
     let html = '';
     if (courses && courses.length > 0) {
         courses.forEach(c => {
@@ -452,42 +457,66 @@ openCourseModal: function(userId, fullName) {
     }
     $('#managedCourseList').html(html);
 },
-    unenroll: function(userId, courseId, courseName) {
-        Swal.fire({
-            title: 'Xác nhận xóa?',
-            text: `Học viên sẽ bị loại khỏi khóa "${courseName}". Thao tác này không thể hoàn tác!`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            confirmButtonText: 'Đồng ý xóa',
-            cancelButtonText: 'Bỏ qua'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $.ajax({
-                    url: `${this.config.apiUrlEnroll}/unenroll?studentId=${userId}&courseId=${courseId}`, // URL API unenroll
+   unenroll: function(userId, courseId, courseName) {
+    Swal.fire({
+        title: 'Xác nhận xóa?',
+        text: `Học viên sẽ bị loại khỏi khóa "${courseName}". Thao tác này không thể hoàn tác!`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Đồng ý xóa',
+        cancelButtonText: 'Bỏ qua'
+    }).then(async (result) => { // Thêm async ở đây để dùng await
+        if (result.isConfirmed) {
+            try {
+                // 1. KHÓA MÀN HÌNH TRÁNH SPAM CLICK
+                GlobalLoader.show();
+
+                // Chuyển sang dùng await $.ajax nhìn code cực kỳ gọn và hiện đại
+                const res = await $.ajax({
+                    url: `${this.config.apiUrlEnroll}/unenroll?studentId=${userId}&courseId=${courseId}`,
                     type: 'DELETE',
-                    headers: { "Authorization": "Bearer " + localStorage.getItem("jwt_token") },
-                    success: (res) => {
-                        if (res.success) {
-                            Swal.fire('Thành công', 'Đã hủy đăng ký khóa học cho học viên.', 'success');
-                            
-                            // 1. Cập nhật ngay biến tạm để đồng bộ dữ liệu
-                            this.tempCourses[userId] = this.tempCourses[userId].filter(x => x.courseId !== courseId);
-                            
-                            // 2. Render lại danh sách trong Modal quản lý
-                            this.renderManagedCourses(userId, this.tempCourses[userId]);
-                            
-                            // 3. Load lại bảng chính để mất Badge khóa học
-                            this.loadData(); 
-                        }
-                    },
-                    error: (err) => {
-                        Swal.fire('Lỗi', 'Không thể thực hiện yêu cầu lúc này.', 'error');
-                    }
+                    headers: { "Authorization": "Bearer " + localStorage.getItem("jwt_token") }
                 });
+
+                // Check cả success (camelCase) hoặc Success từ server trả về
+                if (res.success || res.Success) {
+                    // 2. ĐỒNG BỘ: Hiện thông báo Toast góc màn hình cho tinh tế
+                    Toast.fire({
+                        icon: 'success',
+                        title: res.message || res.Message || 'Đã hủy đăng ký khóa học!'
+                    });
+                    
+                    // Cập nhật ngay biến tạm để đồng bộ dữ liệu
+                    this.tempCourses[userId] = this.tempCourses[userId].filter(x => x.courseId !== courseId);
+                    
+                    // Render lại danh sách trong Modal quản lý
+                    this.renderManagedCourses(userId, this.tempCourses[userId]);
+                    
+                    // Load lại bảng chính để mất Badge khóa học
+                    this.loadData(); 
+                } else {
+                    Toast.fire({
+                        icon: 'error',
+                        title: res.message || res.Message || 'Hủy đăng ký thất bại!'
+                    });
+                }
+
+            } catch (error) {
+                console.error("Lỗi unenroll:", error);
+                let errorMsg = error.responseJSON?.message || error.responseJSON?.Message || 'Không thể thực hiện yêu cầu lúc này.';
+                Toast.fire({
+                    icon: 'error',
+                    title: errorMsg
+                });
+            } finally {
+                // 3. GIẢI PHÓNG MÀN HÌNH LUÔN NẰM Ở FINALLY
+                GlobalLoader.hide();
             }
-        });
-    },
+        }
+    });
+},
 // ==========================================
     // HÀM openDetail ĐÃ FIX LỖI HIỂN THỊ TAB
     // ==========================================
@@ -569,34 +598,37 @@ openCourseModal: function(userId, fullName) {
     // ==========================================
     // 3. HÀM MỞ THÊM MỚI (CREATE)
     // ==========================================
-    openCreateModal: function () {
-        if ($('#frmUser').length > 0) {
-            $('#frmUser')[0].reset(); 
-        }
-        $('#createdAtInput').val(''); 
-        $('#userDetail-history-body').empty(); 
-        $('#userDetail-history-pagination').empty(); 
-        
-        $('input[name="isActive"]').prop('checked', true); 
-        $('#roleSelect').val('2'); 
+   openCreateModal: function () {
+    if ($('#frmUser').length > 0) {
+        $('#frmUser')[0].reset(); 
+    }
+    $('#createdAtInput').val(''); 
+    $('#userDetail-history-body').empty(); 
+    $('#userDetail-history-pagination').empty(); 
+    
+    $('input[name="isActive"]').prop('checked', true); 
+    
+    // === ĐÃ BỎ DÒNG GÁN MẶC ĐỊNH LÀ 2 ===
+    // Thay vào đó, nếu bác muốn nó reset về lựa chọn đầu tiên (ví dụ: "Chọn vai trò" hoặc option đầu) thì dùng dòng dưới:
+    $('#modalRoleId').prop('selectedIndex', 0); 
 
-        $('#modalTitle').text('Thêm Người Dùng Mới');
-        $('#emailInput').prop('readonly', false).removeClass('bg-light'); 
-        $('#createdAtContainer').hide();
-        $('#passArea').show();
-        
-        this.setReadOnly(false);
-        $('.modal-footer').show();
+    $('#modalTitle').text('Thêm Người Dùng Mới');
+    $('#emailInput').prop('readonly', false).removeClass('bg-light'); 
+    $('#createdAtContainer').hide();
+    $('#passArea').show();
+    
+    this.setReadOnly(false);
+    $('.modal-footer').show();
 
-        // Ẩn thanh menu Tabs đi bằng d-none và ép về tab thông tin
-        $('#userModalTabs').addClass('d-none');
-        const tabTarget = document.getElementById('info-tab');
-        if (tabTarget) {
-            bootstrap.Tab.getOrCreateInstance(tabTarget).show();
-        }
+    // Ẩn thanh menu Tabs đi bằng d-none và ép về tab thông tin
+    $('#userModalTabs').addClass('d-none');
+    const tabTarget = document.getElementById('info-tab');
+    if (tabTarget) {
+        bootstrap.Tab.getOrCreateInstance(tabTarget).show();
+    }
 
-        bootstrap.Modal.getOrCreateInstance('#userModal').show();
-    },
+    bootstrap.Modal.getOrCreateInstance('#userModal').show();
+}, 
     loadUserWithdrawHistory: async function (userId, pageIndex = 1) {
         const historyBody = document.getElementById('userDetail-history-body');
         const paginationDiv = document.getElementById('userDetail-history-pagination');
@@ -608,7 +640,7 @@ openCourseModal: function(userId, fullName) {
         const token = localStorage.getItem("jwt_token");
 
         try {
-            const response = await fetch(`https://lms-u2jn.onrender.com/api/Withdrawal/admin/teacher-history/${userId}?pageIndex=${pageIndex}&pageSize=5`, {
+            const response = await fetch(`http://127.0.0.1:5000/api/Withdrawal/admin/teacher-history/${userId}?pageIndex=${pageIndex}&pageSize=5`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -765,6 +797,7 @@ loadDetail: async function (id) {
     }
 
         try {
+            GlobalLoader.show();
             const response = await fetch(isUpdate ? `${this.config.apiUrl}/${id}` : this.config.apiUrl, {
                 method: isUpdate ? 'PUT' : 'POST',
                 headers: { 'Content-Type': 'application/json', "Authorization": "Bearer " + localStorage.getItem("jwt_token") },
@@ -778,6 +811,10 @@ loadDetail: async function (id) {
             }
         } catch (error) {
             Toast.fire({ icon: 'error', title: 'Lỗi khi lưu dữ liệu' });
+        }
+        finally {
+            // LUÔN LUÔN TẮT GLOBAL LOADER KHI XỬ LÝ XONG
+            GlobalLoader.hide();
         }
     },
 
@@ -797,24 +834,39 @@ loadDetail: async function (id) {
         }
     },
 
-    deleteUser: function(id, name) {
+   deleteUser: function(id, name) {
         Swal.fire({
             title: 'Xóa người dùng?',
             text: `Bạn có chắc muốn xóa "${name}"?`,
             icon: 'warning',
             showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
             confirmButtonText: 'Xóa luôn!',
             cancelButtonText: 'Hủy'
         }).then(async (result) => {
             if (result.isConfirmed) {
-                const response = await fetch(`${this.config.apiUrl}/${id}`, {
-                    method: 'DELETE',
-                    headers: { "Authorization": "Bearer " + localStorage.getItem("jwt_token") }
-                });
-                const res = await response.json();
-                if (res.success || res.Success) {
-                    Toast.fire({ icon: 'success', title: 'Đã xóa thành công' });
-                    this.loadData(1);
+                try {
+                    // BẬT LOADER KHÓA MÀN HÌNH KHI ĐANG GỌI XÓA
+                    GlobalLoader.show();
+
+                    const response = await fetch(`${this.config.apiUrl}/${id}`, {
+                        method: 'DELETE',
+                        headers: { "Authorization": "Bearer " + localStorage.getItem("jwt_token") }
+                    });
+                    const res = await response.json();
+                    if (res.success || res.Success) {
+                        // ĐỒNG BỘ: Sửa thành Toast cho mượt
+                        Toast.fire({ icon: 'success', title: res.message || res.Message || 'Đã xóa thành công' });
+                        this.loadData(1);
+                    } else {
+                        Toast.fire({ icon: 'error', title: res.message || res.Message || 'Không thể xóa người dùng!' });
+                    }
+                } catch (error) {
+                    Toast.fire({ icon: 'error', title: 'Lỗi hệ thống khi xóa dữ liệu' });
+                } finally {
+                    // GIẢI PHÓNG MÀN HÌNH
+                    GlobalLoader.hide();
                 }
             }
         });
@@ -830,7 +882,21 @@ loadDetail: async function (id) {
         $('#userId').val('');
         this.updateStatusLabel(true);
     },
+    resetSearch: function() {
+    // 1. Reset ô tìm kiếm từ khóa text
+    $('#keySearch').val('');
 
+    // 2. Reset các ô chọn (Select) về giá trị mặc định -1 (Tất cả)
+    $('#roleId').val('-1');
+    $('#courseId').val('-1');
+    $('#isActive').val('-1');
+
+    // 3. Reset các ô chọn ngày tháng về trống
+    $('#fromDate').val('');
+    $('#toDate').val('');
+
+    this.loadData(1);
+},
     updateStatusLabel: function(isActive) {
         const label = $('#statusLabel');
         if(isActive) label.text('Đang hoạt động').addClass('text-success').removeClass('text-danger');
@@ -863,7 +929,7 @@ loadDetail: async function (id) {
         },
 
         loadData: async function(page) {
-            debugger
+            TableLoader.show('#user-trash-table-body');
             const keySearch = $('#search-user-trash').val() || "";
             const roleId = $('#filter-role-trash').val() || 0;
             const pageSize = Manager.config.pageSize;
@@ -909,11 +975,24 @@ loadDetail: async function (id) {
                             </div>
                         </td>
                         <td>${item.email}</td>
-                        <td><span class="badge bg-info-subtle text-info border border-info-subtle">${item.roleName || 'Học viên'}</span></td>
+                        <td>
+                            ${(() => {
+                                const role = (item.roleName || '').toLowerCase().trim();
+                                
+                                if (role === 'teacher') {
+                                    return `<span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">Giảng viên</span>`;
+                                } 
+                                if (role === 'student') {
+                                    return `<span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1">Học viên</span>`;
+                                }
+                                
+                                return `<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">${item.roleName}</span>`;
+                            })()}
+                        </td>
                         <td class="text-muted">${new Date(item.updatedAt).toLocaleDateString('vi-VN')}</td>
                        
                         <td class="text-center">
-                            <button class="btn-action btn-restore me-1" onclick="Manager.trash.restoreBulk(${item.id})" title="Khôi phục">
+                            <button class="btn-action btn-restore me-1" onclick="Manager.trash.restore(${item.id})" title="Khôi phục">
                                 <i class="bi bi-arrow-counterclockwise"></i>
                             </button>
                             <button class="btn-action btn-delete-forever" onclick="Manager.trash.hardDelete(${item.id})" title="Xóa vĩnh viễn">
@@ -926,130 +1005,188 @@ loadDetail: async function (id) {
             tbody.innerHTML = html;
         },
 
-       restore: function(id) {
-            Swal.fire({
-                title: 'Khôi phục khóa học?',
-                text: "Người dùng này sẽ quay lại danh sách hiển thị chính.",
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#198754',
-                confirmButtonText: 'Đồng ý',
-                cancelButtonText: 'Hủy'
-            }).then(async (result) => {
-                if (result.isConfirmed) {
-                    const response = await fetch(`${Manager.config.apiUrl}/restore/${id}`, { method: 'POST' });
-                    const res = await response.json();
-                    if (res.success || res.Success) {
-                        Swal.fire('Thành công!', 'Đã khôi phục người dùng.', 'success');
-                        this.loadData(1);
-                    }
-                }
-            });
-        },
+      restore: function(id) {
+        Swal.fire({
+            title: 'Khôi phục tài khoản?',
+            text: "Người dùng này sẽ quay lại danh sách hiển thị chính.",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#198754',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Đồng ý',
+            cancelButtonText: 'Hủy'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    // KHÓA MÀN HÌNH KHI GỌI API KHÔI PHỤC
+                    GlobalLoader.show();
 
-        hardDelete: function(id) {
-            Swal.fire({
-                title: 'Xóa vĩnh viễn?',
-                text: "Dữ liệu sẽ bị xóa sạch khỏi hệ thống và không thể khôi phục!",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                confirmButtonText: 'Xóa ngay',
-                cancelButtonText: 'Hủy'
-            }).then(async (result) => {
-                if (result.isConfirmed) {
-                    const response = await fetch(`${Manager.config.apiUrl}/hard-delete/${id}`, { method: 'DELETE' });
+                    const response = await fetch(`${Manager.config.apiUrl}/restore/${id}`, { 
+                        method: 'POST',
+                        headers: { "Authorization": "Bearer " + localStorage.getItem("jwt_token") }
+                    });
                     const res = await response.json();
+                    
                     if (res.success || res.Success) {
-                        Swal.fire('Đã xóa!', 'Khóa học đã bị xóa vĩnh viễn.', 'success');
+                        Toast.fire({ icon: 'success', title: 'Đã khôi phục người dùng thành công.' });
                         this.loadData(1);
                     } else {
-                        Swal.fire('Thất bại!', res.message || 'Có lỗi xảy ra.', 'error');
+                        Toast.fire({ icon: 'error', title: res.message || res.Message || 'Khôi phục thất bại.' });
                     }
+                } catch (error) {
+                    console.error(error);
+                    Toast.fire({ icon: 'error', title: 'Lỗi kết nối máy chủ.' });
+                } finally {
+                    GlobalLoader.hide();
                 }
-            });
-        },
-        restoreBulk: function() {
-    const ids = this.getSelectedIds();
-    if (ids.length === 0) return;
-
-    Swal.fire({
-        title: `Khôi phục ${ids.length} người dùng?`,
-        text: "Các tài khoản được chọn sẽ hoạt động trở lại bình thường.",
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#1976d2',
-        confirmButtonText: 'Đồng ý khôi phục',
-        cancelButtonText: 'Hủy'
-    }).then(async (result) => {
-        if (result.isConfirmed) {
-            try {
-                const response = await fetch(`${Manager.config.apiUrl}/restore-bulk`, {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + localStorage.getItem("jwt_token") // Thêm token nếu cần
-                    },
-                    body: JSON.stringify(ids)
-                });
-
-                const res = await response.json();
-                const isSuccess = res.success || res.Success;
-                const apiMessage = res.message || res.Message;
-
-                if (isSuccess) {
-                    Toast.fire({ 
-                        icon: 'success', 
-                        title: apiMessage || `Đã khôi phục thành công ${ids.length} tài khoản.` 
-                    });
-                    Manager.uncheckAll(); 
-                    this.loadData(1);    
-                } else {
-                    // Hiển thị lỗi trực tiếp từ Backend
-                    Swal.fire('Thất bại!', apiMessage || 'Có lỗi xảy ra.', 'error');
-                }
-            } catch (error) {
-                console.error("Lỗi restore hàng loạt:", error);
-                Swal.fire('Lỗi!', 'Không thể kết nối đến máy chủ.', 'error');
             }
-        }
-    });
-},
-        deleteBulk: function() {
-            const ids = this.getSelectedIds();
-            if (ids.length === 0) return;
+        });
+    },
 
-            Swal.fire({
-                title: `Xóa vĩnh viễn ${ids.length} mục?`,
-                text: "Dữ liệu người dùng sẽ bị xóa sạch hoàn toàn, hành động này không thể hoàn tác!",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                confirmButtonText: 'Xóa sạch ngay',
-                cancelButtonText: 'Hủy'
-            }).then(async (result) => {
-                if (result.isConfirmed) {
-                    try {
-                        const response = await fetch(`${Manager.config.apiUrl}/hard-delete-bulk`, {
-                            method: 'DELETE', 
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(ids)
-                        });
-                        const res = await response.json();
-                        if (res.success || res.Success) {
-                            Toast.fire({ icon: 'success', title: `Đã xóa vĩnh viễn ${ids.length} mục.` });
-                            this.loadData(1);
-                        } else {
-                            Swal.fire('Thất bại!', res.message || 'Có lỗi xảy ra.', 'error');
-                        }
-                    } catch (error) {
-                        console.error("Lỗi xóa hàng loạt:", error);
-                        Swal.fire('Lỗi!', 'Không thể kết nối đến máy chủ.', 'error');
+    hardDelete: function(id) {
+        Swal.fire({
+            title: 'Xóa vĩnh viễn?',
+            text: "Dữ liệu sẽ bị xóa sạch khỏi hệ thống và không thể khôi phục!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Xóa ngay',
+            cancelButtonText: 'Hủy'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    // KHÓA MÀN HÌNH KHI GỌI API XÓA VĨNH VIỄN
+                    GlobalLoader.show();
+
+                    const response = await fetch(`${Manager.config.apiUrl}/hard-delete/${id}`, { 
+                        method: 'DELETE',
+                        headers: { "Authorization": "Bearer " + localStorage.getItem("jwt_token") }
+                    });
+                    const res = await response.json();
+                    
+                    if (res.success || res.Success) {
+                        Toast.fire({ icon: 'success', title: 'Tài khoản đã bị xóa vĩnh viễn.' });
+                        this.loadData(1);
+                    } else {
+                        Toast.fire({ icon: 'error', title: res.message || res.Message || 'Xóa vĩnh viễn thất bại.' });
                     }
+                } catch (error) {
+                    console.error(error);
+                    Toast.fire({ icon: 'error', title: 'Lỗi kết nối máy chủ.' });
+                } finally {
+                    GlobalLoader.hide();
                 }
-            });
-        },
+            }
+        });
+    },
 
+    restoreBulk: function() {
+        const ids = this.getSelectedIds();
+        if (ids.length === 0) return;
+
+        Swal.fire({
+            title: `Khôi phục ${ids.length} người dùng?`,
+            text: "Các tài khoản được chọn sẽ hoạt động trở lại bình thường.",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#1976d2',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Đồng ý khôi phục',
+            cancelButtonText: 'Hủy'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    // KHÓA MÀN HÌNH KHI KHÔI PHỤC HÀNG LOẠT
+                    GlobalLoader.show();
+
+                    const response = await fetch(`${Manager.config.apiUrl}/restore-bulk`, {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + localStorage.getItem("jwt_token")
+                        },
+                        body: JSON.stringify(ids)
+                    });
+
+                    const res = await response.json();
+                    const isSuccess = res.success || res.Success;
+
+                    if (isSuccess) {
+                        Toast.fire({ 
+                            icon: 'success', 
+                            title: res.message || res.Message || `Đã khôi phục thành công ${ids.length} tài khoản.` 
+                        });
+                        if (typeof Manager.uncheckAll === 'function') Manager.uncheckAll(); 
+                        this.loadData(1);    
+                    } else {
+                        Toast.fire({ icon: 'error', title: res.message || res.Message || 'Có lỗi xảy ra.' });
+                    }
+                } catch (error) {
+                    console.error("Lỗi restore hàng loạt:", error);
+                    Toast.fire({ icon: 'error', title: 'Không thể kết nối đến máy chủ.' });
+                } finally {
+                    GlobalLoader.hide();
+                }
+            }
+        });
+    },
+resetSearch: function() {
+        // 1. Xóa chữ trong ô tìm kiếm thùng rác
+        $('#search-user-trash').val('');
+        $('#filter-role-trash').val('0');
+        if (typeof Manager.uncheckAll === 'function') {
+            Manager.uncheckAll();
+        }
+
+        // 5. Nạp lại trang đầu tiên của thùng rác (tự động ăn theo TableLoader.show)
+        this.loadData(1);
+    },
+    deleteBulk: function() {
+        const ids = this.getSelectedIds();
+        if (ids.length === 0) return;
+
+        Swal.fire({
+            title: `Xóa vĩnh viễn ${ids.length} mục?`,
+            text: "Dữ liệu người dùng sẽ bị xóa sạch hoàn toàn, hành động này không thể hoàn tác!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Xóa sạch ngay',
+            cancelButtonText: 'Hủy'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    // KHÓA MÀN HÌNH KHI XÓA HÀNG LOẠT VĨNH VIỄN
+                    GlobalLoader.show();
+
+                    const response = await fetch(`${Manager.config.apiUrl}/hard-delete-bulk`, {
+                        method: 'DELETE', 
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + localStorage.getItem("jwt_token")
+                        },
+                        body: JSON.stringify(ids)
+                    });
+                    const res = await response.json();
+                    
+                    if (res.success || res.Success) {
+                        Toast.fire({ icon: 'success', title: `Đã xóa vĩnh viễn ${ids.length} mục thành công.` });
+                        if (typeof Manager.uncheckAll === 'function') Manager.uncheckAll(); 
+                        this.loadData(1);
+                    } else {
+                        Toast.fire({ icon: 'error', title: res.message || res.Message || 'Có lỗi xảy ra.' });
+                    }
+                } catch (error) {
+                    console.error("Lỗi xóa hàng loạt vĩnh viễn:", error);
+                    Toast.fire({ icon: 'error', title: 'Không thể kết nối đến máy chủ.' });
+                } finally {
+                    GlobalLoader.hide();
+                }
+            }
+        });
+    },
         getSelectedIds: function() {
             return Array.from($('.item-check:checked')).map(cb => parseInt($(cb).val()));
         },

@@ -10,8 +10,8 @@ namespace LMS.Services.Interfaces
         Task<ChapterResponseDTO> GetByIdAsync(int id);
         Task<List<ChapterResponseDTO>> GetByCourseAsync(int courseId);
         Task<string> UpdateAsync(int id, ChapterRequestDTO dto);
-        Task<string> ChangeStatusAsync(int chapter);
-        Task DeleteAsync(int id);
+        Task ChangeStatusAsync(int chapterId, string role, int userId);
+        Task DeleteAsync(int id, string role, int userId);
         Task CreateAsync(ChapterRequestDTO dto);
         Task<ChapterModel> GetByIdOrThrowAsync(int id);
         Task<(List<ChapterResponseDTO> Data, int Total)> GetChaperListAsync(
@@ -19,8 +19,8 @@ namespace LMS.Services.Interfaces
         Task<bool> ReorderChaptersAsync(int courseId, List<int> chapterId);
 
         // --- Phần dành cho Thùng rác ---
-        Task RestoreAsync(int id);
-        Task HardDeleteAsync(int id);
+        Task RestoreAsync(int id, string role, int userId);
+        Task HardDeleteAsync(int id, string role, int userId);
         Task<(List<ChapterResponseDTO> Data, int Total)> GetDeletedChapterListAsync( int courseId,
             int page, int pageSize, string keySearch);
     }

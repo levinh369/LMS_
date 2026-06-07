@@ -1,3 +1,14 @@
+const Toast = Swal.mixin({
+    toast: true,
+    position: 'top-end', // Góc trên bên phải
+    showConfirmButton: false,
+    timer: 3000,
+    timerProgressBar: true,
+    didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer)
+        toast.addEventListener('mouseleave', Swal.resumeTimer)
+    }
+});
 const OrderApp = {
     init: function () {
         this.fetchOrders();
@@ -9,7 +20,7 @@ const OrderApp = {
         const $noOrder = $('#noOrder');
 
         $.ajax({
-            url: "https://lms-u2jn.onrender.com/api/User/my-orders", // Thay bằng URL API thật của bác
+            url: "http://127.0.0.1:5000/api/User/my-orders", // Thay bằng URL API thật của bác
             type: 'GET',
             headers: { "Authorization": "Bearer " + token },
             success: (res) => {
@@ -35,42 +46,63 @@ const OrderApp = {
         });
     },
 
-    generateOrderHtml: function (order) {
-        // Xử lý logic hiển thị dựa trên Status từ DTO của bác
-        const isSuccess = order.status === "Success" || order.status === "1";
+   generateOrderHtml: function (order) {
+        // Đưa status về dạng chữ để dễ so sánh
+        const currentStatus = String(order.status);
         
-        const statusBadge = isSuccess 
-            ? `<div class="status-badge status-success"><i class="bi bi-check-circle-fill me-1"></i> Thanh toán thành công</div>`
-            : `<div class="status-badge status-pending"><i class="bi bi-clock-history me-1"></i> Đang chờ thanh toán</div>`;
+        let statusBadge = '';
+        let actionButtons = '';
+        let opacityStyle = '';
 
-        const actionButtons = isSuccess
-            ? `<button class="btn btn-detail btn-sm" onclick="OrderApp.viewInvoice('${order.orderCode}')">Xem hóa đơn</button>
-               <a href="/learn/learning.html?id=${order.courseId}" class="btn btn-learn btn-sm">Vào học ngay</a>`
-            : `<button class="btn btn-detail btn-sm text-danger border-danger">Hủy đơn</button>
-               <button onclick="Detail.handlePayment(${order.courseId},${order.orderId})" class="btn btn-warning btn-sm fw-bold rounded-3 px-4 shadow-sm">Thanh toán ngay</button>`;
+        // Xử lý từng trường hợp cụ thể
+        if (currentStatus === "Success" || currentStatus === "1") {
+            // 1. THANH TOÁN THÀNH CÔNG (Đã bỏ toàn bộ nút và logic check 7 ngày hoàn tiền)
+            statusBadge = `<div class="status-badge status-success text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i> Thanh toán thành công</div>`;
+            
+            actionButtons = `
+                <button class="btn btn-detail btn-sm border" onclick="OrderApp.viewInvoice('${order.orderCode}')">Xem hóa đơn</button>
+                <a href="/learn/learning.html?id=${order.courseId}" class="btn btn-primary btn-sm shadow-sm">Vào học ngay</a>`;
+
+        } else if (currentStatus === "Cancelled" || currentStatus === "3") {
+            // 2. ĐÃ HỦY
+            opacityStyle = 'opacity: 0.6;'; 
+            statusBadge = `<div class="status-badge status-danger text-danger fw-bold"><i class="bi bi-x-circle-fill me-1"></i> Đã hủy</div>`;
+            actionButtons = `<button class="btn btn-secondary btn-sm" disabled>Đơn đã đóng</button>`;
+            
+        } else if (currentStatus === "Pending" || currentStatus === "0") {
+            // 3. ĐANG CHỜ THANH TOÁN
+            statusBadge = `<div class="status-badge status-pending text-warning fw-bold"><i class="bi bi-clock-history me-1"></i> Đang chờ thanh toán</div>`;
+            actionButtons = `
+                <button class="btn btn-detail btn-sm text-danger border-danger">Hủy đơn</button>
+                <button onclick="Detail.handlePayment(${order.courseId},${order.orderId})" class="btn btn-warning btn-sm fw-bold rounded-3 px-4 shadow-sm">Thanh toán ngay</button>`;
+                
+        } else {
+            // Dự phòng cho các trạng thái khác
+            statusBadge = `<div class="status-badge text-secondary"><i class="bi bi-info-circle me-1"></i> ${currentStatus}</div>`;
+        }
 
         const formattedDate = new Date(order.createdAt).toLocaleDateString('vi-VN');
         const formattedPrice = new Intl.NumberFormat('vi-VN').format(order.totalAmount) + 'đ';
 
         return `
-            <div class="order-item shadow-sm">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <div class="text-muted small">Mã đơn: <b>#${order.orderCode}</b> | ${formattedDate}</div>
+            <div class="order-item shadow-sm mb-3 border rounded p-3">
+                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                    <div class="text-muted small">Mã đơn: <b class="text-dark">#${order.orderCode}</b> | ${formattedDate}</div>
                     ${statusBadge}
                 </div>
                 
-                <div class="d-flex align-items-center mb-3 ${!isSuccess ? 'text-secondary' : ''}" style="${!isSuccess ? 'opacity: 0.8;' : ''}">
-                    <img src="${order.avatarUrl || '/img/default-course.png'}" class="course-preview me-3">
+                <div class="d-flex align-items-center mb-3" style="${opacityStyle}">
+                    <img src="${order.avatarUrl || '/img/default-course.png'}" class="course-preview me-3 rounded" style="width: 80px; height: 80px; object-fit: cover;">
                     <div class="flex-grow-1">
                         <h5 class="fw-bold mb-1">${order.courseTitle}</h5>
                         <div class="text-muted small">Giảng viên: System</div>
                     </div>
                     <div class="text-end">
-                        <div class="price ${!isSuccess ? 'text-secondary' : ''}">${formattedPrice}</div>
+                        <div class="price fw-bold text-danger">${formattedPrice}</div>
                     </div>
                 </div>
 
-                <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                <div class="d-flex justify-content-end gap-2 pt-2">
                     ${actionButtons}
                 </div>
             </div>`;

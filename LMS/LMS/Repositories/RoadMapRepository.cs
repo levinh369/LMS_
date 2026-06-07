@@ -62,9 +62,10 @@ namespace LMS.Repositories
         public async Task<RoadMapModel?> GetRoadmapDetail(int id)
         {
             var roadMap = await _context.RoadMapModels
+                .Include(r => r.Teacher)
                 .Include(r => r.RoadmapCourses)
                     .ThenInclude(rc => rc.Course)
-                 .AsNoTracking()  
+                .AsNoTracking()
                 .FirstOrDefaultAsync(x => x.Id == id);
 
             return roadMap;

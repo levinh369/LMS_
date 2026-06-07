@@ -9,7 +9,7 @@ const CourseApp = {
         const $empty = $('#emptyCourse');
 
         $.ajax({
-            url: "https://lms-u2jn.onrender.com/api/Course/my-course",
+            url: "http://127.0.0.1:5000/api/Course/my-course",
             type: 'GET',
             headers: { "Authorization": "Bearer " + token },
             success: (res) => {

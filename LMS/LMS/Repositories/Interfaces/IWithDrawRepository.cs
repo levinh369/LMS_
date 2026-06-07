@@ -30,6 +30,7 @@ namespace LMS.Repositories.Interfaces
 
         // 6. Lưu thay đổi xuống Database
         Task SaveChangesAsync();
-   
+        void Update(WithdrawalRequestModel entity);
+        Task<List<WithdrawalRequestModel>> GetAllWithdrawalsForExportAsync(string keyword, int status, DateTime? fromDate, DateTime? toDate);
     }
 }

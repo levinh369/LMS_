@@ -2,7 +2,7 @@ var RoadMapBuider = {
     currentPage: 0,
     roadmapId: null,
     config: {
-        apiUrl: "https://lms-u2jn.onrender.com/api/roadmap",
+        apiUrl: "http://127.0.0.1:5000/api/roadmap",
         pageSize: 10
     },
 
@@ -36,24 +36,39 @@ var RoadMapBuider = {
         new Sortable(document.getElementById('roadmapStepsList'), commonConfig);
     },
 
-    LoadData: async function (id) {
-        try {
-            const response = await fetch(`${RoadMapBuider.config.apiUrl}/${id}/builder-data`);
-            if (!response.ok) throw new Error('Mạng lỗi hoặc Server có vấn đề');
+   LoadData: async function (id) {
+    try {
+        // 📍 1. Lấy Token từ kho ra
+        const token = localStorage.getItem("jwt_token");
 
-            const res = await response.json();
-            const roadmapDetail = res.data;
+        // 📍 2. Chuyển sang $.ajax và kẹp Token vào Headers
+        const res = await $.ajax({
+            url: `${RoadMapBuider.config.apiUrl}/${id}/builder-data`,
+            type: 'GET',
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
 
-            // Render 2 cột: Kho bên trái và Lộ trình bên phải
-            RoadMapBuider.renderList('#allCoursesList', roadmapDetail.availableCourses, false);
-            RoadMapBuider.renderList('#roadmapStepsList', roadmapDetail.courses, true);
-            RoadMapBuider.updateUI();
+        // 📍 3. Lấy dữ liệu ($.ajax đã tự parse JSON)
+        const roadmapDetail = res.data;
 
-        } catch (error) {
-            console.error("Lỗi khi lấy dữ liệu:", error);
-            Swal.fire('Lỗi!', 'Không load được dữ liệu bác ơi.', 'error');
+        // Render 2 cột: Kho bên trái và Lộ trình bên phải
+        RoadMapBuider.renderList('#allCoursesList', roadmapDetail.availableCourses, false);
+        RoadMapBuider.renderList('#roadmapStepsList', roadmapDetail.courses, true);
+        RoadMapBuider.updateUI();
+
+    } catch (error) {
+        console.error("Lỗi khi lấy dữ liệu:", error);
+        
+        // Xử lý báo lỗi chi tiết
+        let msg = 'Không load được dữ liệu bác ơi.';
+        if (error.status === 401) {
+            msg = 'Phiên đăng nhập hết hạn, vui lòng đăng nhập lại!';
         }
-    },
+        Swal.fire('Lỗi!', msg, 'error');
+    }
+},
 
     renderList: function (containerId, courses, isRightColumn) {
         let html = '';

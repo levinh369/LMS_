@@ -25,6 +25,11 @@ namespace LMS.Models
 
         [StringLength(255)]
         public string? Note { get; set; } // Ghi chú của Admin (VD: "Sai số tài khoản, vui lòng tạo lại lệnh")
+        [StringLength(500)]
+        public string? DisputeReason { get; set; } // Lý do giảng viên báo lỗi ngân hàng
+
+        [StringLength(500)]
+        public string? AdminNote { get; set; }
 
         [ForeignKey("UserId")]
         public UserModel User { get; set; }

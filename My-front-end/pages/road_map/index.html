@@ -61,7 +61,7 @@
         </div>
     </div>
 
-   <div class="filter-section p-3 mb-3" style="background-color: #f8f9fa; border-radius: 12px;">
+<div class="filter-section p-3 mb-3" style="background-color: #f8f9fa; border-radius: 12px;">
     <div class="row g-2 align-items-center">
         <div class="col-md-3">
             <div class="input-group">
@@ -85,49 +85,43 @@
         </div>
 
         <div class="col-md-4 d-flex gap-2">
-            <button class="btn btn-dark px-3 rounded-pill fw-bold shadow-sm" onclick="RoadMap.loadData(1)">
-                <i class="bi bi-funnel-fill me-1"></i> LỌC DỮ LIỆU
+            <button class="btn btn-dark px-3 rounded-pill fw-bold shadow-sm d-flex align-items-center" 
+                    onclick="RoadMap.loadData(1)" style="height: 38px;">
+                <i class="bi bi-funnel-fill me-1"></i> LỌC
             </button>
             
-            <button class="btn btn-white border rounded-circle shadow-sm d-flex align-items-center justify-content-center" 
-                    onclick="RoadMap.resetFilter()" title="Làm mới" style="width: 38px; height: 38px; background: white;">
-                <i class="bi bi-arrow-clockwise"></i>
+       <button class="btn btn-white border rounded-pill shadow-sm d-flex align-items-center justify-content-center px-3" 
+        onclick="RoadMap.resetFilter()" style="height: 38px; background: white;">
+    <i class="bi bi-arrow-clockwise text-dark me-1"></i> LÀM MỚI
+</button>
+
+            <button class="btn btn-primary px-3 rounded-pill fw-bold shadow-sm d-flex align-items-center" 
+                    onclick="RoadMap.openModal()" style="height: 38px;">
+                <i class="bi bi-plus-lg me-1"></i> TẠO LỘ TRÌNH
             </button>
         </div>
     </div>
 </div>
-<!-- DÒNG 2: THAO TÁC HÀNG LOẠT & NÚT CHỨC NĂNG -->
-<div class="d-flex justify-content-between align-items-center px-1">
-    
-    <!-- Bên trái: Chỉ hiện số lượng khi chọn (hoặc ẩn nếu count = 0) -->
+
+<div id="teacherActionRow" class="d-flex justify-content-between align-items-center px-1 mb-2">
     <div id="bulk-actions" class="transition" style="opacity: 0;">
         <div class="badge bg-danger-subtle text-danger px-3 py-2 rounded-pill fw-bold">
             <i class="bi bi-check2-circle me-1"></i> Đã chọn: <span id="selected-count">0</span>
         </div>
     </div>
 
-    <!-- Bên phải: Các nút thao tác chính (Luôn hiện) -->
     <div class="d-flex align-items-center gap-2">
-        <!-- Nút Xóa chọn: Luôn hiện theo ý bác -->
         <button id="btn-bulk-delete" class="btn btn-danger btn-sm fw-bold rounded-pill px-3 shadow-sm border-0" 
                 onclick="RoadMap.softDeleteBulk()" style="height: 34px; font-size: 12px;">
             <i class="bi bi-trash-fill me-1"></i> XÓA MỤC CHỌN
         </button>
 
-        <!-- Thùng rác -->
-        <a href="road-map_trash.html" class="btn btn-outline-secondary btn-sm px-3 rounded-pill fw-bold d-flex align-items-center" 
+        <a href="road-map_trash.html" id="btn-trash-link" class="btn btn-outline-secondary btn-sm px-3 rounded-pill fw-bold d-flex align-items-center" 
            style="height: 34px; font-size: 12px;">
             <i class="bi bi-trash3 me-1"></i> THÙNG RÁC
         </a>
-
-        <!-- Tạo mới -->
-        <button class="btn btn-primary btn-sm px-3 rounded-pill fw-bold shadow-sm d-flex align-items-center" 
-                onclick="RoadMap.openModal()" style="height: 34px; font-size: 12px;">
-            <i class="bi bi-plus-lg me-1"></i> TẠO LỘ TRÌNH
-        </button>
     </div>
 </div>
-
 </div>
     <!-- Bảng dữ liệu -->
     <div class="card border-0 shadow-sm" style="border-radius: 15px;">
@@ -200,52 +194,85 @@
         </div>
     </div>
 </div>
-<div class="modal fade" id="modalDetail" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden;">
+<<div class="modal fade" id="modalDetail" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered"> <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden;">
             <div class="modal-body p-0">
                 <div class="row g-0">
-                    <!-- BÊN TRÁI: ẢNH & DANGER OVERLAY -->
-                    <div class="col-md-5 position-relative" style="min-height: 400px; background: #000;">
-                        <img id="detail-img" src="" class="w-100 h-100" style="object-fit: cover;">
-                        
-                        <!-- Lớp phủ khi bị Niêm phong -->
-                        <div id="danger-overlay" class="position-absolute top-0 start-0 w-100 h-100 d-none danger-overlay d-flex flex-column align-items-center justify-content-center text-white text-center p-4">
-                            <i class="bi bi-shield-lock-fill mb-3" style="font-size: 5rem;"></i>
-                            <h4 class="fw-bold text-uppercase mb-2">Đã Niêm Phong</h4>
-                            <p class="small opacity-75">Lộ trình này đã bị Quản trị viên khóa. Mọi thao tác chỉnh sửa đều bị vô hiệu hóa.</p>
+                    <div class="col-lg-4 position-relative d-flex flex-column" style="background: #f8f9fa;">
+                        <div class="position-relative" style="height: 250px; background: #000;">
+                            <img id="detail-img" src="" class="w-100 h-100" style="object-fit: cover; opacity: 0.9;">
+                            
+                            <div id="danger-overlay" class="position-absolute top-0 start-0 w-100 h-100 d-none danger-overlay d-flex flex-column align-items-center justify-content-center text-white text-center p-3" style="background: rgba(220, 53, 69, 0.85); backdrop-filter: blur(3px);">
+                                <i class="bi bi-shield-lock-fill mb-2" style="font-size: 3rem;"></i>
+                                <h5 class="fw-bold text-uppercase mb-1">Đã Niêm Phong</h5>
+                                <p class="small opacity-75 mb-0" style="font-size: 0.75rem;">Mọi thao tác chỉnh sửa bị khóa.</p>
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- BÊN PHẢI: THÔNG TIN -->
-                    <div class="col-md-7 bg-white p-4 p-lg-5">
-                        <div class="d-flex justify-content-between align-items-start mb-4">
+                        <div class="p-4 flex-grow-1">
+                            <h4 id="detail-title" class="fw-bold text-dark mb-1 lh-base"></h4>
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <span id="detail-id" class="badge bg-secondary"></span>
+                                <span id="detail-status"></span>
+                            </div>
+
+                            <hr class="text-muted opacity-25">
+
+                            <div class="mb-3">
+                                <div class="text-muted small fw-bold text-uppercase mb-1" style="font-size: 0.7rem; letter-spacing: 0.5px;">Người tạo (Giảng viên)</div>
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold me-2" style="width: 32px; height: 32px; font-size: 0.85rem;" id="detail-teacher-avatar-text">?</div>
+                                    <div>
+                                        <div id="detail-teacher-name" class="fw-bold text-dark fs-6"></div>
+                                        <div id="detail-teacher-id" class="text-muted small" style="font-size: 0.75rem;"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="text-muted small fw-bold text-uppercase mb-1" style="font-size: 0.7rem; letter-spacing: 0.5px;">Ngày khởi tạo</div>
+                                <div id="detail-created-at" class="fw-bold text-dark fs-6"></div>
+                            </div>
+
                             <div>
-                                <h2 id="detail-title" class="fw-bold text-dark mb-1"></h2>
-                                <span id="detail-id" class="text-muted small fw-bold"></span>
-                            </div>
-                            <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
-                        </div>
-
-                        <div class="row g-4">
-                            <div class="col-6">
-                                <div class="info-label">Trạng thái</div>
-                                <div id="detail-status"></div>
-                            </div>
-                            <div class="col-6">
-                            <div class="info-label">Ngày tạo</div> 
-                            <div id="detail-created-at" class="h6 fw-bold text-dark mb-0"></div>
-                        </div>
-                            <div class="col-12">
-                                <div class="info-label">Mô tả lộ trình</div>
-                                <div class="p-3 bg-light rounded-3" style="min-height: 100px;">
-                                    <p id="detail-desc" class="text-secondary small mb-0 lh-base"></p>
+                                <div class="text-muted small fw-bold text-uppercase mb-1" style="font-size: 0.7rem; letter-spacing: 0.5px;">Mô tả lộ trình</div>
+                                <div class="p-3 bg-white rounded border border-light" style="max-height: 150px; overflow-y: auto;">
+                                    <p id="detail-desc" class="text-secondary small mb-0 lh-lg" style="text-align: justify;"></p>
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Thông báo Alert phía dưới -->
-                        <div id="detail-lock-alert" class="mt-4"></div>
+                    <div class="col-lg-8 bg-white p-4 p-lg-5 d-flex flex-column" style="min-height: 600px;">
+                        <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+                            <div>
+                                <h4 class="fw-bold text-dark mb-1"><i class="bi bi-stack me-2 text-primary"></i>Danh sách Khóa học</h4>
+                                <p class="text-muted small mb-0">Các khóa học được sắp xếp theo thứ tự học tập</p>
+                            </div>
+                            <button type="button" class="btn-close shadow-none bg-light rounded-circle p-2" data-bs-dismiss="modal" style="width: 32px; height: 32px;"></button>
+                        </div>
+
+                        <div id="detail-lock-alert" class="mb-4"></div>
+
+                        <div class="flex-grow-1" style="overflow-y: auto; overflow-x: hidden; padding-right: 10px;" id="detail-course-container">
+                            
+                            <div id="detail-course-loading" class="text-center py-5">
+                                <div class="spinner-border text-primary mb-3" role="status"></div>
+                                <div class="text-muted">Đang tải cấu trúc khóa học...</div>
+                            </div>
+
+                            <div id="detail-course-empty" class="text-center py-5 d-none">
+                                <div class="mb-3">
+                                    <i class="bi bi-inbox text-muted" style="font-size: 3rem; opacity: 0.4;"></i>
+                                </div>
+                                <h6 class="fw-bold text-secondary">Lộ trình này chưa có khóa học nào</h6>
+                                <p class="text-muted small">Giảng viên chưa thêm nội dung vào lộ trình học tập này.</p>
+                            </div>
+
+                            <div id="detail-course-list" class="d-flex flex-column gap-3 d-none">
+                                </div>
+                        </div>
+
                     </div>
                 </div>
             </div>
@@ -255,9 +282,13 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/twbs-pagination/1.4.2/jquery.twbsPagination.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="../assets/js/roadmap.js"></script>
 <script src="../assets/js/admin-loader.js"></script>
+<script src="../assets/js/notification.js"></script>
+<script src="../assets/js/global-loader.js"></script>
+<script src="../assets/js/common.js"></script>
 <script>
     $(document).ready(function() {
         RoadMap.init();

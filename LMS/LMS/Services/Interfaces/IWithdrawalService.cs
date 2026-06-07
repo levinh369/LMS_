@@ -1,5 +1,6 @@
 ﻿using LMS.DTOs.Request;
 using LMS.DTOs.Respone;
+using LMS.Models;
 
 namespace LMS.Services.Interfaces
 {
@@ -17,5 +18,11 @@ namespace LMS.Services.Interfaces
         Task<(bool IsSuccess, string Message)> ProcessWithdrawalAsync(int adminId, ProcessWithdrawalDTO dto);
         Task<TeacherWalletStatsDTO> GetTeacherWalletStatsAsync(int teacherId);
         Task<(List<WithdrawalHistoryDTO> Data, int Total)> GetTeacherHistoryAsync(int teacherId, int pageIndex, int pageSize, int status = -1);
+        Task<WithdrawalDetailResponseDTO> GetWithdrawalDetail(int id);
+        Task<ServiceResult> DisputeWithdrawal(int id, string reason);
+        Task<WithdrawalDetailResponseDTO> GetWithdrawalDetailForAdmin(int id);
+        Task<ServiceResult> RollbackWithdrawalAsync(int id, int adminId, string adminNote);
+        byte[] ExportWithdrawalsToExcel(List<WithdrawalRequestModel> list);
+        Task<List<WithdrawalRequestModel>> GetAllWithdrawalsForExportAsync(string keySearch, int status, DateTime? fromDate, DateTime? toDate);
     }
 }

@@ -13,15 +13,12 @@ const Toast = Swal.mixin({
 const AdminComment = {
     config: {
         pageSize: 5,
-        apiUrl: "https://lms-u2jn.onrender.com/api/comment", // Check kỹ port nhé bác
+        apiUrl: "http://127.0.0.1:5000/api/comment", // Check kỹ port nhé bác
         token: localStorage.getItem('jwt_token') // Lấy token để authenticate
     },
     currentPage:null,
     searchTimer: null,
- init: function () {
-    this.initChart();
-
-    // 2. Lấy thông tin User và đưa biến ra ngoài phạm vi hàm
+init: function () {
     const userInfoRaw = localStorage.getItem("user_info");
     let roleId = 0;
     let currentUserId = 0;
@@ -31,7 +28,6 @@ const AdminComment = {
         roleId = parseInt(user.role); 
         currentUserId = user.id || user.userId; 
     } else {
-        console.error("Không tìm thấy thông tin đăng nhập!");
         return;
     }
 
@@ -46,44 +42,63 @@ const AdminComment = {
     }
 
     this.loadData(1);
+    
+    // 📍 Chỉ cần gọi 1 lần ở đây, không cần truyền tham số gì cả
+    // Nó sẽ tự động móc ID từ giao diện ra để tính toán
+    this.loadChartStats(); 
+    
     this.registerEvents();
 },
-    
 registerEvents: function() {
-    const self = this; // Để dùng trong các callback nếu cần
+    const self = this; 
 
-    // 1. Nhóm sự kiện Lọc Cấp 1 (Thay đổi là Load lại Data ngay)
-    // Lưu ý: Đã bỏ #courseFilter ra khỏi đây để xử lý riêng biệt bên dưới
+    // 1. Nhóm Lọc Cấp 1
     $('#statusFilter, #lessonFilter').on('change', function() {
-        console.log("Filter changed, reloading data...");
         self.loadData(1); 
+        self.loadChartStats(); 
     });
 
-    // 2. Sự kiện Thác nước: Khóa học -> Bài học
+    // 2. Đổi Khóa học -> Phải reset Bài học
     $('#courseFilter').on('change', async function() {
-        debugger
         const courseId = $(this).val();
+        
+        // 📍 Ép reset ô Bài học về Tất cả
+        $('#lessonFilter').html('<option value="all">-- Chọn bài học --</option>').val('all'); 
+
         await self.loadLessons(courseId); 
         self.loadData(1); 
+        self.loadChartStats(); 
     });
 
-    // 3. Tìm kiếm với cơ chế Debounce (Chống spam API)
+    // 3. Đổi Giảng viên -> Phải reset Khóa và Bài
+    $('#instructorFilter').off('change').on('change', async function() {
+        const teacherId = $(this).val();
+        
+        // 📍 Ép reset cả Khóa và Bài về Tất cả
+        $('#courseFilter').html('<option value="all">-- Chọn khóa học --</option>').val('all');
+        $('#lessonFilter').html('<option value="all">-- Chọn bài học --</option>').val('all');
+
+        await self.loadCourses(teacherId); 
+        self.loadData(1); 
+        self.loadChartStats(); 
+    });
+
+    // 4. Debounce Search
     $('#searchInp').on('input', function() {
         clearTimeout(self.searchTimer);
         self.searchTimer = setTimeout(function() {
-            console.log("Searching for:", $('#searchInp').val());
             self.loadData(1); 
         }, 500); 
     });
 
-    // 4. Xử lý Checkbox (Ủy quyền sự kiện cho bảng động)
+    // 5. Checkbox
     $(document).on('change', '#selectAll', function() {
         $('.cmt-checkbox').prop('checked', this.checked);
-        self.onSelectItem();
+        if(self.onSelectItem) self.onSelectItem();
     });
 
     $(document).on('change', '.cmt-checkbox', function() {
-        self.onSelectItem();
+        if(self.onSelectItem) self.onSelectItem();
     });
 },
 loadData: async function (page) {
@@ -93,7 +108,7 @@ loadData: async function (page) {
     const lessonId = $('#lessonFilter').val();
     const searchContent = $('#searchInp').val();
     const status = $('#statusFilter').val();
-    
+    TableLoader.show('#commentFeed');
     const url = new URL(`${apiUrl}/manager-comment`);
     url.searchParams.append('page', page);
     url.searchParams.append('pageSize', pageSize);
@@ -304,7 +319,8 @@ sendReply: async function(parentId) {
     const token = localStorage.getItem("jwt_token");
 
     try {
-        const response = await fetch('https://lms-u2jn.onrender.com/api/comment', {
+        GlobalLoader.show();
+        const response = await fetch('http://127.0.0.1:5000/api/comment', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -349,7 +365,11 @@ sendReply: async function(parentId) {
             Swal.fire('Lỗi', res.message || 'Không thể gửi phản hồi', 'error');
         }
     } catch (error) {
-        Swal.fire('Lỗi', 'Hệ thống đang bận, bác thử lại sau nhé!', 'error');
+        Swal.fire('Lỗi', 'Hệ thống đang bận, thử lại sau nhé!', 'error');
+    }
+    finally {
+        // 2. LUÔN LUÔN TẮT GLOBAL LOADER KHI XỬ LÝ XONG
+        GlobalLoader.hide();
     }
 },
 showReplyForm: function(parentId, targetUserId, targetUserName) {
@@ -399,11 +419,11 @@ hideReplyForm: function(id) {
     const apiUrl = this.config.apiUrl;
 
     try {
-        // Gửi yêu cầu PUT tới đúng cái Route [HttpPut("toggle-status/{id}")]
+        GlobalLoader.show();
         const response = await fetch(`${apiUrl}/toggle-status/${id}`, {
             method: 'PUT',
             headers: {
-                // 'Authorization': `Bearer ${token}`,
+                'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             }
         });
@@ -432,9 +452,13 @@ hideReplyForm: function(id) {
         console.error("Lỗi khi gọi API toggle-status:", error);
         Swal.fire('Lỗi hệ thống', 'Server đang bận hoặc lỗi kết nối!', 'error');
     }
+    finally {
+        // TẮT LOADER KHÓA MÀN HÌNH
+        GlobalLoader.hide();
+    }
 },
 
-    deleteComment: function(id) {
+   deleteComment: function(id) {
     Swal.fire({
         title: 'Xác nhận xóa?',
         text: "Bình luận này và các phản hồi liên quan sẽ bị ẩn khỏi hệ thống!",
@@ -448,46 +472,81 @@ hideReplyForm: function(id) {
         if (result.isConfirmed) {
             const token = localStorage.getItem('jwt_token');
             try {
-                // Gọi API DELETE
+                // 2. KHÓA MÀN HÌNH KHI BẮT ĐẦU XÓA
+                GlobalLoader.show();
+
                 const response = await fetch(`${this.config.apiUrl}/${id}`, {
                     method: 'DELETE',
-                    //headers: { 'Authorization': `Bearer ${token}` }
+                    headers: { 
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
                 });
 
                 const res = await response.json();
 
-                if (res.success) {
-                    Swal.fire('Thành công!', res.message, 'success');
-                    // Load lại dữ liệu ở trang hiện tại
+                if (res.success || res.Success) {
+                    // ĐỒNG BỘ: Báo thành công bằng Toast tinh tế
+                    Toast.fire({
+                        icon: 'success',
+                        title: res.message || res.Message || 'Đã xóa bình luận thành công!'
+                    });
                     AdminComment.loadData(AdminComment.currentPage || 1);
                 } else {
-                    Swal.fire('Lỗi', res.message, 'error');
+                    Toast.fire({
+                        icon: 'error',
+                        title: res.message || res.Message || 'Xóa thất bại!'
+                    });
                 }
             } catch (error) {
                 console.error("Lỗi xóa:", error);
-                Swal.fire('Lỗi', 'Không thể kết nối đến máy chủ!', 'error');
+                Toast.fire({ icon: 'error', title: 'Không thể kết nối đến máy chủ!' });
+            } finally {
+                GlobalLoader.hide();
             }
         }
     });
 },
 restore: function(id) {
-        Swal.fire({
-            title: 'Khôi phục lại?',
-            text: "Bình luận sẽ hiện lại trên trang khóa học.",
-            icon: 'info',
-            showCancelButton: true,
-            confirmButtonText: 'Khôi phục',
-            confirmButtonColor: '#22c55e'
-        }).then(async (result) => {
-            if (result.isConfirmed) {
+    Swal.fire({
+        title: 'Khôi phục lại?',
+        text: "Bình luận sẽ hiện lại trên trang khóa học.",
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonText: 'Khôi phục',
+        cancelButtonText: 'Hủy',
+        confirmButtonColor: '#22c55e',
+        cancelButtonColor: '#64748b'
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            try {
+                // 3. KHÓA MÀN HÌNH KHI BẮT ĐẦU KHÔI PHỤC
+                GlobalLoader.show();
+
                 const res = await this.callApi(`${this.config.apiUrl}/restore/${id}`, 'PUT');
-                if(res.success) {
-                    Swal.fire('Thành công!', res.message, 'success');
-                    this.loadData(this.currentPage);
+                
+                if (res.success || res.Success) {
+                    // ĐỒNG BỘ: Đưa về Toast thông báo mượt mà
+                    Toast.fire({
+                        icon: 'success',
+                        title: res.message || res.Message || 'Bình luận đã được khôi phục!'
+                    });
+                    this.loadData(this.currentPage || 1);
+                } else {
+                    Toast.fire({
+                        icon: 'error',
+                        title: res.message || res.Message || 'Khôi phục thất bại!'
+                    });
                 }
+            } catch (error) {
+                console.error("Lỗi khôi phục:", error);
+                Toast.fire({ icon: 'error', title: 'Lỗi hệ thống khi khôi phục!' });
+            } finally {
+                GlobalLoader.hide();
             }
-        });
-    },
+        }
+    });
+},
 
     // Hàm phụ để gọi API cho đỡ lặp code
     callApi: async function(url, method) {
@@ -507,8 +566,28 @@ restore: function(id) {
 
 loadCourses: async function(teacherId = 'all') {
     try {
-        let url = `https://lms-u2jn.onrender.com/api/course/by-teacher?teacherId=${teacherId}`;
-        const response = await fetch(url);
+        // 1. Móc cái Token ra
+        const token = localStorage.getItem("jwt_token");
+
+        // 2. Xử lý cái vụ 'all' (Nếu backend C# của bác mong đợi số nguyên thì 'all' đổi thành 0)
+        const param = teacherId === 'all' ? 0 : teacherId; 
+
+        let url = `http://127.0.0.1:5000/api/course/by-teacher?teacherId=${param}`;
+        
+        // 3. 📍 PHẢI KẸP THÊM CỤC OPTIONS NÀY VÀO FETCH
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}` // Đây là vé qua cổng
+            }
+        });
+
+        // 4. Chặn lại ngay nếu bị 401 (Hết hạn Token) hoặc lỗi Server, tránh ép kiểu JSON gây lỗi SyntaxError
+        if (!response.ok) {
+            console.error(`Bị từ chối hoặc lỗi Server. Mã lỗi HTTP: ${response.status}`);
+            return; // Dừng luôn, không chạy xuống dòng json() nữa
+        }
+
         const res = await response.json();
         
         const $courseSelect = $('#courseFilter');
@@ -517,11 +596,12 @@ loadCourses: async function(teacherId = 'all') {
         // CỰC QUAN TRỌNG: Khi load lại Course, phải reset ô Lesson về mặc định
         $('#lessonFilter').html('<option value="all">-- Chọn bài học --</option>');
 
-        if (res.success && res.data) {
-            res.data.forEach(c => {
-            const id = c.courseId || c.id; 
-            $courseSelect.append(`<option value="${id}">${c.title || c.courseName}</option>`);
-    });
+        if ((res.success || res.Success) && (res.data || res.Data)) {
+            const courses = res.data || res.Data;
+            courses.forEach(c => {
+                const id = c.courseId || c.id; 
+                $courseSelect.append(`<option value="${id}">${c.title || c.courseName}</option>`);
+            });
         }
     } catch (e) { 
         console.error("Lỗi khi gọi API Courses:", e); 
@@ -530,7 +610,7 @@ loadCourses: async function(teacherId = 'all') {
 loadTeacherSelect: async function() {
     const token = localStorage.getItem("jwt_token");
     try {
-        const response = await fetch(`https://lms-u2jn.onrender.com/api/course/get-all-teachers`, {
+        const response = await fetch(`http://127.0.0.1:5000/api/course/get-all-teachers`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const res = await response.json();
@@ -545,16 +625,7 @@ loadTeacherSelect: async function() {
             
             $('#instructorFilter').html(html);
 
-            // Xử lý sự kiện Change
-            $('#instructorFilter').off('change').on('change', async (e) => {
-                const selectedId = $(e.target).val();
-                debugger
-                // 1. Load lại danh sách khóa học của ông này
-                await this.loadCourses(selectedId); 
-                
-                // 2. Load lại dữ liệu bảng bình luận theo Teacher
-                this.loadData(1); 
-            });
+            // 📍 T ĐÃ XÓA TOÀN BỘ ĐOẠN ĐĂNG KÝ SỰ KIỆN Ở ĐÂY CHO BÁC
         }
     } catch (error) { 
         console.error("Lỗi load giảng viên:", error); 
@@ -566,7 +637,7 @@ loadLessons: async function(courseId) {
         return;
     }
     try {
-        const response = await fetch(`https://lms-u2jn.onrender.com/api/lesson/list-lesson/${courseId}`);
+        const response = await fetch(`http://127.0.0.1:5000/api/lesson/list-lesson/${courseId}`);
         const res = await response.json();
         
         if (res.success && res.data) {
@@ -615,16 +686,14 @@ loadLessons: async function(courseId) {
 
     // 1. Xác định LessonId
     if (commentId) {
-        // Trường hợp Toggle còm cũ: Lấy từ data-attribute của thẻ cha
         lessonId = $(`#thread-${commentId}`).attr('data-lesson-id');
     } else {
-        // Trường hợp Đăng mới: Lấy từ Select Filter
         lessonId = $('#lessonFilter').val();
     }
 
-    // 2. Kiểm tra tính hợp lệ của Bài học
+    // 2. Kiểm tra tính hợp lệ của Bài học -> ĐỒNG BỘ: Sửa sang Toast cho gọn
     if (!lessonId || lessonId === 'all' || isNaN(parseInt(lessonId))) {
-        Swal.fire('Lưu ý', 'Bác phải chọn một bài học cụ thể mới thực hiện ghim được!', 'warning');
+        Toast.fire({ icon: 'warning', title: 'Bác phải chọn một bài học cụ thể mới thực hiện ghim được!' });
         return;
     }
 
@@ -646,7 +715,8 @@ loadLessons: async function(courseId) {
         });
 
         if (text) {
-            this.callPinApi({ content: text, lessonId: lessonId }, true);
+            // Gọi hàm API bọc kèm loader ngầm bên dưới
+            await this.callPinApi({ content: text, lessonId: lessonId }, true);
         }
     } 
     // KỊCH BẢN B: Ghim hoặc Gỡ ghim một bình luận có sẵn
@@ -654,96 +724,249 @@ loadLessons: async function(courseId) {
         // KIỂM TRA TRẠNG THÁI: Nếu icon đang là 'fill' thì nghĩa là ĐANG GHIM
         const isCurrentlyPinned = $(`#thread-${commentId}`).find('.bi-pin-angle-fill').length > 0;
 
-        // Tự động điều chỉnh nội dung thông báo dựa trên trạng thái
         const swalConfig = isCurrentlyPinned ? {
             title: 'Bỏ ghim bình luận?',
             text: "Bình luận này sẽ không còn nằm ở đầu danh sách bài học nữa.",
             icon: 'warning',
             confirmButtonText: 'Gỡ ghim ngay',
-            confirmButtonColor: '#f59e0b' // Màu cam cảnh báo
+            confirmButtonColor: '#f59e0b' 
         } : {
             title: 'Xác nhận ghim?',
             text: "Bình luận này sẽ được đẩy lên đầu danh sách bài học này!",
             icon: 'question',
             confirmButtonText: 'Ghim ngay',
-            confirmButtonColor: '#3085d6' // Màu xanh xác nhận
+            confirmButtonColor: '#3085d6' 
         };
 
         Swal.fire({
             ...swalConfig,
             showCancelButton: true,
-            cancelButtonText: 'Để sau'
-        }).then((result) => {
+            cancelButtonText: 'Để sau',
+            cancelButtonColor: '#64748b'
+        }).then(async (result) => {
             if (result.isConfirmed) {
-                this.callPinApi({ commentId: commentId, lessonId: lessonId }, false);
+                await this.callPinApi({ commentId: commentId, lessonId: lessonId }, false);
             }
         });
     }
 },
 
-// Hàm trung gian gọi API (Khớp với PinRequest ở Controller)
+// =========================================================
+// HÀM PHỤ GỌI API GHIM - TÍCH HỢP SẴN GLOBAL LOADER VÀ TOAST
+// =========================================================
+callPinApi: async function(payload, isNewNotification) {
+    const token = localStorage.getItem("jwt_token");
+    const apiUrl = this.config.apiUrl;
+    
+    // Tùy theo kiến trúc API của bác, đổi URL cho khớp (ví dụ: /api/comment/pin)
+    const url = `${apiUrl}/pin`; 
+
+    try {
+        // 1. KHÓA CỨNG MÀN HÌNH KHÔNG CHO SPAM CLICK
+        GlobalLoader.show();
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const res = await response.json();
+
+        if (response.ok && (res.success || res.Success)) {
+            // 2. ĐỒNG BỘ: Nổ Toast nhẹ nhàng góc màn hình
+            Toast.fire({
+                icon: 'success',
+                title: res.message || res.Message || (isNewNotification ? 'Đã đăng và ghim thông báo mới!' : 'Đã cập nhật trạng thái ghim!')
+            });
+
+            // 3. Tải lại toàn bộ Feed tại trang hiện tại để cập nhật vị trí các cục Comment
+            this.loadData(this.currentPage || 1);
+        } else {
+            Toast.fire({
+                icon: 'error',
+                title: res.message || res.Message || 'Thao tác ghim thất bại!'
+            });
+        }
+    } catch (error) {
+        console.error("Lỗi ghim bài viết:", error);
+        Toast.fire({ icon: 'error', title: 'Không thể kết nối máy chủ ghim bài lúc này!' });
+    } finally {
+        // 4. LUÔN LUÔN NHẢ MÀN HÌNH RA Ở KHỐI FINALLY
+        GlobalLoader.hide();
+    }
+},
 callPinApi: async function (data, isNew) {
     try {
-        const response = await fetch('https://lms-u2jn.onrender.com/api/comment/pin-handler', {
+        // 1. KHÓA MÀN HÌNH CHỐNG SPAM CLICK KHI ĐANG GHIM
+        GlobalLoader.show();
+
+        const response = await fetch('http://127.0.0.1:5000/api/comment/pin-handler', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem("jwt_token")}` // Bác check lại chỗ lưu token nhé
+                'Authorization': `Bearer ${localStorage.getItem("jwt_token")}`
             },
             body: JSON.stringify({
-            isNew: isNew,
-            commentId: data.commentId || null,
-            content: data.content || null,
-            lessonId: data.lessonId, // <--- Nó phải nằm ở ngoài cùng như này
-            courseId: data.courseId || null
-        })
+                isNew: isNew,
+                commentId: data.commentId || null,
+                content: data.content || null,
+                lessonId: data.lessonId, 
+                courseId: data.courseId || null
+            })
         });
-        debugger
+
         const res = await response.json();
 
-        if (response.ok) {
-            Toast.fire({ icon: 'success', title: res.message || 'Thao tác thành công!' });
+        if (response.ok && (res.success || res.Success)) {
+            // ĐỒNG BỘ: Dùng Toast nổ góc phải mượt mà
+            Toast.fire({ icon: 'success', title: res.message || 'Thao tác ghim thành công!' });
+            
             // Reload lại danh sách để thấy thằng vừa ghim nhảy lên đầu
-            this.loadData(this.currentPage); 
+            this.loadData(this.currentPage || 1); 
         } else {
-            Swal.fire('Lỗi', res.message || 'Không thể thực hiện thao tác ghim', 'error');
+            // ĐỒNG BỘ: Chuyển lỗi từ Swal to về Toast cho tinh tế
+            Toast.fire({ icon: 'error', title: res.message || 'Không thể thực hiện thao tác ghim!' });
         }
     } catch (error) {
         console.error("Lỗi callPinApi:", error);
-        Toast.fire({ icon: 'error', title: 'Backend đang bận rồi bác Vinh ơi!' });
+        Toast.fire({ icon: 'error', title: 'Backend đang bận rồi bác ơi!' });
+    } finally {
+        // 2. LUÔN NHẢ MÀN HÌNH RA Ở FINALLY
+        GlobalLoader.hide();
     }
 },
-    initChart: function() {
-        const ctx = document.getElementById('miniChart').getContext('2d');
-        new Chart(ctx, {
+
+loadChartStats: async function() {
+        try {
+            const token = this.config.token;
+            
+            // Lấy trực tiếp từ các ô Filter hiện tại
+            const teacherId = $('#instructorFilter').val();
+            const courseId = $('#courseFilter').val();
+            const lessonId = $('#lessonFilter').val();
+
+            const url = new URL(`${this.config.apiUrl}/manager-comment-stats`);
+            
+            if (teacherId && teacherId !== 'all' && teacherId !== '0') url.searchParams.append('teacherId', teacherId);
+            if (courseId && courseId !== 'all' && courseId !== '0') url.searchParams.append('courseId', courseId);
+            if (lessonId && lessonId !== 'all' && lessonId !== '0') url.searchParams.append('lessonId', lessonId);
+
+            const response = await fetch(url.toString(), {
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!response.ok) return;
+
+            const res = await response.json();
+            
+            if ((res.success || res.Success) && (res.data || res.Data)) {
+                const stats = res.data || res.Data;
+
+                // Cập nhật text tổng số records
+                $('#admin-total-records').text(stats.totalComments);
+                const $rateObj = $('#interaction-rate');
+                $rateObj.removeClass('text-success text-warning text-danger');
+                
+                // 📍 VŨ KHÍ XỬ LÝ LỖI UNDEFINED NẰM Ở ĐÂY:
+                const avg = stats.averagePerDay || stats.AveragePerDay || 0;
+                
+                // Hạ tiêu chuẩn xuống cho hợp lý với nền tảng hiện tại
+if (avg >= 3) { // 3 comment/ngày là Cao
+    $rateObj.text('Cao').addClass('text-success');
+} else if (avg >= 0.5) { // Chỉ cần nửa comment/ngày (khoảng 3-4 comment/tuần) là Trung bình
+    $rateObj.text('Trung bình').addClass('text-warning');
+} else {
+    $rateObj.text('Thấp').addClass('text-danger');
+}
+
+                // Sinh mảng Labels 7 ngày
+                const labels = [];
+                for (let i = 6; i >= 0; i--) {
+                    let d = new Date();
+                    d.setDate(d.getDate() - i);
+                    labels.push(d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }));
+                }
+
+                this.initChart(labels, stats.last7DaysCount);
+            }
+        } catch (error) {
+            console.error("Lỗi load thống kê:", error);
+        }
+    },
+
+    initChart: function(labelsData, chartData) {
+        const canvas = document.getElementById('miniChart');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        
+        if (this.miniChartInstance) {
+            this.miniChartInstance.destroy();
+        }
+
+        this.miniChartInstance = new Chart(ctx, {
             type: 'line',
-            data: { labels: ['T2', 'T3', 'T4', 'T5', 'T6', 'T7'], datasets: [{ data: [12, 19, 15, 25, 22, 30], borderColor: '#4f46e5', tension: 0.4, fill: true, backgroundColor: 'rgba(79, 70, 229, 0.1)' }] },
-            options: { plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { display: false } } }
+            data: { 
+                labels: labelsData, 
+                datasets: [{ 
+                    data: chartData, 
+                    borderColor: '#4f46e5', 
+                    tension: 0.4, 
+                    fill: true, 
+                    backgroundColor: 'rgba(79, 70, 229, 0.1)' 
+                }] 
+            },
+            options: { 
+                plugins: { legend: { display: false } }, 
+                scales: { y: { display: false }, x: { display: false } },
+                maintainAspectRatio: false
+            }
         });
     },
-    
-        hardDelete: function(id) {
-            Swal.fire({
-                title: 'Xóa vĩnh viễn?',
-                text: "Dữ liệu sẽ bị xóa sạch khỏi hệ thống và không thể khôi phục!",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                confirmButtonText: 'Xóa ngay',
-                cancelButtonText: 'Hủy'
-            }).then(async (result) => {
-                if (result.isConfirmed) {
-                    const response = await fetch(`${AdminComment.config.apiUrl}/hard-delete/${id}`, { method: 'DELETE' });
-                    const res = await response.json();
-                    if (res.success || res.Success) {
-                        Toast.fire('Đã xóa!', 'Bình luận đã bị xóa vĩnh viễn.', 'success');
-                        this.loadData(1);
-                    } else {
-                        Toast.fire('Thất bại!', res.message || 'Có lỗi xảy ra.', 'error');
-                    }
+hardDelete: function(id) {
+    Swal.fire({
+        title: 'Xóa vĩnh viễn?',
+        text: "Dữ liệu sẽ bị xóa sạch khỏi hệ thống và không thể khôi phục!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Xóa ngay',
+        cancelButtonText: 'Hủy'
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            try {
+                // 3. KHÓA MÀN HÌNH BẢO VỆ TIẾN TRÌNH XÓA VĨNH VIỄN
+                GlobalLoader.show();
+
+                const token = localStorage.getItem("jwt_token");
+                const response = await fetch(`${AdminComment.config.apiUrl}/hard-delete/${id}`, { 
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const res = await response.json();
+
+                if (res.success || res.Success) {
+                    // ĐỒNG BỘ: Sửa cú pháp truyền Toast.fire chuẩn object ({ icon, title })
+                    Toast.fire({ icon: 'success', title: res.message || 'Bình luận đã bị xóa vĩnh viễn.' });
+                    this.loadData(1);
+                } else {
+                    Toast.fire({ icon: 'error', title: res.message || 'Có lỗi xảy ra khi xóa.' });
                 }
-            });
-        },
+            } catch (error) {
+                console.error("Lỗi xóa vĩnh viễn:", error);
+                Toast.fire({ icon: 'error', title: 'Không thể kết nối đến máy chủ!' });
+            } finally {
+                // 4. LUÔN LUÔN TẮT LOADER KHÓA MÀN HÌNH
+                GlobalLoader.hide();
+            }
+        }
+    });
+},
 };
 
 $(document).ready(() => AdminComment.init());

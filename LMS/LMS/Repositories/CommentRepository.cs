@@ -510,5 +510,54 @@ namespace LMS.Repositories
                 }
             }
         }
+        public async Task<int> GetTotalCommentsAsync(int? teacherId, int? courseId, int? lessonId)
+        {
+            var query = _context.Comments.AsQueryable();
+
+            if (lessonId.HasValue && lessonId > 0)
+            {
+                query = query.Where(c => c.LessonId == lessonId.Value);
+            }
+            else if (courseId.HasValue && courseId > 0)
+            {
+                query = query.Where(c => c.Lesson.CourseModelId == courseId.Value);
+            }
+            else if (teacherId.HasValue && teacherId > 0)
+            {
+                query = query.Where(c => _context.Courses.Any(course =>
+                    course.Id == c.Lesson.CourseModelId &&
+                    course.TeacherId == teacherId.Value));
+            }
+
+            return await query.CountAsync();
+        }
+
+        public async Task<Dictionary<DateTime, int>> GetCommentStatsLast7DaysAsync(int? teacherId, int? courseId, int? lessonId)
+        {
+            var startDate = DateTime.Today.AddDays(-6);
+            var query = _context.Comments.Where(c => c.CreatedAt >= startDate);
+
+            if (lessonId.HasValue && lessonId > 0)
+            {
+                query = query.Where(c => c.LessonId == lessonId.Value);
+            }
+            else if (courseId.HasValue && courseId > 0)
+            {
+                query = query.Where(c => c.Lesson.CourseModelId == courseId.Value);
+            }
+            else if (teacherId.HasValue && teacherId > 0)
+            {
+                query = query.Where(c => _context.Courses.Any(course =>
+                    course.Id == c.Lesson.CourseModelId &&
+                    course.TeacherId == teacherId.Value));
+            }
+
+            var groupedData = await query
+                .GroupBy(c => c.CreatedAt.Date)
+                .Select(g => new { Date = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.Date, x => x.Count);
+
+            return groupedData;
+        }
     }
 }

@@ -10,7 +10,7 @@ namespace LMS.Services.Interfaces
         Task<IEnumerable<LessonResponseDTO>> GetAllAsync();
         Task<LessonResponseDTO> GetByIdAsync(int id);
         Task UpdateAsync(int id, LessonRequestDTO dto);
-        Task DeleteAsync(int id);
+        Task DeleteAsync(int id, string role, int userId);
         Task<LessonResponseDTO> GetById(int id);
         Task<List<LessonResponseDTO>> GetLessonsByCourseAsync(int courseId);
         Task CreateAsync(LessonRequestDTO dto);
@@ -25,14 +25,15 @@ namespace LMS.Services.Interfaces
         Task<int> GetBunnyVideoDurationAsync(string videoId);
         Task<int> GetCourseId(int chapterId);
         Task<List<LessonBasicDTO>> GetListLessonBasicAsync(int courseId);
-        Task RestoreAsync(int id);
-        Task HardDeleteAsync(int id);
+        Task RestoreAsync(int id, string role, int userId);
+        Task HardDeleteAsync(int id, string role, int userId);
 
         Task<(List<LessonResponseDTO> Data, int Total)> GetDeletedLessonListAsync(
             int chapterId, int page, int pageSize, string keySearch, bool? isPreview);
-        Task<bool> RestoreBulkAsync(List<int> ids);
-        Task<bool> HardDeleteBulkAsync(List<int> ids);
-        Task<bool> SoftDeleteBulkAsync(List<int> ids);
+        Task<bool> RestoreBulkAsync(List<int> ids, string role, int userId);
+        Task<bool> HardDeleteBulkAsync(List<int> ids, string role, int userId);
+        Task<bool> SoftDeleteBulkAsync(List<int> ids, string role, int userId);
+        Task<bool> ChangeStatusAsync(int id, string role, int userId);
 
     }
 }

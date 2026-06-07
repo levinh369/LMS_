@@ -1,6 +1,7 @@
 ﻿using LMS.DTOs.Request;
 using LMS.Services;
 using LMS.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -8,6 +9,7 @@ using System.Security.Claims;
 
 namespace LMS.Controllers
 {
+    [Authorize(Roles = "Admin")]
     [Route("api/[controller]")]
     [ApiController]
     public class RoadMapController : ControllerBase
@@ -80,6 +82,7 @@ namespace LMS.Controllers
                 data = roadmapDetail
             });
         }
+        [AllowAnonymous]
         [HttpGet("{id}/detail")]
         public async Task<IActionResult> RoadMapDetail(int id)
         {
@@ -90,6 +93,7 @@ namespace LMS.Controllers
                 data = roadmapDetail
             });
         }
+        [AllowAnonymous]
         [HttpGet("top-roadmaps")]
         public async Task<IActionResult> GetTopRoadMaps()
         {
@@ -100,6 +104,7 @@ namespace LMS.Controllers
                 data = roadMaps
             });
         }
+        [AllowAnonymous]
         [HttpGet("get-all")]
         public async Task<IActionResult> GetAllRoadMaps()
         {

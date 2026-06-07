@@ -1,4 +1,5 @@
-﻿using LMS.DTOs.Respone;
+﻿using LMS.DTOs.Request;
+using LMS.DTOs.Respone;
 using LMS.Models;
 
 namespace LMS.Repositories.Interfaces
@@ -22,5 +23,9 @@ namespace LMS.Repositories.Interfaces
         Task<bool> ToggleStatusAsync(int id, string role);
         Task<List<CourseLookupDTO>> GetCourseByTeacherAsync(int teacherId);
         Task<CourseModel?> GetByLessonId(int lessonId);
+        Task<int> UpdateDeleteStatusBulkAsync(List<int> ids, bool isDeleted, string role, int userId);
+        Task<int> HardDeleteBulkAsync(List<int> ids, string role, int userId);
+        Task<(List<CourseModel> Data, int Total)> GetPublicCoursesAsync(CourseSearchRequestDTO filter);
     }
+
 }

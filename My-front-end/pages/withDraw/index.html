@@ -28,9 +28,7 @@
             <h3 class="fw-bold text-dark m-0"><i class="bi bi-cash-coin text-primary me-2"></i>Quản lý Yêu cầu Rút tiền</h3>
             <p class="text-muted small mb-0">Quản lý dòng tiền, duyệt lệnh và đối soát ngân hàng</p>
         </div>
-        <button onclick="Withdrawal.exportExcel()" class="btn btn-outline-success shadow-sm">
-            <i class="bi bi-file-earmark-excel"></i> Xuất file Excel
-        </button>
+       
     </div>
 
     <div class="card shadow-sm border-0 mb-4" style="border-radius: 15px;">
@@ -51,9 +49,9 @@
                         <option value="0" selected>Chờ xử lý (Pending)</option>
                         <option value="1">Đã hoàn tất (Approved)</option>
                         <option value="2">Đã từ chối (Rejected)</option>
+                        <option value="3" class="text-danger fw-bold">Đang khiếu nại (Disputed)</option> 
                     </select>
                 </div>
-
                 <div class="col-md-2">
                     <label class="form-label fw-semibold text-muted small mb-1">Từ ngày</label>
                     <input type="date" id="filterFromDate" class="form-control bg-light">
@@ -64,14 +62,19 @@
                     <input type="date" id="filterToDate" class="form-control bg-light">
                 </div>
 
-                <div class="col-md-2 d-flex align-items-end gap-2">
-                    <button onclick="Withdrawal.loadData(1)" class="btn btn-primary w-100 fw-bold shadow-sm">
-                        <i class="bi bi-funnel"></i> Lọc dữ liệu
-                    </button>
-                    <button onclick="Withdrawal.resetFilter()" class="btn btn-light border text-secondary" title="Làm mới">
-                        <i class="bi bi-arrow-clockwise"></i>
-                    </button>
-                </div>
+              <div class="col-md-2 d-flex align-items-end gap-2">
+    <button onclick="Withdrawal.loadData(1)" class="btn btn-primary fw-bold shadow-sm flex-grow-1">
+        <i class="bi bi-funnel"></i> Lọc
+    </button>
+    
+    <button onclick="Withdrawal.exportExcel()" class="btn btn-success fw-bold shadow-sm" title="Xuất báo cáo Excel">
+        <i class="bi bi-file-earmark-excel"></i>
+    </button>
+
+    <button onclick="Withdrawal.resetFilter()" class="btn btn-light border text-secondary" title="Làm mới">
+        <i class="bi bi-arrow-clockwise"></i>
+    </button>
+</div>
             </div>
         </div>
     </div>
@@ -176,6 +179,81 @@
         </div>
     </div>
 </div>
+<div class="modal fade" id="withdrawDetailAdminModal" data-bs-focus="false" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 1rem; overflow: hidden;">
+            
+            <div class="modal-header border-bottom-0 bg-white pt-4 pb-2 px-4">
+                <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2">
+                    <i class="bi bi-receipt text-primary fs-4"></i> Chi tiết lệnh rút tiền
+                </h5>
+                <button type="button" class="btn-close bg-light rounded-circle p-2" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body p-4 pt-2">
+                <div class="p-4 bg-primary bg-opacity-10 text-center mb-4" style="border-radius: 1rem;">
+                    <div class="text-primary fw-semibold small mb-1 text-uppercase tracking-wide">Số tiền yêu cầu rút</div>
+                    <h2 class="fw-bold text-primary mb-0" id="dtlAdminAmount" style="letter-spacing: -1px;">- 0 đ</h2>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <div class="col-6">
+                        <div class="text-muted small mb-1 d-flex align-items-center gap-1">
+                            <i class="bi bi-hash"></i> Mã giao dịch
+                        </div>
+                        <div class="fw-bold text-dark fs-6" id="dtlAdminCode">---</div>
+                    </div>
+                    <div class="col-6 text-end">
+                        <div class="text-muted small mb-1 d-flex align-items-center justify-content-end gap-1">
+                            Giảng viên <i class="bi bi-person-badge"></i>
+                        </div>
+                        <div class="fw-bold text-dark fs-6" id="dtlAdminTeacher">---</div>
+                    </div>
+                </div>
+
+                <div class="card border border-light-subtle shadow-sm mb-3" style="border-radius: 0.75rem;">
+                    <div class="card-header bg-light border-bottom-0 pt-3 pb-1">
+                        <h6 class="fw-bold text-secondary mb-0 small text-uppercase">Thông tin chuyển khoản</h6>
+                    </div>
+                    <div class="card-body pt-2 pb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted small d-flex align-items-center gap-2">
+                                <i class="bi bi-bank text-secondary"></i> Ngân hàng
+                            </span>
+                            <span class="fw-bold text-dark" id="dtlAdminBank">---</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted small d-flex align-items-center gap-2">
+                                <i class="bi bi-credit-card-2-front text-secondary"></i> Số tài khoản
+                            </span>
+                            <span class="fw-bold text-dark" id="dtlAdminSTK" style="font-family: monospace; font-size: 1.05rem;">---</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-muted small d-flex align-items-center gap-2">
+                                <i class="bi bi-person-check text-secondary"></i> Chủ tài khoản
+                            </span>
+                            <span class="fw-bold text-dark text-uppercase" id="dtlAdminAccountName">---</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-danger d-flex align-items-start gap-3 border-0 shadow-sm mb-0" id="dtlAdminDisputeBox" style="display: none; border-radius: 0.75rem;">
+                    <i class="bi bi-exclamation-triangle-fill text-danger fs-4 mt-1"></i>
+                    <div>
+                        <div class="fw-bold text-danger mb-1 small text-uppercase">Lịch sử xử lý / Khiếu nại</div>
+                        <div class="text-dark small" id="dtlAdminDisputeReason">
+                            ---
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer border-top-0 bg-light rounded-bottom-4 px-4 py-3 d-flex justify-content-end" id="admin-modal-footer">
+                <button type="button" class="btn btn-secondary rounded-pill px-4 fw-semibold" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
@@ -183,5 +261,6 @@
 <script src="../assets/js/admin-loader.js"></script>
 <script src="../assets/js/withdrawal.js"></script>
 <script src="../assets/js/common.js"></script>
+<script src="../assets/js/global-loader.js"></script>
 </body>
 </html>

@@ -133,15 +133,14 @@
                 <table class="table align-middle mb-0">
                     <thead>
                         <tr>
-                             <th class="ps-4" style="width: 50px;">
+                            <th class="ps-4" style="width: 50px;">
                                 <input class="form-check-input" type="checkbox" id="check-all">
                             </th>
-                            <th class="ps-3">Bài học</th>
+                            <th class="text-center">ID</th> <th class="ps-3">Bài học</th>
                             <th>Chương học</th>
-                            <th>Video ID</th>
+                            <th>Nguồn & Video ID</th>
                             <th>Thời lượng</th>
-                            <th>Trạng thái</th>
-                            <th>Xem trước</th>
+                            <th>Trạng thái</th> <th>Xem trước</th>
                             <th class="text-center pe-4">Hành động</th>
                         </tr>
                     </thead>
@@ -165,6 +164,7 @@
     <script src="../assets/js/admin-loader.js"></script>
     <script src="../assets/js/lesson.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <script src="../assets/js/global-loader.js"></script>
     <script>
         $(document).ready(function() {
             if (typeof Lesson !== 'undefined' && Lesson.lessontrash) {

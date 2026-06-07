@@ -5,11 +5,15 @@
     using LMS.Services.Interfaces;
     using Microsoft.AspNetCore.SignalR;
     using System.Collections.Concurrent;
+    using System.Linq;
+    using System.Threading.Tasks;
+    using System;
 
     public class NotificationHub : Hub
     {
         private static readonly ConcurrentDictionary<string, int> _onlineUsers = new ConcurrentDictionary<string, int>();
         private readonly IDashboardService _stashboardService;
+
         public NotificationHub(IDashboardService dashboardService)
         {
             _stashboardService = dashboardService;
@@ -17,7 +21,14 @@
 
         public override async Task OnConnectedAsync()
         {
-            // 1. Chỉ Teacher mới được vào nhóm nhận thông báo
+            // 📍 1. PHÂN LUỒNG ADMIN: Thêm vào AdminGroup để hứng thông báo nhảy số (Chấm đỏ)
+            // (Check cả "Admin" và "1" tùy vào cách bác cấu hình Claim trong Token)
+            if (Context.User != null && (Context.User.IsInRole("Admin") || Context.User.IsInRole("1")))
+            {
+                await Groups.AddToGroupAsync(Context.ConnectionId, "AdminGroup");
+            }
+
+            // 📍 2. PHÂN LUỒNG TEACHER: Code gốc của bác
             if (Context.User != null && Context.User.IsInRole("Teacher"))
             {
                 await Groups.AddToGroupAsync(Context.ConnectionId, "TeacherGroup");
@@ -35,22 +46,18 @@
                     return oldValue + 1;
                 });
 
-                // 2. LẤY TÊN VÀ AVATAR TỪ TOKEN RA
-                // Vì lúc tạo Token bạn dùng ClaimTypes.Name, nên Identity.Name sẽ tự động lấy được FullName
+                // LẤY TÊN VÀ AVATAR TỪ TOKEN RA
                 var userName = Context.User?.Identity?.Name ?? "Học viên";
-
-                // Lấy Claim có Type là "Avatar" mà mình vừa tự định nghĩa
                 var avatarUrl = Context.User?.Claims.FirstOrDefault(c => c.Type == "Avatar")?.Value
-                                ?? "/images/default-avatar.png"; // Nếu không có thì gán ảnh mặc định
+                                ?? "/images/default-avatar.png";
 
                 if (isFirstConnection || _onlineUsers[userId] == 1)
                 {
-                    // 3. GÓI VÀO OBJECT GỬI XUỐNG JS
                     var onlineUserInfo = new
                     {
                         userId = userId,
                         userName = userName,
-                        avatar = avatarUrl // <--- Đã thêm Avatar vào gói hàng!
+                        avatar = avatarUrl
                     };
 
                     await Clients.Group("TeacherGroup").SendAsync("UserIsOnline", onlineUserInfo);
@@ -59,7 +66,8 @@
 
             await base.OnConnectedAsync();
         }
-        public override async Task OnDisconnectedAsync(Exception exception)
+
+        public override async Task OnDisconnectedAsync(Exception? exception)
         {
             var userId = Context.UserIdentifier ?? Context.User?.Identity?.Name;
 
@@ -76,9 +84,15 @@
 
                 if (isOffline)
                 {
-                    // Thoát thì chỉ cần bắn mỗi ID xuống để JS tìm thẻ HTML xóa đi là được
+                    // Bắn tín hiệu offline cho TeacherGroup
                     await Clients.Group("TeacherGroup").SendAsync("UserIsOffline", userId);
                 }
+            }
+
+            // 📍 3. DỌN DẸP KẾT NỐI: Xóa khỏi nhóm Admin khi họ tắt trình duyệt
+            if (Context.User != null && (Context.User.IsInRole("Admin") || Context.User.IsInRole("1")))
+            {
+                await Groups.RemoveFromGroupAsync(Context.ConnectionId, "AdminGroup");
             }
 
             if (Context.User != null && Context.User.IsInRole("Teacher"))
@@ -88,6 +102,8 @@
 
             await base.OnDisconnectedAsync(exception);
         }
+
+        // HÀM LẤY DANH SÁCH ONLINE (Giữ nguyên code gốc của bác)
         public async Task<List<object>> GetActiveUsers(string? keySearch)
         {
             if (Context.User == null || !Context.User.IsInRole("Teacher"))
@@ -95,12 +111,13 @@
 
             var currentTeacherIdStr = Context.UserIdentifier;
 
-            // Lấy danh sách các ID đang có kết nối lớn hơn 0
-            var allOnlineIds = _onlineUsers.Where(x => x.Value > 0).Select(x => x.Key).ToList();
+            var allOnlineIds = _onlineUsers
+                .Where(x => x.Value > 0 && x.Key != currentTeacherIdStr)
+                .Select(x => x.Key)
+                .ToList();
 
             if (int.TryParse(currentTeacherIdStr, out int currentTeacherId))
             {
-                // Gọi thẳng qua tầng Service xử lý
                 return await _stashboardService.GetOnlineStudentsAsync(currentTeacherId, allOnlineIds, keySearch);
             }
 
@@ -108,4 +125,3 @@
         }
     }
 }
-

@@ -13,5 +13,6 @@ namespace LMS.Services.Interfaces
         Task<(List<InstructorApplicationResponseDTO> Data, int Total)> GetPagedAsync(int page, int pageSize, string keySearch, string status, string sort);
         Task<InstructorApplicationResponseDTO> DetailApplicationAsync(int applicationId);
         Task<InstructorApplicationModel> GetByIdOrThrowAsync(int id);
+        Task DeleteAsync(int id);
     }
 }

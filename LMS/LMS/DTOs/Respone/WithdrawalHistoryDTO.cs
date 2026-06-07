@@ -9,6 +9,7 @@
         public DateTime CreatedAt { get; set; }
         public int Status { get; set; } // 0: Chờ duyệt, 1: Thành công, 2: Từ chối
         public string Note { get; set; }
+        public string AdminNote { get; set; }
     }
     public class TeacherWalletStatsDTO
     {

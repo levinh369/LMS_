@@ -30,6 +30,13 @@
             transition: 0.2s;
         }
         .action-icon:hover { opacity: 0.7; }
+        #application-table-body img {
+    transition: all .2s ease;
+}
+
+#application-table-body img:hover {
+    transform: scale(1.08);
+}
     </style>
 </head>
 
@@ -87,9 +94,7 @@
                 <i class="bi bi-arrow-clockwise me-1"></i> Làm mới
             </button>
             
-            <button class="btn btn-outline-danger px-4 fw-bold shadow-sm ms-2">
-                <i class="bi bi-trash3 me-1"></i> Thùng rác
-            </button>
+          
         </div>
         
     </div>
@@ -168,14 +173,19 @@
                 </div>
 
                 <div id="detailContent" style="display: none;">
-                    <div class="row mb-4">
-                        <div class="col-md-6">
-                            <p class="mb-1 text-muted small fw-bold">Họ và tên</p>
-                            <h6 class="fw-bold text-dark" id="detailFullName"></h6>
+                <div class="row mb-4 align-items-center">
+                        <div class="col-md-6 d-flex align-items-center">
+                            <img id="detailAvatar" src="/images/default-avatar.png" alt="Avatar" 
+                                 class="rounded-circle border border-2 border-primary shadow-sm me-3" 
+                                 style="width: 65px; height: 65px; object-fit: cover;">
+                            <div>
+                                <p class="mb-1 text-muted small fw-bold">Họ và tên</p>
+                                <h6 class="fw-bold text-dark mb-0" id="detailFullName" style="font-size: 1.1rem;"></h6>
+                            </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-6 mt-3 mt-md-0">
                             <p class="mb-1 text-muted small fw-bold">Email liên hệ</p>
-                            <h6 class="text-dark" id="detailEmail"></h6>
+                            <h6 class="text-dark mb-0" id="detailEmail"></h6>
                         </div>
                     </div>
                     <div class="row mb-4">
@@ -219,5 +229,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
 <script src="../assets/js/admin_instructor_approval.js"></script>
 <script src="../assets/js/admin-loader.js"></script>
+<script src="../assets/js/common.js"></script>
+<script src="../assets/js/global-loader.js"></script>
 </body>
 </html>

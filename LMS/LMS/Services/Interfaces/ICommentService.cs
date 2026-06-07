@@ -23,6 +23,7 @@ namespace LMS.Services.Interfaces
         Task HardDeleteAsync(int id);
         Task<object> GetParentCommentsPaginatedAsync(int lessonId, int userId, int page, int pageSize);
         Task<object> GetRepliesPaginatedAsync(int parentId,int lessionId, int userId, int page, int pageSize);
+        Task<CommentStatsDto> GetAdminCommentStatsAsync(int? teacherId, int? courseId, int? lessonId);
 
     }
 }

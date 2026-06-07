@@ -7,7 +7,7 @@ namespace LMS.Services.Interfaces
     {
         Task<IEnumerable<OrderResponeDTO>> GetAllOrdersForAdminAsync();
         Task<(List<OrderResponeDTO> Data, int Total)> GetOrderListAsync(
-        int page, int pageSize, string keySearch, DateTime? fromDate, DateTime? toDate, int status);
+        int page, int pageSize, string keySearch, DateTime? fromDate, DateTime? toDate, int status, int teacherId);
 
         // Lấy chi tiết 1 đơn hàng để hiện Modal
         Task<OrderAdminDetailDTO> GetOrderDetailForAdminAsync(int orderId);
@@ -21,5 +21,7 @@ namespace LMS.Services.Interfaces
         // Thống kê doanh thu tháng hiện tại cho Header Admin
         Task<decimal> GetMonthlyRevenueAsync();
         Task<bool> CancelOrderAsync(int orderId);
+        Task<byte[]> ExportOrdersToExcelAsync(
+    string keySearch, DateTime? fromDate, DateTime? toDate, int status, int filterTeacherId);
     }
 }

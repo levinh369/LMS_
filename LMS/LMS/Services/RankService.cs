@@ -21,25 +21,43 @@ namespace LMS.Services
         public async Task<RankDashboardResponseDto> GetDashboardDataAsync()
         {
             var now = DateTime.Now;
+
+            // 1. Lấy danh sách Rank và số lượng Teacher từng Rank
             var rankConfigs = await _rankRepo.GetRankConfigsWithTeacherCountAsync();
+
+            // 2. Tính lợi nhuận sàn (Tháng này)
+            // Lưu ý: Dùng (decimal?) để nếu tháng mới chưa có đơn nào thì trả về 0 thay vì báo lỗi Null
             var monthlyProfit = await _context.Orders
                 .Where(o => o.Status == OrderStatusEnum.Success
-                       && o.CreatedAt.Month == now.Month
-                       && o.CreatedAt.Year == now.Year)
-                .SumAsync(o => o.AdminAmount);
+                        && o.CreatedAt.Month == now.Month
+                        && o.CreatedAt.Year == now.Year)
+                .SumAsync(o => (decimal?)o.AdminAmount) ?? 0;
+
+            // 3. Đếm tổng số giảng viên
             var totalTeachers = await _context.Users
                 .CountAsync(u => u.Role.RoleName == "Teacher" && !u.IsDeleted);
-            var pendingRequests = await _context.Users
-                .CountAsync(u => u.Role.RoleName == "Teacher" && u.IsActive == false);
+
+            // 4. MỚI: Đếm số giảng viên mới đăng ký trong tháng này
+            var newTeachersThisMonth = await _context.Users
+                .CountAsync(u => u.Role.RoleName == "Teacher"
+                        && !u.IsDeleted
+                        && u.CreatedAt.Month == now.Month
+                        && u.CreatedAt.Year == now.Year);
+
+            // 5. MỚI: Tính tổng số giảng viên hạng Vàng + Kim Cương
+            // Giả sử RankEnum của bác: 1=Đồng, 2=Bạc, 3=Vàng, 4=Kim Cương
+            // Ta lấy luôn từ rankConfigs đã query ở trên cho nhẹ Database
+            var vipTeachersCount = rankConfigs
+                .Where(r => r.RankEnum >= 3) // Lọc các hạng VIP (Vàng trở lên)
+                .Sum(r => r.TeacherCount);
 
             return new RankDashboardResponseDto
             {
                 TotalTeachers = totalTeachers,
                 MonthlyPlatformRevenue = monthlyProfit,
-                AverageCommission = rankConfigs.Any() ? rankConfigs.Average(c => (decimal)c.DefaultRate) : 0,
-                PendingRankRequests = pendingRequests,
-                RankConfigs = rankConfigs,
-                IsAutoRankingEnabled = true 
+                VipTeachersCount = vipTeachersCount,
+                NewTeachersThisMonth = newTeachersThisMonth,
+                RankConfigs = rankConfigs
             };
         }
         public async Task<List<TeacherByRankDto>> GetTeachersByRankAsync(int rankEnum)

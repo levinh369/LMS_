@@ -171,5 +171,17 @@ namespace LMS.Services
             // 3. Ép kiểu trên bộ nhớ RAM sang List<object> để khớp định dạng đầu ra trả về cho Hub
             return onlineStudentsRaw.Cast<object>().ToList();
         }
+        public async Task<PendingCountsDto> GetPendingCountsAsync()
+        {
+            // Đếm số đơn chờ duyệt trong DB (Status = 0)
+            var withdrawCount = await _context.WithdrawalRequests.CountAsync(x => x.Status == 0);
+            var teacherCount = await _context.InstructorApplications.CountAsync(x => x.Status == 0);
+
+            return new PendingCountsDto
+            {
+                WithdrawCount = withdrawCount,
+                TeacherCount = teacherCount
+            };
+        }
     }
 }

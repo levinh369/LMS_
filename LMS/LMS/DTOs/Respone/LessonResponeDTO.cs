@@ -1,4 +1,6 @@
-﻿namespace LMS.DTOs.Respone
+﻿using System.Runtime.CompilerServices;
+
+namespace LMS.DTOs.Respone
 {
     public class LessonResponseDTO
     {
@@ -25,5 +27,7 @@
         public bool IsLocked { get; set; }
         public bool IsCompleted {  get; set; }
         public int WatchedLastTime {  get; set; }
+        public string DeletedByRole {  get; set; }
+        public string LockedByRole { get; set; }
     }
 }

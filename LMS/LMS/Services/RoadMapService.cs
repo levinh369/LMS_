@@ -196,6 +196,7 @@ namespace LMS.Services
             var modelList = entities.Select(c => new RoadMapResponeDTO
             {
                 Id = c.Id,
+
                 Title = c.Title,
                 Description = c.Description,
                 IsActive = c.IsActive,
@@ -238,16 +239,26 @@ namespace LMS.Services
                 Title = detail.Title,
                 Description = detail.Description,
                 ThumbnailUrl = detail.ThumbnailUrl,
+                IsActive = detail.IsActive,
+                CreatedAt = detail.CreatedAt,
+                UpdatedAt = detail.UpdatedAt,
+                LockedByRole = detail.LockedByRole,
+                CourseCount = detail.RoadmapCourses?.Count ?? 0,
+
+                InstructorId = detail.TeacherId,
+                InstructorName = detail.Teacher?.FullName ?? "Chưa rõ",
+
                 Courses = detail.RoadmapCourses?
                     .OrderBy(rc => rc.OrderIndex)
                     .Select(rc => new CourseInRoadMapDTO
                     {
                         Id = rc.CourseId,
-                        Title = rc.Course.Title,
-                        ThumbnailUrl = rc.Course.ThumbnailUrl,
-                        OrderIndex = rc.OrderIndex,
+                        Title = rc.Course?.Title ?? "Chưa có tiêu đề",
+                        ThumbnailUrl = rc.Course?.ThumbnailUrl,
                         PhaseName = rc.PhaseName,
-                        IsFree = rc.Course.Price
+                        IsPhase = false, 
+                        OrderIndex = rc.OrderIndex,
+                        IsFree = rc.Course?.Price ?? 0
                     }).ToList()
             };
         }

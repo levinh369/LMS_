@@ -1,6 +1,7 @@
 ﻿using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
 using LMS.Services.Interfaces;
+using System.Text.RegularExpressions;
 
 namespace LMS.Services
 {
@@ -79,6 +80,55 @@ namespace LMS.Services
             var uploadResult = await _cloudinary.UploadAsync(uploadParams);
 
             return uploadResult.SecureUrl.ToString(); // Trả về link tải/xem file
+        }
+        public async Task<bool> DeleteImageFromUrlAsync(string imageUrl)
+        {
+            if (string.IsNullOrEmpty(imageUrl)) return true; // Không có link thì báo Ok luôn để bỏ qua
+
+            try
+            {
+                // 1. Tìm vị trí chữ "upload/" trong chuỗi URL
+                int uploadIndex = imageUrl.IndexOf("upload/");
+                if (uploadIndex == -1) return false;
+
+                // Cắt lấy phần đuôi đằng sau "upload/"
+                string afterUpload = imageUrl.Substring(uploadIndex + 7);
+
+                // 2. Dọn dẹp cái mã version (ví dụ: v1775809985/)
+                if (Regex.IsMatch(afterUpload, @"^v\d+/"))
+                {
+                    afterUpload = afterUpload.Substring(afterUpload.IndexOf('/') + 1);
+                }
+
+                // 3. Cắt bỏ cái phần đuôi file (.jpg, .png, .pdf...)
+                int lastDotIndex = afterUpload.LastIndexOf('.');
+                string publicId = lastDotIndex != -1
+                                  ? afterUpload.Substring(0, lastDotIndex)
+                                  : afterUpload;
+
+                // 4. Lệnh DestroyAsync cần biết kiểu file (Image hay Raw/Document)
+                // Ảnh thì là Image, CV/PDF thì là Raw. Mặc định mình xử lý Image trước.
+                var resourceType = ResourceType.Image;
+                if (imageUrl.EndsWith(".pdf") || imageUrl.EndsWith(".doc") || imageUrl.EndsWith(".docx"))
+                {
+                    resourceType = ResourceType.Raw;
+                }
+
+                var deletionParams = new DeletionParams(publicId)
+                {
+                    ResourceType = resourceType
+                };
+
+                // 5. Gửi yêu cầu xóa lên Cloudinary
+                var result = await _cloudinary.DestroyAsync(deletionParams);
+
+                return result.Result == "ok";
+            }
+            catch (Exception)
+            {
+                // Bắt lỗi ngầm để luồng xóa DB chính không bị gián đoạn nếu Cloudinary gặp trục trặc
+                return false;
+            }
         }
     }
 }

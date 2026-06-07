@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kết quả tìm kiếm - LMS Academy</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        .course-card { transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; height: 100%; }
+        .course-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important; }
+        .course-card img { height: 160px; object-fit: cover; }
+        .course-title { font-size: 1rem; font-weight: 700; display: -webkit-box;  -webkit-box-orient: vertical; overflow: hidden }
+        .instructor-name { font-size: 0.85rem; color: #6c757d; }
+        .price-text { font-size: 1.1rem; font-weight: bold; }
+        .old-price { font-size: 0.85rem; text-decoration: line-through; color: #6c757d; }
+        .filter-section-title { font-size: 0.95rem; font-weight: bold; text-transform: uppercase; color: #495057; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+<div id="header-placeholder"></div>
+
+<div class="container my-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h3 class="fw-bold text-dark">
+                <span id="totalRecordsCount">0</span> kết quả cho "<span id="displayKeyword" class="text-primary">...</span>"
+            </h3>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-3 d-none d-lg-block mb-4">
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-4"><i class="bi bi-funnel me-2"></i>Bộ lọc</h5>
+                 <div class="mb-4">
+    <div class="filter-section-title">Trình độ</div>
+    
+    <div class="form-check mb-2">
+        <input class="form-check-input filter-level" type="radio" name="levelGroup" value="" id="level0" checked>
+        <label class="form-check-label" for="level0">Tất cả trình độ</label>
+    </div>
+    
+    <div class="form-check mb-2">
+        <input class="form-check-input filter-level" type="radio" name="levelGroup" value="1" id="level1">
+        <label class="form-check-label" for="level1">Người mới bắt đầu</label>
+    </div>
+    <div class="form-check mb-2">
+        <input class="form-check-input filter-level" type="radio" name="levelGroup" value="2" id="level2">
+        <label class="form-check-label" for="level2">Trung cấp</label>
+    </div>
+    <div class="form-check mb-2">
+        <input class="form-check-input filter-level" type="radio" name="levelGroup" value="3" id="level3">
+        <label class="form-check-label" for="level3">Nâng cao</label>
+    </div>
+</div>
+
+<hr class="text-muted">
+
+<div class="mb-2">
+    <div class="filter-section-title">Giá</div>
+    
+    <div class="form-check mb-2">
+        <input class="form-check-input filter-price" type="radio" name="priceGroup" value="" id="price0" checked>
+        <label class="form-check-label" for="price0">Tất cả</label>
+    </div>
+
+    <div class="form-check mb-2">
+        <input class="form-check-input filter-price" type="radio" name="priceGroup" value="paid" id="price1">
+        <label class="form-check-label" for="price1">Có phí</label>
+    </div>
+    <div class="form-check mb-2">
+        <input class="form-check-input filter-price" type="radio" name="priceGroup" value="free" id="price2">
+        <label class="form-check-label" for="price2">Miễn phí</label>
+    </div>
+</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-9">
+            
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="text-muted" id="displayPaginationStatus">Hiển thị 0-0 kết quả</span>
+                <div class="d-flex align-items-center">
+                    <span class="me-2 text-muted text-nowrap small">Sắp xếp theo:</span>
+                    <select id="sortBySelect" class="form-select form-select-sm border-secondary-subtle">
+                        <option value="relevant">Liên quan nhất</option>
+                        <option value="newest">Mới nhất</option>
+                        <option value="price_asc">Giá từ thấp đến cao</option>
+                        <option value="price_desc">Giá từ cao xuống thấp</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="row g-4 mb-5" id="courseResultGrid"></div>
+
+            <nav aria-label="Search results pages">
+                <ul class="pagination justify-content-center" id="paginationGrid"></ul>
+            </nav>
+
+        </div>
+    </div>
+</div>
+<div id="footer-placeholder"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script src="assets/js/notification.js"></script>
+<script src="assets/js/common.js"></script>
+<script>
+    // Đảm bảo cấu hình mảng truyền lên API khớp định dạng C# (levels=1&levels=2 thay vì levels[]=1)
+    $.ajaxSettings.traditional = true;
+
+    // Khởi tạo các tham số mặc định toàn cục cho trang
+    let currentKeyword = "";
+    let currentPage = 1;
+    const pageSize = 6; // Số lượng bản ghi trên một trang
+
+    $(document).ready(function() {
+        // 1. Đọc từ khóa tìm kiếm từ URL thanh địa chỉ
+        const urlParams = new URLSearchParams(window.location.search);
+        currentKeyword = urlParams.get('keyword') || "";
+        
+        $('#displayKeyword').text(currentKeyword || "Tất cả khóa học");
+
+        // 2. Kích hoạt cuộc gọi API lần đầu tiên khi load trang
+        fetchSearchData();
+
+        // 3. Bắt sự kiện khi user Thay đổi Bộ Lọc hoặc Kiểu Sắp Xếp
+        $('.filter-level, .filter-price, #sortBySelect').on('change', function() {
+            currentPage = 1; // Mỗi lần đổi bộ lọc thì reset bắt buộc về trang 1
+            fetchSearchData();
+        });
+
+        // 4. Bắt sự kiện khi click chuyển trang trên thanh Phân Trang (Event Delegation)
+        $(document).on('click', '#paginationGrid .page-link', function(e) {
+            e.preventDefault();
+            const targetPage = $(this).data('page');
+            if (targetPage && targetPage !== currentPage) {
+                currentPage = targetPage;
+                fetchSearchData();
+                window.scrollTo({ top: 0, behavior: 'smooth' }); // Cuộn mượt lên đầu trang
+            }
+        });
+    });
+
+    // HÀM CHÍNH: Thu thập dữ liệu từ UI và gọi API Backend
+    async function fetchSearchData() {
+        const $grid = $('#courseResultGrid');
+        
+        // Hiển thị hiệu ứng chờ Loading quay tròn
+        $grid.html('<div class="col-12 text-center my-5"><div class="spinner-border text-primary"></div></div>');
+
+        // Thu thập mảng Trình độ (Levels) được tích chọn
+const selectedLevels = [];
+$('.filter-level:checked').each(function() {
+    const val = $(this).val();
+    if (val !== "") { // 📍 Bọc thêm dòng IF này để bỏ qua nút "Tất cả"
+        selectedLevels.push(parseInt(val));
+    }
+});
+
+        // Xác định bộ lọc Giá (IsFree) dựa trên trạng thái 2 checkbox
+        let isFreeParam = null;
+        const paidChecked = $('#price1').is(':checked');
+        const freeChecked = $('#price2').is(':checked');
+        if (paidChecked && !freeChecked) isFreeParam = false; // Chỉ chọn có phí
+        else if (!paidChecked && freeChecked) isFreeParam = true;  // Chỉ chọn miễn phí
+
+        // Đóng gói toàn bộ thông số thành object gửi lên URL API
+        const requestData = {
+            keyword: currentKeyword,
+            levels: selectedLevels,
+            isFree: isFreeParam,
+            sortBy: $('#sortBySelect').val(),
+            pageIndex: currentPage,
+            pageSize: pageSize
+        };
+
+        try {
+            // Thực hiện gọi AJAX endpoint bản full của bác
+            const response = await $.get('http://127.0.0.1:5000/api/course/search-result', requestData);
+            
+            if (response.success && response.data) {
+                const result = response.data;
+                
+                // Cập nhật số lượng tổng bản ghi và trạng thái hiển thị
+                $('#totalRecordsCount').text(result.totalRecords);
+                const startItem = result.totalRecords === 0 ? 0 : (result.pageIndex - 1) * result.pageSize + 1;
+                const endItem = Math.min(result.pageIndex * result.pageSize, result.totalRecords);
+                $('#displayPaginationStatus').text(`Hiển thị ${startItem}-${endItem} của ${result.totalRecords} kết quả`);
+
+                // Tiến hành vẽ danh sách Card Khóa học và Phân trang
+                renderCourseCards(result.data);
+                renderPagination(result.totalPages, result.pageIndex);
+            } else {
+                showErrorUi("Không thể tải danh sách khóa học.");
+            }
+        } catch (error) {
+            console.error("Lỗi gọi API Search:", error);
+            showErrorUi("Lỗi kết nối hệ thống server hoặc CORS!");
+        }
+    }
+
+   function renderCourseCards(courses) {
+    const $grid = $('#courseResultGrid');
+    $grid.empty();
+
+    if (!courses || courses.length === 0) {
+        $grid.html('<div class="col-12 text-center text-muted my-5"><i class="bi bi-folder-x display-4"></i><p class="mt-2">Không tìm thấy khóa học nào khớp với bộ lọc của bạn.</p></div>');
+        return;
+    }
+
+    courses.forEach(course => {
+        let badgeHtml = '';
+        let priceHtml = '';
+
+        // Conditional Rendering: Tự động tính toán Badge trạng thái
+        if (course.isFree) {
+            badgeHtml = `<span class="badge bg-success fw-bold position-absolute top-0 start-0 m-2 shadow-sm">MIỄN PHÍ</span>`;
+            priceHtml = `<span class="price-text text-success">MIỄN PHÍ</span>`;
+        } else {
+            badgeHtml = `<span class="badge bg-primary fw-bold position-absolute top-0 start-0 m-2 shadow-sm">PRO</span>`;
+            priceHtml = `<span class="price-text text-danger">${course.price.toLocaleString('vi-VN')}đ</span>`;
+        }
+
+        // Bọc lót dữ liệu (nếu Backend chưa trả về thì mặc định hiện 0)
+        const studentCount = course.studentCount || 0;
+        const lessonCount = course.lessonCount || 0;
+        const duration = course.duration || "0 giờ";
+
+        const cardHtml = `
+            <div class="col-md-6 col-xl-4">
+                <div class="card border-0 shadow-sm course-card h-100" onclick="window.location.href='course-detail.html?id=${course.id}'">
+                    <div class="position-relative">
+                        <img src="${course.thumbnailUrl}" class="card-img-top" alt="Course Thumbnail">
+                        ${badgeHtml}
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="course-title text-dark mb-2">${course.title}</h5>
+                        <div class="instructor-name mb-3">Giảng viên: ${course.instructorName}</div>
+                        
+                        <div class="d-flex align-items-center gap-3 mt-auto mb-3 small text-muted">
+                            <span title="Số học viên tham gia"><i class="bi bi-people me-1"></i>${studentCount}</span>
+                            <span title="Tổng số bài học"><i class="bi bi-journal-text me-1"></i>${lessonCount} bài</span>
+                            <span title="Tổng thời lượng"><i class="bi bi-clock me-1"></i>${duration}</span>
+                        </div>
+
+                        <div class="pt-3 border-top d-flex justify-content-between align-items-center">
+                            ${priceHtml}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        $grid.append(cardHtml);
+    });
+}
+
+    // HÀM BỔ TRỢ 2: Vẽ thanh phân trang động dựa trên TotalPages thu về
+    function renderPagination(totalPages, activePage) {
+        const $pager = $('#paginationGrid');
+        $pager.empty();
+
+        if (totalPages <= 1) return; // Nếu chỉ có 1 trang hoặc không có data thì ẩn luôn
+
+        // Nút Lùi trang (Previous)
+        $pager.append(`
+            <li class="page-item ${activePage === 1 ? 'disabled' : ''}">
+                <a class="page-link" href="#" data-page="${activePage - 1}" tabindex="-1"><i class="bi bi-chevron-left"></i> Lùi</a>
+            </li>
+        `);
+
+        // Các nút số trang cụ thể
+        for (let i = 1; i <= totalPages; i++) {
+            $pager.append(`
+                <li class="page-item ${activePage === i ? 'active' : ''}">
+                    <a class="page-link" href="#" data-page="${i}">${i}</a>
+                </li>
+            `);
+        }
+
+        // Nút Tiến trang (Next)
+        $pager.append(`
+            <li class="page-item ${activePage === totalPages ? 'disabled' : ''}">
+                <a class="page-link" href="#" data-page="${activePage + 1}">Tiến <i class="bi bi-chevron-right"></i></a>
+            </li>
+        `);
+    }
+
+    function showErrorUi(msg) {
+        $('#courseResultGrid').html(`<div class="col-12 text-center text-danger my-5"><p>${msg}</p></div>`);
+    }
+</script>
+</body>
+</html>

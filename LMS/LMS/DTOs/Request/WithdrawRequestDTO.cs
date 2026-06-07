@@ -17,4 +17,13 @@ namespace LMS.DTOs.Request
         [Required(ErrorMessage = "Vui lòng nhập tên chủ tài khoản")]
         public string AccountName { get; set; }
     }
+    public class DisputeRequestDto
+    {
+        public string Reason { get; set; } = string.Empty;
+    }
+    public class RollbackRequestDto
+    {
+        public string AdminNote { get; set; } = string.Empty;
+    }
 }
+

@@ -2,6 +2,7 @@
 using LMS.DTOs.Request;
 using LMS.DTOs.Respone;
 using LMS.Models;
+using System.Threading.Tasks;
 
 namespace LMS.Services.Interfaces
 {
@@ -20,6 +21,8 @@ namespace LMS.Services.Interfaces
 
         Task<(List<CategoryResponeDTO> Data, int Total)> GetDeletedCategoryListAsync(
             int page, int pageSize, string keySearch);
-
+        Task<bool> RestoreBulkAsync(List<int> ids);
+        Task<bool> HardDeleteBulkAsync(List<int> ids);
+        Task<bool> SoftDeleteBulkAsync(List<int> ids);
     }
 }

@@ -67,14 +67,31 @@ namespace LMS.Services
             }
         }
 
-        public async Task DeleteAsync(int id)
+        public async Task DeleteAsync(int id, string role, int userId)
         {
             var exist = await GetByIdOrThrowAsync(id);
+
+            // 2. Kiểm tra trạng thái xóa
             if (exist.IsDeleted)
             {
-                throw new Exception("Khóa học đã bị xóa trước đó rồi");
+                throw new Exception("Khóa học đã bị xóa trước đó rồi!");
             }
-            await courseRepository.DeleteAsync(exist);
+            if (role == "Teacher")
+            {
+ 
+                if (exist.TeacherId != userId)
+                {
+                    throw new Exception("Lỗi phân quyền: Bạn không có quyền xóa khóa học của người khác!");
+                }
+
+                if (exist.LockedByRole == "Admin")
+                {
+                    throw new Exception("Thao tác bị chặn: Khóa học này đang bị Admin niêm phong, không thể xóa!");
+                }
+            }
+            exist.IsDeleted = true;
+            exist.DeletedByRole = role; 
+            await courseRepository.UpdateAsync(exist);
         }
 
         public async Task<IEnumerable<CourseResponeDTO>> GetCourseDetail()
@@ -519,27 +536,53 @@ namespace LMS.Services
                 Description = c.Description,
                 CategoryName = c.Category != null ? c.Category.Name : "Chưa phân loại", 
                 UpdatedAt = c.UpdatedAt,
-                ThumbnailUrl = c.ThumbnailUrl
-
+                ThumbnailUrl = c.ThumbnailUrl,
+                LockedByRole = c.LockedByRole,
+                DeletedByRole = c.DeletedByRole
             }).ToList();
 
             return (dtoList, total);
         }
 
-        public async Task HardDeleteAsync(int id)
+        public async Task RestoreAsync(int id, string role, int userId)
         {
+           
             var entity = await courseRepository.GetByIdAsync(id);
+
             if (entity == null)
-                throw new Exception("Khóa học không tồn tại");
-            await courseRepository.HardDeleteAsync(entity);
+                throw new Exception("Khóa học không tồn tại hoặc đã bị xóa vĩnh viễn.");
+            if (role == "Teacher")
+            {
+                if (entity.TeacherId != userId)
+                    throw new Exception("Lỗi phân quyền: Bạn không thể khôi phục khóa học của người khác!");
+
+                if (entity.DeletedByRole == "Admin")
+                    throw new Exception("Thao tác bị chặn: Khóa học này đã bị Admin xóa do vi phạm, bạn không thể tự khôi phục!");
+            }
+            entity.IsDeleted = false;
+            entity.DeletedByRole = null;
+            entity.UpdatedAt = DateTime.UtcNow.AddHours(7);
+            await courseRepository.UpdateAsync(entity);
         }
 
-        public async Task RestoreAsync(int id)
+        public async Task HardDeleteAsync(int id, string role, int userId)
         {
             var entity = await courseRepository.GetByIdAsync(id);
+
             if (entity == null)
-                throw new Exception("Khóa học không tồn tại");
-            await courseRepository.RestoreAsync(entity);
+                throw new Exception("Khóa học không tồn tại.");
+            if (role == "Teacher")
+            {
+                if (entity.TeacherId != userId)
+                    throw new Exception("Lỗi phân quyền: Bạn không thể xóa khóa học của người khác!");
+                if (entity.LockedByRole == "Admin" || entity.DeletedByRole == "Admin")
+                    throw new Exception("Thao tác bị chặn: Không thể xóa vĩnh viễn dữ liệu đang bị Admin khóa hoặc xử lý!");
+            }
+            if (!string.IsNullOrEmpty(entity.ThumbnailUrl))
+            {
+                await cloudinaryService.DeleteImageFromUrlAsync(entity.ThumbnailUrl);
+            }
+            await courseRepository.HardDeleteAsync(entity);
         }
         public async Task<List<UserSimpleDTO>> GetTeacherListForSelectAsync()
         {
@@ -562,22 +605,52 @@ namespace LMS.Services
         {
             return await courseRepository.GetCourseByTeacherAsync(teacherId);
         }
-        public async Task<bool> RestoreBulkAsync(List<int> ids)
+        public async Task<int> RestoreBulkAsync(List<int> ids, string role, int userId)
         {
-            if (ids == null || !ids.Any()) return false;
-            return await courseRepository.UpdateDeleteStatusBulkAsync(ids, false);
+            if (ids == null || !ids.Any()) return 0;
+            return await courseRepository.UpdateDeleteStatusBulkAsync(ids, false, role, userId);
         }
 
-        public async Task<bool> SoftDeleteBulkAsync(List<int> ids)
+        public async Task<int> SoftDeleteBulkAsync(List<int> ids, string role, int userId)
         {
-            if (ids == null || !ids.Any()) return false;
-            return await courseRepository.UpdateDeleteStatusBulkAsync(ids, true);
+            if (ids == null || !ids.Any()) return 0;
+
+            // Gọi thẳng xuống Repo, truyền cờ isDeleted = true
+            return await courseRepository.UpdateDeleteStatusBulkAsync(ids, true, role, userId);
         }
 
-        public async Task<bool> HardDeleteBulkAsync(List<int> ids)
+        public async Task<int> HardDeleteBulkAsync(List<int> ids, string role, int userId)
         {
-            if (ids == null || !ids.Any()) return false;
-            return await courseRepository.HardDeleteBulkAsync(ids);
+            if (ids == null || !ids.Any()) return 0;
+            return await courseRepository.HardDeleteBulkAsync(ids, role, userId);
+        }
+        public async Task<PagedResultDto<CourseSearchResultItemDto>> SearchCoursesAsync(CourseSearchRequestDTO filter)
+        {
+            var (courses, total) = await courseRepository.GetPublicCoursesAsync(filter);
+
+            var mappedItems = courses.Select(c => new CourseSearchResultItemDto
+            {
+                Id = c.Id,
+                Title = c.Title,
+                ThumbnailUrl = c.ThumbnailUrl ?? "/img/default-course.png",
+                Price = c.Price,
+                IsFree = c.Price == 0,
+                Level = (int)c.Level,
+                InstructorName = c.Teacher != null ? c.Teacher.FullName : "Giảng viên LMS",
+
+                LessonCount = c.Lessons?.Count ?? 0,
+                StudentCount = c.Enrollments?.Count ?? 0,
+                Duration = FormatDuration(c.Lessons?.Sum(l => l.Duration) ?? 0)
+            }).ToList();
+
+            return new PagedResultDto<CourseSearchResultItemDto>
+            {
+                Data = mappedItems,
+                TotalRecords = total,
+                TotalPages = (int)Math.Ceiling(total / (double)filter.PageSize),
+                PageIndex = filter.PageIndex,
+                PageSize = filter.PageSize
+            };
         }
 
     }

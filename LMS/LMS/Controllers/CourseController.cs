@@ -10,6 +10,7 @@ using System.Security.Claims;
 
 namespace LMS.Controllers
 {
+    [Authorize(Roles = "Teacher,Admin")]
     [Route("api/[controller]")]
     [ApiController]
     public class CourseController : ControllerBase
@@ -47,9 +48,18 @@ namespace LMS.Controllers
            
         }
         [HttpDelete("{id}")]
+        [Authorize]
         public async Task<IActionResult> DeleteAynsc(int id)
         {
-            await courseService.DeleteAsync(id);
+            var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value;
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(roleClaim) || string.IsNullOrEmpty(userIdClaim))
+            {
+                return Unauthorized(new { message = "Bạn chưa đăng nhập hoặc phiên làm việc đã hết hạn!" });
+            }
+            int userId = int.Parse(userIdClaim);
+            await courseService.DeleteAsync(id, roleClaim, userId);
             return Ok(new
             {
                 message = "Xóa khóa học thành công"
@@ -121,6 +131,7 @@ namespace LMS.Controllers
             var courses = await courseService.GetCourseDetail();
             return Ok(new { success = true, data = courses });
         }
+        [AllowAnonymous]
         [HttpGet("detail/{id}")]
         public async Task<IActionResult> GetCourseDetail(int id)
         {
@@ -131,6 +142,7 @@ namespace LMS.Controllers
                 data = course
             });
         }
+        [AllowAnonymous]
         [HttpGet("filter")]
         public async Task<IActionResult> GetCourses([FromQuery] bool isFree)
         {
@@ -140,6 +152,7 @@ namespace LMS.Controllers
 
             return Ok(new { success = true, data = courses });
         }
+        [AllowAnonymous]
         [HttpGet("course-detail/{id}")]
         public async Task<IActionResult> GetCourseDetailHomeAsync(int id)
         {
@@ -157,6 +170,8 @@ namespace LMS.Controllers
 
             return Ok(new { success = true, data = courseDetail });
         }
+        [Authorize]
+        [AllowAnonymous]
         [HttpGet("course-learning/{id}")]
         public async Task<IActionResult> GetCourseDetailForLearning(int id)
         {
@@ -171,6 +186,7 @@ namespace LMS.Controllers
             return Ok(new { success = true, data = courserDetail });
         }
         [Authorize]
+        [AllowAnonymous]
         [HttpGet("my-course")]
         public async Task<IActionResult> GetCoursesForUser()
         {
@@ -222,6 +238,7 @@ namespace LMS.Controllers
 
             return Ok(new { success = true });
         }
+        [AllowAnonymous]
         [HttpGet("search")]
         public async Task<IActionResult> SearchQuery([FromQuery] string query)
         {
@@ -236,6 +253,27 @@ namespace LMS.Controllers
                 return StatusCode(500, "Đã có lỗi xảy ra phía server.");
             }
         }
+        [AllowAnonymous]
+        [HttpGet("search-result")]
+        public async Task<IActionResult> Search([FromQuery] CourseSearchRequestDTO filter)
+        {
+            try
+            {
+                if (filter == null) filter = new CourseSearchRequestDTO();
+                if (filter.PageIndex < 1) filter.PageIndex = 1;
+                if (filter.PageSize < 1) filter.PageSize = 6;
+
+                var result = await courseService.SearchCoursesAsync(filter);
+                return Ok(new { success = true, data = result });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Full Search Error]: {ex.Message}");
+                return StatusCode(500, new { success = false, message = "Lỗi xử lý hệ thống: " + ex.Message });
+            }
+        }
+        [Authorize]
+        [AllowAnonymous]
         [HttpGet("resume/{courseId}")]
         public async Task<IActionResult> ResumeLesson(int courseId)
         {
@@ -292,12 +330,19 @@ namespace LMS.Controllers
         }
 
         [HttpPost("restore/{id}")]
+        [Authorize]
         public async Task<IActionResult> Restore(int id)
         {
+            var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value;
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(roleClaim) || string.IsNullOrEmpty(userIdClaim))
+                return Unauthorized(new { Success = false, Message = "Phiên làm việc không hợp lệ." });
+
             try
             {
-                await courseService.RestoreAsync(id);
-                return Ok(new { Success = true, Message = "Khôi phục khóa học thành công" });
+                await courseService.RestoreAsync(id, roleClaim, int.Parse(userIdClaim));
+                return Ok(new { Success = true, Message = "Khôi phục khóa học thành công." });
             }
             catch (Exception ex)
             {
@@ -306,16 +351,23 @@ namespace LMS.Controllers
         }
 
         [HttpDelete("hard-delete/{id}")]
+        [Authorize]
         public async Task<IActionResult> HardDelete(int id)
         {
+            var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value;
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(roleClaim) || string.IsNullOrEmpty(userIdClaim))
+                return Unauthorized(new { Success = false, Message = "Phiên làm việc không hợp lệ." });
+
             try
             {
-                await courseService.HardDeleteAsync(id);
-                return Ok(new { Success = true, Message = "Đã xóa vĩnh viễn khóa học" });
+                await courseService.HardDeleteAsync(id, roleClaim, int.Parse(userIdClaim));
+                return Ok(new { Success = true, Message = "Đã xóa vĩnh viễn khóa học." });
             }
             catch (Exception ex)
             {
-                return BadRequest(new { Success = false, Message = "Không thể xóa vĩnh viễn khóa học này vì có dữ liệu liên quan." });
+                return BadRequest(new { Success = false, Message = $"Lỗi: {ex.Message}" });
             }
         }
         [HttpGet("get-all-teachers")]
@@ -351,6 +403,7 @@ namespace LMS.Controllers
                 return StatusCode(500, $"Lỗi hệ thống: {ex.Message}");
             }
         }
+        [Authorize]
         [HttpGet("lookup")]
         public async Task<IActionResult> GetLookupByTeacher()
         {
@@ -368,21 +421,48 @@ namespace LMS.Controllers
                 return BadRequest(new { success = false, message = ex.Message });
             }
         }
-        [HttpGet("by-teacher")] 
+        [Authorize(Roles = "Admin, Teacher")]
+        [HttpGet("by-teacher")]
         public async Task<IActionResult> GetCoursesByTeacher([FromQuery] string teacherId = "all")
         {
             try
             {
-                // Logic xử lý giống như cũ
-                if (teacherId == "all" || teacherId == "0")
+                // 1. Lấy thông tin Role và UserID từ Token (Claims)
+                var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
+                var currentUserIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (string.IsNullOrEmpty(currentUserRole) || string.IsNullOrEmpty(currentUserIdStr))
                 {
-                    var allCourses = await courseService.GetCourseDetail();
-                    return Ok(new { success = true, data = allCourses });
+                    return Unauthorized(new { success = false, message = "Không xác định được danh tính." });
                 }
 
-                int id = int.Parse(teacherId);
-                var courses = await courseService.GetCourseByTeacherAsync(id);
-                return Ok(new { success = true, data = courses });
+                int currentUserId = int.Parse(currentUserIdStr);
+
+                // 2. NẾU LÀ TEACHER: Ép cứng chỉ được lấy khóa học của chính mình
+                // Bỏ qua luôn tham số teacherId truyền từ Client
+                if (currentUserRole == "Teacher")
+                {
+                    var myCourses = await courseService.GetCourseByTeacherAsync(currentUserId);
+                    return Ok(new { success = true, data = myCourses });
+                }
+
+                // 3. NẾU LÀ ADMIN: Có toàn quyền sử dụng tham số teacherId
+                if (currentUserRole == "Admin")
+                {
+                    if (teacherId == "all" || teacherId == "0")
+                    {
+                        var allCourses = await courseService.GetCourseDetail();
+                        return Ok(new { success = true, data = allCourses });
+                    }
+                    else
+                    {
+                        int id = int.Parse(teacherId);
+                        var courses = await courseService.GetCourseByTeacherAsync(id);
+                        return Ok(new { success = true, data = courses });
+                    }
+                }
+
+                return Forbid();
             }
             catch (Exception ex)
             {
@@ -390,43 +470,89 @@ namespace LMS.Controllers
             }
         }
         [HttpPost("soft-delete-bulk")]
+        [Authorize] 
         public async Task<IActionResult> SoftDeleteBulk([FromBody] List<int> ids)
         {
+            var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value;
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(roleClaim) || string.IsNullOrEmpty(userIdClaim))
+                return Unauthorized(new { Success = false, Message = "Phiên làm việc không hợp lệ hoặc chưa đăng nhập." });
+
             if (ids == null || !ids.Any())
                 return BadRequest(new { Success = false, Message = "Danh sách ID không hợp lệ." });
 
-            var result = await courseService.SoftDeleteBulkAsync(ids);
-            if (result)
-                return Ok(new { Success = true, Message = $"Đã chuyển {ids.Count} mục vào thùng rác." });
+            int userId = int.Parse(userIdClaim);
 
-            return BadRequest(new { Success = false, Message = "Không thể xóa các mục đã chọn." });
+            try
+            {
+                var deletedCount = await courseService.SoftDeleteBulkAsync(ids, roleClaim, userId);
+
+                if (deletedCount > 0)
+                    return Ok(new { Success = true, Message = $"Đã chuyển {deletedCount} mục hợp lệ vào thùng rác." });
+                return BadRequest(new { Success = false, Message = "Không thể xóa! Các mục đã chọn có thể đang bị Admin niêm phong hoặc không thuộc quyền sở hữu của bạn." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Success = false, Message = $"Lỗi hệ thống: {ex.Message}" });
+            }
         }
         [HttpPost("restore-bulk")]
         public async Task<IActionResult> RestoreBulk([FromBody] List<int> ids)
         {
+            var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value;
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(roleClaim) || string.IsNullOrEmpty(userIdClaim))
+                return Unauthorized(new { Success = false, Message = "Phiên làm việc không hợp lệ hoặc chưa đăng nhập." });
+
             if (ids == null || !ids.Any())
                 return BadRequest(new { Success = false, Message = "Danh sách ID không hợp lệ." });
 
-            var result = await courseService.RestoreBulkAsync(ids);
-            if (result)
-                return Ok(new { Success = true, Message = $"Đã khôi phục {ids.Count} khóa học thành công." });
-
-            return BadRequest(new { Success = false, Message = "Khôi phục thất bại. Vui lòng thử lại." });
+            int userId = int.Parse(userIdClaim);
+            try {
+                var restoreCount = await courseService.RestoreBulkAsync(ids, roleClaim, userId);
+                if (restoreCount > 0)
+                    return Ok(new { Success = true, Message = $"Đã khôi phục {restoreCount} mục." });
+                return BadRequest(new { Success = false, Message = "Khôi phục thất bại. Vui lòng thử lại." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Success = false, Message = $"Lỗi hệ thống: {ex.Message}" });
+            }
         }
 
         [HttpDelete("hard-delete-bulk")]
+        [Authorize] 
         public async Task<IActionResult> HardDeleteBulk([FromBody] List<int> ids)
         {
+            // 1. Rút thông tin từ Token
+            var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value;
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(roleClaim) || string.IsNullOrEmpty(userIdClaim))
+                return Unauthorized(new { Success = false, Message = "Phiên làm việc không hợp lệ." });
+
             if (ids == null || !ids.Any())
                 return BadRequest(new { Success = false, Message = "Danh sách ID không hợp lệ." });
 
-            var result = await courseService.HardDeleteBulkAsync(ids);
-            if (result)
-                return Ok(new { Success = true, Message = $"Đã xóa vĩnh viễn {ids.Count} khóa học." });
+            int userId = int.Parse(userIdClaim);
 
-            return BadRequest(new { Success = false, Message = "Không thể xóa vĩnh viễn dữ liệu." });
+            try
+            {
+                var deletedCount = await courseService.HardDeleteBulkAsync(ids, roleClaim, userId);
+
+                if (deletedCount > 0)
+                    return Ok(new { Success = true, Message = $"Đã xóa vĩnh viễn {deletedCount} mục hợp lệ khỏi hệ thống." });
+
+                return BadRequest(new { Success = false, Message = "Không thể xóa! Dữ liệu có thể đang bị Admin niêm phong hoặc không thuộc quyền sở hữu của bạn." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Success = false, Message = $"Lỗi hệ thống: {ex.Message}" });
+            }
         }
-    
 
-}
+
+    }
 }

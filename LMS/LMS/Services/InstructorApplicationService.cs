@@ -3,10 +3,12 @@ using LMS.Data;
 using LMS.DTOs.Request;
 using LMS.DTOs.Respone;
 using LMS.Enums;
+using LMS.Hub;
 using LMS.Models;
 using LMS.Repositories;
 using LMS.Repositories.Interfaces;
 using LMS.Services.Interfaces;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace LMS.Services
@@ -18,20 +20,32 @@ namespace LMS.Services
         private readonly ApplicationDbContext _context;
         private readonly IEmailService _emailService;
         private readonly INotificationService notificationService;
+        private readonly IHubContext<NotificationHub> _hubContext;
+        private readonly IDashboardService _dashboardService;
         public InstructorApplicationService(
             IInstructorApplicationRepository applicationRepo,
             ICloudinaryService cloudinaryService,
             ApplicationDbContext context,
             IEmailService emailService,
-            INotificationService notificationService)
+            INotificationService notificationService,IHubContext<NotificationHub> hubContext, IDashboardService dashboardService)
         {
             _applicationRepo = applicationRepo;
             _cloudinaryService = cloudinaryService;
             _context = context;
             _emailService = emailService;
             this.notificationService = notificationService;
+            _hubContext = hubContext;
+            _dashboardService = dashboardService;
         }
-
+        public async Task DeleteAsync(int id)
+        {
+            var exist = await GetByIdOrThrowAsync(id);
+            if (exist.IsDeleted)
+            {
+                throw new Exception("Đơn đã bị xóa trước đó rồi");
+            }
+            await _applicationRepo.DeleteAsync(exist);
+        }
         public async Task<bool> ApplyInstructorAsync(int userId, string userName, ApplyInstructorRequestDTO dto)
         {
             // 1. Kiểm tra đơn trùng
@@ -58,11 +72,11 @@ namespace LMS.Services
                 Status = ApplicationStatusEnum.Pending
             };
             await _applicationRepo.AddAsync(application);
-            string adminMsg = $"<b>{userName}</b> vừa gửi yêu cầu đăng ký trở thành giảng viên.";
-            string url = $"/admin/applications/{application.Id}";
 
-            // BƯỚC QUAN TRỌNG: Lấy danh sách ID của các Admin
-            // (Nếu bạn đã làm Enum RoleTypeEnum.Admin = 1 thì thay thẳng vào đây cho xịn)
+            string adminMsg = $"<b>{userName}</b> vừa gửi yêu cầu đăng ký trở thành giảng viên.";
+            string url = $"/managerUser/admin-approvals.html?id={application.Id}";
+
+            // 4. Lấy danh sách ID của các Admin
             var adminRoleId = await _context.Roles
                 .Where(r => r.RoleName == "Admin")
                 .Select(r => r.Id)
@@ -90,12 +104,60 @@ namespace LMS.Services
                 }
             }
 
+            try
+            {
+                var pendingCounts = await _dashboardService.GetPendingCountsAsync();
+
+                await _hubContext.Clients.Group("AdminGroup")
+                    .SendAsync("ReceiveAdminNotificationCount", pendingCounts.WithdrawCount, pendingCounts.TeacherCount);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[SignalR Error] Lỗi khi bắn thông báo duyệt giảng viên: {ex.Message}");
+            }
+
             return true;
         }
 
         public async Task<IEnumerable<InstructorApplicationModel>> GetPendingApplicationsAsync()
         {
             return await _applicationRepo.GetPendingApplicationsAsync();
+        }
+
+        public async Task<bool> RejectApplicationAsync(int applicationId, string rejectReason)
+        {
+            var isSuccess = await _applicationRepo.RejectApplicationAsync(applicationId, rejectReason);
+            if (isSuccess)
+            {
+                var application = await _applicationRepo.GetApplicationWithUserAsync(applicationId);
+
+                // Gửi email báo lỗi và kèm theo lý do (rejectReason)
+                string subject = "Thông báo về đơn đăng ký giảng viên";
+                string body = $@"
+            <h3>Chào {application.User.FullName},</h3>
+            <p>Cảm ơn bạn đã quan tâm và nộp hồ sơ giảng viên trên hệ thống LMS.</p>
+            <p>Rất tiếc, hồ sơ của bạn hiện tại chưa được phê duyệt với lý do sau:</p>
+            <p><strong>{rejectReason}</strong></p>
+            <p>Bạn có thể cập nhật lại thông tin và nộp lại đơn trong tương lai.</p>
+            <br/>
+            <p>Trân trọng,</p>";
+
+                await _emailService.SendEmailAsync(application.User.Email, subject, body);
+
+                // 📍 BẮN SIGNALR: GIẢM SỐ ĐẾM KHI TỪ CHỐI THÀNH CÔNG
+                try
+                {
+                    var pendingCounts = await _dashboardService.GetPendingCountsAsync();
+                    await _hubContext.Clients.Group("AdminGroup")
+                        .SendAsync("ReceiveAdminNotificationCount", pendingCounts.WithdrawCount, pendingCounts.TeacherCount);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[SignalR Error] Lỗi khi bắn đếm số (Reject): {ex.Message}");
+                }
+            }
+
+            return isSuccess;
         }
 
         public async Task<bool> ApproveApplicationAsync(int applicationId)
@@ -115,38 +177,26 @@ namespace LMS.Services
                 // Gửi email chúc mừng
                 string subject = "Chúc mừng! Đơn đăng ký giảng viên đã được duyệt";
                 string body = $@"
-                <h3>Chào {application.User.FullName},</h3>
-                <p>Hồ sơ đăng ký giảng viên của bạn trên hệ thống LMS đã được phê duyệt.</p>
-                <p>Ngay bây giờ, bạn có thể đăng nhập lại vào hệ thống để truy cập Bảng điều khiển giảng viên và bắt đầu tạo khóa học đầu tiên của mình!</p>
-                <br/>
-                <p>Trân trọng,</p>
-                <p>Ban Quản Trị LMS</p>";
+        <h3>Chào {application.User.FullName},</h3>
+        <p>Hồ sơ đăng ký giảng viên của bạn trên hệ thống LMS đã được phê duyệt.</p>
+        <p>Ngay bây giờ, bạn có thể đăng nhập lại vào hệ thống để truy cập Bảng điều khiển giảng viên và bắt đầu tạo khóa học đầu tiên của mình!</p>
+        <br/>
+        <p>Trân trọng,</p>
+        <p>Ban Quản Trị LMS</p>";
 
                 await _emailService.SendEmailAsync(application.User.Email, subject, body);
 
-            }
-            return isSuccess;
-        }
-
-        public async Task<bool> RejectApplicationAsync(int applicationId, string rejectReason)
-        {
-            var isSuccess = await _applicationRepo.RejectApplicationAsync(applicationId, rejectReason);
-            if (isSuccess)
-            {
-                var application = await _applicationRepo.GetApplicationWithUserAsync(applicationId);
-
-                // Gửi email báo lỗi và kèm theo lý do (rejectReason)
-                string subject = "Thông báo về đơn đăng ký giảng viên";
-                string body = $@"
-                    <h3>Chào {application.User.FullName},</h3>
-                    <p>Cảm ơn bạn đã quan tâm và nộp hồ sơ giảng viên trên hệ thống LMS.</p>
-                    <p>Rất tiếc, hồ sơ của bạn hiện tại chưa được phê duyệt với lý do sau:</p>
-                    <p><strong>{rejectReason}</strong></p>
-                    <p>Bạn có thể cập nhật lại thông tin và nộp lại đơn trong tương lai.</p>
-                    <br/>
-                    <p>Trân trọng,</p>";
-
-                await _emailService.SendEmailAsync(application.User.Email, subject, body);
+                // 📍 BẮN SIGNALR: GIẢM SỐ ĐẾM KHI DUYỆT THÀNH CÔNG
+                try
+                {
+                    var pendingCounts = await _dashboardService.GetPendingCountsAsync();
+                    await _hubContext.Clients.Group("AdminGroup")
+                        .SendAsync("ReceiveAdminNotificationCount", pendingCounts.WithdrawCount, pendingCounts.TeacherCount);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[SignalR Error] Lỗi khi bắn đếm số (Approve): {ex.Message}");
+                }
             }
 
             return isSuccess;
@@ -164,7 +214,8 @@ namespace LMS.Services
                 Experience = x.Experience,
                 CvUrl = x.CvUrl,
                 Status = x.Status.ToString(),
-                AppliedAt = x.CreatedAt
+                AppliedAt = x.CreatedAt,
+                AvatarUrl = x.User.AvatarUrl
 
             }).ToList();
             return (modelList, total);
@@ -190,7 +241,8 @@ namespace LMS.Services
                 Experience = x.Experience,
                 CvUrl = x.CvUrl,
                 Status = x.Status.ToString(),
-                AppliedAt = x.CreatedAt
+                AppliedAt = x.CreatedAt,
+                AvatarUrl = x.User.AvatarUrl
             };
             return course;
         }

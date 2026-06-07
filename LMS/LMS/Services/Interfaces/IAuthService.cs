@@ -10,6 +10,10 @@ namespace LMS.Services.Interfaces
     {
         Task<AuthResponseDTO> LoginAsync(LoginRequestDTO loginRequest);
         Task<AuthResponseDTO> RegisterAsync(RegisterRequestDTO registerRequest);
-        string GenerateJwtToken(UserModel user);
+        (string AccessToken, string RefreshToken) GenerateTokens(UserModel user);
+        Task ForgotPasswordAsync(string email);
+        Task<bool> VerifyOtpAsync(string email, string otpCode);
+        Task ResetPasswordAsync(string email, string otpCode, string newPassword);
+        Task<AuthResponseDTO> RefreshTokenAsync(RefreshTokenRequestDTO request);
     }
 }

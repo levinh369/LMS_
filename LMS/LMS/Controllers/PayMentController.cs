@@ -5,9 +5,11 @@ using LMS.DTOs.Request;
 using LMS.Enums;
 using LMS.Models;
 using LMS.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+[Authorize]
 [Route("api/[controller]")]
 [ApiController]
 public class PaymentController : ControllerBase
@@ -131,6 +133,7 @@ public class PaymentController : ControllerBase
 
         int orderId = int.Parse(vnpay.GetResponseData("vnp_TxnRef"));
         string vnp_ResponseCode = vnpay.GetResponseData("vnp_ResponseCode");
+        string vnp_TransactionStatus = vnpay.GetResponseData("vnp_TransactionStatus");
         string vnp_TransactionNo = vnpay.GetResponseData("vnp_TransactionNo");
         string vnp_SecureHash = queryData["vnp_SecureHash"];
 
@@ -153,7 +156,47 @@ public class PaymentController : ControllerBase
             {
                 order.Status = OrderStatusEnum.Success;
                 order.VnpayTranNo = vnp_TransactionNo;
+                order.Vnp_TransactionStatus = vnp_TransactionStatus;
+                int actualTeacherId = order.Course.TeacherId ?? 0;
+                if (actualTeacherId > 0)
+                {
+                    var teacher = await _context.Users.FirstOrDefaultAsync(u => u.Id == actualTeacherId);
+                    if (teacher != null)
+                    {
+                        decimal lifetimeGross = await _context.Enrollments
+                            .Include(e => e.Course)
+                            .Where(e => e.Course.TeacherId == actualTeacherId)
+                            .SumAsync(e => e.Course.Price);
 
+                        decimal totalRevenueToSetRank = lifetimeGross + order.Amount;
+
+                        var activeRanks = await _context.Ranks
+                            .Where(r => r.IsActive == true && r.IsDeleted == false)
+                            .OrderBy(r => r.RequiredRevenue)
+                            .ToListAsync();
+                        var currentRank = activeRanks.LastOrDefault(r => totalRevenueToSetRank >= r.RequiredRevenue)
+                                          ?? activeRanks.FirstOrDefault();
+                        decimal appliedRate = currentRank?.DefaultRate ?? 70m;
+                        if (order.Course.CommissionRate.HasValue && order.Course.CommissionRate.Value > 0)
+                        {
+                            appliedRate = (decimal)order.Course.CommissionRate.Value;
+                        }
+
+                        decimal teacherShareRate = appliedRate / 100m;
+
+                        order.TeacherAmount = order.Amount * teacherShareRate;
+                        order.AdminAmount = order.Amount - order.TeacherAmount;
+                        order.AppliedRate = (int)appliedRate; 
+
+                        if (currentRank != null)
+                        {
+                            teacher.Rank = currentRank.RankEnum;
+                        }
+
+                     
+                        teacher.WalletBalance += order.TeacherAmount;
+                    }
+                }
                 var enrollDto = new EnrollRequestDTO
                 {
                     CourseId = order.CourseId,
@@ -163,7 +206,7 @@ public class PaymentController : ControllerBase
                 await _enrollmentService.AddEnrollAsync(order.UserId, enrollDto);
                 await _context.SaveChangesAsync();
 
-                return Redirect("http://127.0.0.1:5500/pages/payment/payment-success.html");
+                return Redirect($"http://127.0.0.1:5500/pages/payment/payment-success.html?courseId={order.CourseId}");
             }
             // TRƯỜNG HỢP 2: NGƯỜI DÙNG NHẤN HỦY (MÃ 24)
             else if (vnp_ResponseCode == "24")

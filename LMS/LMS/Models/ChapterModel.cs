@@ -13,6 +13,10 @@ namespace LMS.Models
         [Required]
         public int CourseId { get; set; }
         public CourseModel Course { get; set; }
+        [StringLength(20)]
+        public string? LockedByRole { get; set; }
+        [StringLength(20)]
+        public string? DeletedByRole { get; set; }
 
         // Một chương có nhiều bài học
         public ICollection<LessonModel> Lessons { get; set; } = new List<LessonModel>();

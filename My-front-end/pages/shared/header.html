@@ -209,7 +209,7 @@
 
 <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top">
     <div class="container">
-        <a class="navbar-brand fw-bold text-primary" href="/">LMS ACADEMY</a>
+        <a class="navbar-brand fw-bold text-primary" href="/index.html">LMS ACADEMY</a>
 
         <div class="search-wrapper position-relative mx-auto w-50 d-none d-md-block">
             <form class="d-flex">
@@ -222,9 +222,12 @@
                     <span>Kết quả cho '<span id="searchKeyworkText"></span>'</span>
                 </div>
                 <div id="searchResultList" class="search-list"></div>
-                <div class="search-footer p-2 text-center border-top">
-                    <a href="#" class="text-decoration-none small fw-bold text-secondary">Xem tất cả kết quả</a>
-                </div>
+               <div class="search-footer p-0 border-top">
+    <a href="#" id="seeAllBtn" class="see-all-link d-block text-center py-2.5 text-decoration-none fw-semibold" style="display: none;">
+        <span>Xem tất cả kết quả</span>
+        <i class="bi bi-arrow-right ms-1"></i>
+    </a>
+</div>
             </div>
         </div>
 
@@ -311,7 +314,7 @@
     </a>
 </li>
         <li>
-            <a class="dropdown-item py-2" href="/profile/settings.html">
+            <a class="dropdown-item py-2" href="/user/settings.html">
                 <i class="bi bi-gear me-2"></i>Cài đặt
             </a>
         </li>
@@ -440,6 +443,5 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="../assets/js/auth.js"></script>
-<script src="../assets/js/notification.js"></script>
+
 

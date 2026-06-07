@@ -40,7 +40,7 @@ namespace LMS.Services
             };
             await enrollRepository.AddAsync(enroll);
             string message = $"Học viên <b>{dto.StudentName}</b> vừa tham gia khóa học của bạn.";
-            string url = $"/instructor/courses/{dto.CourseId}/students";
+            string url = "dashboard/Dashboard-teacher.html";
 
             await notificationService.SendNotificationAsync(
                 dto.TeacherId,                // Người nhận (Giảng viên)

@@ -73,36 +73,35 @@
             <p class="text-muted small">Quản lý nội dung, giá tiền và danh mục khóa học</p>
         </div>
     </div>
-
 <div class="container-fluid pf-4">
     
-    <!-- ================= VIEW DÀNH CHO ADMIN ================= -->
     <div id="admin-section" style="display: none;">
-        <h3 class="mb-4 text-primary fw-bold"><i class="bi bi-shield-check"></i> Quản Trị Hệ Thống Khóa Học</h3>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="mb-0 text-primary fw-bold"><i class="bi bi-shield-check"></i> Quản Trị Hệ Thống Khóa Học</h3>
+        </div>
         
-        <!-- Bộ lọc Admin -->
         <div class="card shadow-sm mb-4 border-start border-primary border-4">
             <div class="card-body p-4">
                 <div class="row g-3">
                     <div class="col-md-4">
                         <label class="form-label fw-bold small">Từ khóa</label>
-                        <input type="text" id="adminKeySearch" class="form-control" placeholder="Tên khóa học, ID...">
+                        <input type="text" id="adminKeySearch" class="form-control bg-light border-0" placeholder="Tên khóa học, ID...">
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-bold small">Giảng viên</label>
-                        <select id="adminFilterTeacher" class="form-select shadow-sm">
+                        <select id="adminFilterTeacher" class="form-select bg-light border-0">
                             <option value="0">Tất cả giảng viên</option>
                         </select>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-bold small">Danh mục</label>
-                        <select id="adminFilterCategory" class="form-select">
+                        <select id="adminFilterCategory" class="form-select bg-light border-0">
                             <option value="">Tất cả danh mục</option>
                         </select>
                     </div>
                     <div class="col-md-2">
                         <label class="form-label fw-bold small">Trạng thái</label>
-                        <select id="adminIsActive" class="form-select">
+                        <select id="adminIsActive" class="form-select bg-light border-0">
                             <option value="-1">Tất cả</option>
                             <option value="1">Hoạt động</option>
                             <option value="0">Khóa</option>
@@ -110,113 +109,113 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-semibold text-muted small">Từ ngày</label>
-                        <input type="date" id="adminFromDate" class="form-control">
+                        <input type="date" id="adminFromDate" class="form-control bg-light border-0">
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-semibold text-muted small">Đến ngày</label>
-                        <input type="date" id="adminToDate" class="form-control">
+                        <input type="date" id="adminToDate" class="form-control bg-light border-0">
                     </div>
+                    
                     <div class="col-md-6 d-flex align-items-end justify-content-end gap-2">
-                        <button onclick="Course.loadData(1)" class="btn btn-primary px-4">
-                            <i class="bi bi-search"></i> Tìm kiếm hệ thống
-                        </button>
-                        <button onclick="Course.resetSearch()" class="btn btn-outline-secondary">
-                            <i class="bi bi-arrow-clockwise"></i>
-                        </button>
-                        <a href="course_trash.html" class="btn btn-danger">
-                            <i class="bi bi-trash3"></i> Thùng rác tổng
-                        </a>
-                    </div>
+    <button onclick="Course.loadData(1)" class="btn btn-dark px-4 fw-bold shadow-sm d-flex align-items-center justify-content-center" style="height: 38px;">
+        <i class="bi bi-search me-2"></i> TÌM KIẾM
+    </button>
+    
+    <button onclick="Course.resetSearch()" class="btn btn-white border px-4 fw-bold shadow-sm d-flex align-items-center justify-content-center" style="background: white; height: 38px;">
+        <i class="bi bi-arrow-clockwise me-2 text-dark"></i> LÀM MỚI
+    </button>
+    
+    <a href="course_trash.html" id="btn-trash-link-admin" class="btn btn-outline-danger px-4 fw-bold shadow-sm d-flex align-items-center justify-content-center" style="height: 38px;">
+        <i class="bi bi-trash3 me-2"></i> THÙNG RÁC
+    </a>
+</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ================= VIEW DÀNH CHO GIẢNG VIÊN ================= -->
     <div id="teacher-section" style="display: none;">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h3 class="text-success fw-bold"><i class="bi bi-mortarboard"></i> Khóa Học Của Tôi</h3>
-            <button onclick="Course.openCreateModal()" class="btn btn-success shadow-sm px-4">
-                <i class="bi bi-plus-lg"></i> Tạo khóa học mới
+            <h3 class="text-success fw-bold mb-0"><i class="bi bi-mortarboard-fill me-2"></i>Khóa Học Của Tôi</h3>
+            
+            <button onclick="Course.openCreateModal()" class="btn btn-primary px-4 rounded-pill fw-bold shadow-sm d-flex align-items-center" style="height: 38px; font-size: 13px;">
+                <i class="bi bi-plus-lg me-2"></i> TẠO KHÓA HỌC
             </button>
         </div>
-   <div class="card shadow-sm border-0 mb-4" style="border-radius: 15px;">
-    <div class="card-body p-4">
-        <!-- HÀNG 1: CÁC BỘ LỌC CHÍNH -->
-        <div class="row g-3 mb-3">
-            <div class="col-md-4">
-                <label class="form-label fw-semibold text-muted small mb-1">Tìm kiếm</label>
-                <div class="input-group">
-                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-search"></i></span>
-                    <input type="text" id="teacherKeySearch" class="form-control bg-light border-start-0" placeholder="Nhập tên khóa học...">
+
+        <div class="filter-section p-3 mb-3" style="background-color: #f8f9fa; border-radius: 12px;">
+            <div class="row g-2 align-items-center">
+                <div class="col-md-3">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-0"><i class="bi bi-search"></i></span>
+                        <input type="text" id="teacherKeySearch" class="form-control bg-white border-0" placeholder="Tìm tên khóa học...">
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <select id="teacherFilterCategory" class="form-select bg-white border-0">
+                        <option value="0">Tất cả danh mục</option>
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <select id="teacherIsActive" class="form-select bg-white border-0">
+                        <option value="-1">Trạng thái</option>
+                        <option value="1">Hiển thị</option>
+                        <option value="0">Tạm ẩn</option>
+                    </select>
+                </div>
+
+                <div class="col-md-4 d-flex gap-2 justify-content-end align-items-center">
+                    <button onclick="Course.loadData(1)" class="btn btn-dark px-3 rounded-pill fw-bold shadow-sm d-flex align-items-center justify-content-center" style="height: 38px; font-size: 13px;">
+                        <i class="bi bi-funnel-fill me-1"></i> LỌC
+                    </button>
+                    
+                    <button onclick="Course.resetSearch()" class="btn btn-white border px-3 rounded-pill fw-bold shadow-sm d-flex align-items-center justify-content-center" style="height: 38px; font-size: 13px; background: white;">
+                        <i class="bi bi-arrow-clockwise text-dark me-1"></i> LÀM MỚI
+                    </button>
+
+                    <div class="vr opacity-25 mx-1" style="height: 24px;"></div>
+                    
+                    <a href="course_trash.html" id="btn-trash-link-teacher" class="btn btn-outline-secondary px-3 rounded-pill fw-bold shadow-sm d-flex align-items-center justify-content-center" style="height: 38px; font-size: 13px;">
+                        <i class="bi bi-trash3 me-1"></i> THÙNG RÁC
+                    </a>
                 </div>
             </div>
-
-            <div class="col-md-3">
-                <label class="form-label fw-semibold text-muted small mb-1">Danh mục</label>
-                <select id="teacherFilterCategory" class="form-select bg-light">
-                    <option value="0">Tất cả danh mục</option>
-                </select>
-            </div>
-
-            <div class="col-md-2">
-                <label class="form-label fw-semibold text-muted small mb-1">Trạng thái</label>
-                <select id="teacherIsActive" class="form-select bg-light">
-                    <option value="-1">Tất cả</option>
-                    <option value="1">Hiển thị</option>
-                    <option value="0">Tạm ẩn</option>
-                </select>
-            </div>
-
-            <div class="col-md-3 d-flex align-items-end gap-2">
-                <button onclick="Course.loadData(1)" class="btn btn-primary w-100 fw-bold">
-                    <i class="bi bi-funnel"></i> Lọc dữ liệu
-                </button>
-                <a href="course_trash.html" class="btn btn-light border" title="Thùng rác">
-                    <i class="bi bi-trash3 text-danger"></i>
-                </a>
-            </div>
-        </div>
-
-        <!-- HÀNG 2: BULK ACTIONS (THIẾT KẾ GIỮ CHỖ) -->
-        <div class="d-flex align-items-center justify-content-between border-top pt-3" style="min-height: 55px;">
-            <!-- Phần text và nút luôn nằm đây nhưng ẩn/hiện nội dung -->
-            <div id="bulk-actions" class="transition" style="visibility: hidden;">
-                <span class="text-muted small me-3">
-                    <i class="bi bi-check2-circle text-danger me-1"></i>
-                    <span id="selected-count" class="fw-bold text-danger">0</span> mục đã chọn
-                </span>
-                <button onclick="Course.softDeleteBulk()" class="btn btn-sm btn-outline-danger px-3 rounded-pill">
-                    <i class="bi bi-trash-fill"></i> Xóa hàng loạt
-                </button>
-            </div>
-
-           
         </div>
     </div>
-</div>
+
+    <div id="action-row" class="d-flex justify-content-between align-items-center mb-2" style="min-height: 40px;">
+        
+        <div id="bulk-actions" class="d-flex align-items-center gap-2" style="opacity: 0; visibility: hidden; transition: all 0.3s ease;">
+            <div class="badge bg-danger-subtle text-danger px-3 py-2 rounded-pill fw-bold">
+                <i class="bi bi-check2-circle me-1"></i> Đã chọn: <span id="selected-count">0</span>
+            </div>
+            <button id="btn-bulk-delete" class="btn btn-danger btn-sm fw-bold rounded-pill px-3 shadow-sm border-0 d-flex align-items-center" 
+                    onclick="Course.softDeleteBulk()" style="height: 34px; font-size: 12px;">
+                <i class="bi bi-trash-fill me-1"></i> XÓA MỤC CHỌN
+            </button>
+        </div>
+        
     </div>
 
-    <!-- ================= BẢNG DỮ LIỆU DÙNG CHUNG CẤU TRÚC ================= -->
     <div class="card shadow-sm">
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead id="table-head" class="table-light">
-                        <!-- Header sẽ được JS đổi dựa theo Role -->
-                    </thead>
+                        </thead>
                     <tbody id="course-table-body">
-                        <!-- Data đổ vào đây -->
-                    </tbody>
+                        </tbody>
                 </table>
             </div>
-            <!-- Phân trang -->
             <div class="p-4 d-flex justify-content-between align-items-center border-top">
                 <div class="text-muted small">Tổng số: <strong id="total-records">0</strong> bản ghi</div>
                 <nav><ul id="paging-ul" class="pagination pagination-sm m-0"></ul></nav>
             </div>
         </div>
     </div>
+
 </div>
 <!-- modal them -->
 <div class="modal fade" id="courseModal" tabindex="-1">
@@ -544,7 +543,7 @@
         </div>
     </div>
 </div>
-<div id="footer-placeholder"></div>
+
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 

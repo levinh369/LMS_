@@ -3,9 +3,8 @@ let searchTimeout;
 const AuthHelper = {
     // Hàm này dùng để lưu Token và thông tin User sau khi Login/Register thành công
    saveAuth: function(authData) {
-    debugger
-    // 1. Lưu Token (Từ trường Token bên C#)
-    localStorage.setItem("jwt_token", authData.token);
+    localStorage.setItem("jwt_token", authData.accessToken);    // 📍 Đổi thành accessToken
+    localStorage.setItem("refresh_token", authData.refreshToken);
     const idToSave = authData.userId; 
     localStorage.setItem("user_id", idToSave); 
     localStorage.setItem("user_info", JSON.stringify({
@@ -101,7 +100,12 @@ checkLoginStatus: function() {
 
 // Hàm chỉ xóa dữ liệu, không làm gì thêm
 clearAuthSilently: function() {
+    // Xóa bộ đôi Token
     localStorage.removeItem("jwt_token");
+    localStorage.removeItem("refresh_token"); // 📍 Bắt buộc phải có dòng này
+    
+    // Xóa thông tin cá nhân
+    localStorage.removeItem("user_id");       // Xóa nốt cái id lẻ (nếu bác có lưu)
     localStorage.removeItem("user_info");
 },
 
@@ -140,7 +144,7 @@ logout: function() {
 
     try {
         const response = await $.ajax({
-            url: "https://lms-u2jn.onrender.com/api/Course/my-course", // URL API của ông
+            url: "http://127.0.0.1:5000/api/Course/my-course", // URL API của ông
             type: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}` // Gửi token lên để Backend lấy UserId
@@ -192,9 +196,18 @@ handleAuthRequired: function(actionIfLoggedIn) {
 },
 };
 
+// Biến cờ hiệu chống gọi API refresh liên tục
+let isRefreshing = false;
+// 📍 Thêm hàng đợi để chứa các request bị 401 cùng lúc
+let refreshQueue = []; 
+
+// 1. CẤU HÌNH GỬI TOKEN
 $.ajaxSetup({
     beforeSend: function(xhr, settings) {
-        if (settings.url.includes('/Auth/login') || settings.url.includes('/Auth/register')) {
+        // Bỏ qua không nhét Access Token nếu đang gọi Login, Register hoặc đang đi xin Refresh Token
+        if (settings.url.includes('/Auth/login') || 
+            settings.url.includes('/Auth/register') || 
+            settings.url.includes('/refresh-token')) {
             return; 
         }
 
@@ -202,41 +215,102 @@ $.ajaxSetup({
         if (token && token !== "undefined") {
             xhr.setRequestHeader('Authorization', 'Bearer ' + token);
         }
-    },
-    error: function (xhr, textStatus, errorThrown) {
-    // 1. Nếu là lỗi 401 (Hết hạn hoặc chưa có quyền)
+    }
+});
+
+// 2. BỘ ĐÁNH CHẶN VÀ CẤP CỨU LỖI 401
+$(document).ajaxError(async function(event, xhr, settings, thrownError) {
     if (xhr.status === 401) {
         
-        // --- ĐOẠN KIỂM TRA MỚI ---
-        // Nếu đang ở trang login-success hoặc trang login thì KHÔNG báo lỗi
-        if (window.location.pathname.includes("login-success.html") || 
-            window.location.pathname.includes("login.html")) {
+        // --- CÁC TRƯỜNG HỢP BỎ QUA KHÔNG XỬ LÝ ---
+        if (settings._isRetrying || // 📍 CHỐNG LẶP VÔ HẠN: Đã cứu 1 lần rồi mà vẫn xịt thì buông tay
+            window.location.pathname.includes("login-success.html") || 
+            window.location.pathname.includes("login.html") ||
+            settings.url.includes('/refresh-token')) {
             return; 
         }
 
-        // 2. Kiểm tra xem Token trong máy có thật sự hết hạn chưa
         const token = localStorage.getItem("jwt_token");
-        if (token && !AuthHelper.isTokenExpired(token)) {
-            // Nếu token vẫn còn hạn mà Backend báo 401, có thể là lỗi đồng bộ
-            // Cứ để yên cho người dùng dùng tiếp, không đá ra ngoài.
+        if (token && typeof AuthHelper !== 'undefined' && !AuthHelper.isTokenExpired(token)) {
             console.warn("Backend báo 401 nhưng Token local vẫn còn hạn. Bỏ qua.");
             return;
         }
 
-        // 3. Nếu thật sự hết hạn thì mới xóa và đá về login
-        console.warn("Phiên đăng nhập thật sự hết hạn.");
-        localStorage.removeItem("jwt_token");
-        localStorage.removeItem("user_info");
+        // --- BẮT ĐẦU LUỒNG REFRESH TOKEN ---
+        const refreshToken = localStorage.getItem("refresh_token");
+        
+        // Nếu không có Refresh Token -> Hết cứu, đuổi ra ngoài
+        if (!refreshToken) {
+            forceLogout();
+            return;
+        }
 
-        alert("Phiên đăng nhập hết hạn, mời bác đăng nhập lại!");
+        // 📍 XỬ LÝ HÀNG ĐỢI KHI CÓ REQUEST ĐỒNG THỜI
+        if (isRefreshing) {
+            // Đang có người đi xin token rồi, nhét ông này vào hàng đợi
+            refreshQueue.push(settings);
+            return;
+        }
+
+        // Đánh dấu luồng xin token bắt đầu
+        isRefreshing = true;
+        settings._isRetrying = true; // Đánh dấu request gốc này đang được cứu
+
+        try {
+            // Gọi API đi xin Token mới
+            const res = await $.ajax({
+                url: "http://127.0.0.1:5000/api/auth/refresh-token", 
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({ refreshToken: refreshToken })
+            });
+
+            if (res && res.success) {
+                console.log("🚩 Cấp lại Token thành công! Đang gọi lại toàn bộ API bị kẹt...");
+                
+                // 1. Cất cặp Token mới vào kho
+                localStorage.setItem("jwt_token", res.accessToken);
+                localStorage.setItem("refresh_token", res.refreshToken);
+
+                // 2. Sửa lại cái vé (Header) và chạy lại request gốc
+                settings.headers = settings.headers || {};
+                settings.headers["Authorization"] = "Bearer " + res.accessToken;
+                $.ajax(settings); 
+
+                // 3. Giải phóng hàng đợi: Chạy lại toàn bộ các request ăn theo
+                refreshQueue.forEach(queuedSettings => {
+                    queuedSettings.headers = queuedSettings.headers || {};
+                    queuedSettings.headers["Authorization"] = "Bearer " + res.accessToken;
+                    queuedSettings._isRetrying = true; // Gắn cờ chống lặp
+                    $.ajax(queuedSettings);
+                });
+                
+                // Dọn sạch hàng đợi
+                refreshQueue = []; 
+            } else {
+                forceLogout();
+            }
+        } catch (err) {
+            console.warn("Refresh Token cũng đã hết hạn.");
+            forceLogout();
+        } finally {
+            // Xin xong (thành công hay thất bại) cũng nhả cờ hiệu ra
+            isRefreshing = false; 
+        }
+    }
+});
+
+// Hàm dọn dẹp và đá văng ra login
+function forceLogout() {
+    localStorage.clear();
+    if (!window.location.pathname.includes("login.html")) {
         window.location.href = "/auth/login.html";
     }
 }
-});
 // 1. Sửa lại hàm renderItem để khớp với DTO từ Backend C#
 AuthHelper.renderItem = function(item) {
     // Chuyển Id thành URL chi tiết
-    const detailUrl = `/Home/detail.html?id=${item.id}`;
+    const detailUrl = `/pages/Home/detail.html?id=${item.id}`;
     // ThumbnailUrl từ C# sẽ thành thumbnailUrl (viết thường chữ t)
     const imgUrl = item.thumbnailUrl || '../assets/img/default-course.png';
 
@@ -259,17 +333,20 @@ $(document).on('input', '#mainSearchInput', function() {
 
     if (query.length < 2) {
         $box.addClass('d-none');
+        $('#seeAllBtn').hide();
         return;
     }
 
     $box.removeClass('d-none');
     $('#searchKeyworkText').text(query);
+    $('#seeAllBtn').attr('href', `/search-results.html?keyword=${encodeURIComponent(query)}`);
+    $('#seeAllBtn').show();
     $list.html('<div class="p-3 text-center"><div class="spinner-border spinner-border-sm text-primary"></div></div>');
 
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(async () => {
         try {
-            const res = await $.get(`https://lms-u2jn.onrender.com/api/course/search?query=${encodeURIComponent(query)}`);
+            const res = await $.get(`http://127.0.0.1:5000/api/course/search?query=${encodeURIComponent(query)}`);
             
             // Xử lý dữ liệu: Nếu Backend trả về trực tiếp mảng hoặc object có .data
             const results = Array.isArray(res) ? res : (res.data || []);
@@ -326,7 +403,7 @@ $(document).ready(function() {
     });
 
     // 5. Nạp Footer
-    $("#footer-placeholder").load("/shared/footer.html", function() {
+    $("#footer-placeholder").load("/pages/shared/footer.html", function() {
         console.log("🚩 Hệ thống: Footer đã load xong.");
     });
 });

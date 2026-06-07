@@ -3,7 +3,7 @@ var Detail = {
     currentLessons: [], // Sẽ chứa danh sách phẳng của tất cả bài học để hiện trong Modal
     currentTeacherId: 0,
     config: {
-        apiUrl: "https://lms-u2jn.onrender.com/api/course"
+        apiUrl: "http://127.0.0.1:5000/api/course"
     },
     init: function () {
         const urlParams = new URLSearchParams(window.location.search);
@@ -221,7 +221,7 @@ handlePayment: function (courseId, orderId = 0, teacherId) {
 
         // 4. Gọi API
         $.ajax({
-            url: 'https://lms-u2jn.onrender.com/api/Payment/create-payment',
+            url: 'http://127.0.0.1:5000/api/Payment/create-payment',
             type: 'POST',
             contentType: 'application/json',
             data: JSON.stringify(paymentData), // Gửi Object thay vì gửi mỗi cái ID lẻ
@@ -383,7 +383,7 @@ renderEnrollButton: async function() {
 
         try {
             // Gọi API check xem user này đã sở hữu khóa học chưa
-            const response = await fetch(`https://lms-u2jn.onrender.com/api/enroll/check/${courseId}`, {
+            const response = await fetch(`http://127.0.0.1:5000/api/enroll/check/${courseId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await response.json();

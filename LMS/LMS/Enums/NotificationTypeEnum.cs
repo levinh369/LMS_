@@ -25,6 +25,12 @@ namespace LMS.Enums
         [Display(Name = "Yêu cầu đăng ký giảng viên")]
         InstructorApplicationPending = 8,
         [Display(Name = "Yêu cầu rút tiền")]
-        WithdrawalRequest = 9
+        WithdrawalRequest = 9,
+        [Display(Name = "Giảng viên báo lỗi rút tiền")]
+        WithdrawalDispute = 10,
+
+        [Display(Name = "Xử lý khiếu nại rút tiền")]
+        WithdrawalDisputeResolved = 11
+
     }
 }

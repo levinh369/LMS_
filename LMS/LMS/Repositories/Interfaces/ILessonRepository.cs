@@ -17,5 +17,12 @@ namespace LMS.Repositories.Interfaces
         Task<bool> UpdateLessonsOrderAsync(List<int> lessonIds);
         Task<int> GetMaxOrderIndexByChapterIdAsync(int chapterId);
         Task<int> GetCourseIdByChapterIdAsync(int chapterId);
+        Task<LessonModel> GetByIdWithIgnoreFilterAsync(int id);
+        Task<List<LessonModel>> GetListByIdsWithIgnoreFilterAsync(List<int> ids);
+        Task SoftDeleteAsync(LessonModel entity, string deletedByRole);
+        Task RestoreAsync(LessonModel entity);
+        Task HardDeleteAsync(LessonModel entity);
+        Task<bool> UpdateDeleteStatusBulkAsync(List<int> ids, bool isDeleted, string deletedByRole);
+        Task<bool> HardDeleteBulkAsync(List<int> ids);
     }
 }

@@ -1,10 +1,23 @@
+
+const Toast2 = Swal.mixin({
+    toast: true,
+    position: 'top-end', // Góc trên bên phải
+    showConfirmButton: false,
+    timer: 3000,
+    timerProgressBar: true,
+    didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer)
+        toast.addEventListener('mouseleave', Swal.resumeTimer)
+    }
+});
 const chapter = {
     currentCourseId: 0, // Lưu ID khóa học đang chọn
     config: {
         pageSize: 10,
-        apiUrl: "https://lms-u2jn.onrender.com/api/chapter"
+        apiUrl: "http://127.0.0.1:5000/api/chapter"
     },
     openModal: async function(courseId) {
+        TableLoader.show('#chapterListBody');
         chapter.currentCourseId = courseId;
         
         $('#txtNewChapter').val('');
@@ -13,18 +26,33 @@ const chapter = {
     },
 
     loadList: async function(courseId) {
-        try {
-            // Giả sử API của bác là /api/course/{id} trả về kèm chapters
-            const res = await $.ajax({
-                url: `${chapter.config.apiUrl}/course/${courseId}`,
-                type: 'GET'
-            });
+    try {
+        // Lấy Token (đề phòng API yêu cầu đăng nhập)
+        const token = localStorage.getItem("jwt_token");
 
-            chapter.render(res.data || []);
-        } catch (error) {
-            console.error("Lỗi load chương:", error);
+        const res = await $.ajax({
+            url: `${chapter.config.apiUrl}/course/${courseId}`,
+            type: 'GET',
+            headers: {
+                "Authorization": "Bearer " + token
+            }
+        });
+
+        // Kéo biến roleId ra ngoài để hứng dữ liệu
+        let currentRole = 0; 
+        const userInfoRaw = localStorage.getItem("user_info");
+        
+        if (userInfoRaw) {
+            const user = JSON.parse(userInfoRaw);
+            currentRole = parseInt(user.role);
         }
-    },
+        chapter.render(res.data || [], currentRole);
+
+    } catch (error) {
+        console.error("Lỗi load chương:", error);
+        Toast.fire('Lỗi!', 'Không thể tải danh sách chương học.', 'error');
+    }
+},
     saveChapter: async function(){
         var title = $('#txtNewChapter').val().trim();
         var courseId = chapter.currentCourseId; 
@@ -39,6 +67,7 @@ const chapter = {
         OrderIndex: 0 
         };
        try {
+        GlobalLoader.show();
         // Hiệu ứng chờ (Optional)
         const btn = $('#btnSaveChapter');
         btn.prop('disabled', true).text('Đang lưu...');
@@ -59,52 +88,79 @@ const chapter = {
         alert("Có lỗi xảy ra: " + errorMsg);
     } finally {
         $('#btnSaveChapter').prop('disabled', false).html('<i class="bi bi-plus-lg"></i> Thêm ngay');
+        GlobalLoader.hide();
     }
     },
     // 3. Hàm đổ dữ liệu vào bảng
-    render: function(data) {
+  render: function(data, roleId) {
     let html = '';
     
-    // 1. Kiểm tra nếu không có dữ liệu (Cập nhật colspan lên 4)
+    // Ép kiểu role cho chắc cốp
+    const currentRole = parseInt(roleId);
+
+    // 1. Kiểm tra nếu không có dữ liệu
     if (!data || data.length === 0) {
-        html = '<tr><td colspan="4" class="text-center text-muted small italic">Chưa có chương nào được tạo.</td></tr>';
+        html = '<tr><td colspan="4" class="text-center text-muted small italic py-4">Chưa có chương nào được tạo.</td></tr>';
     } else {
         // 2. Sắp xếp theo OrderIndex trước khi render
         data.sort((a, b) => (a.order || 0) - (b.order || 0)).forEach((item, index) => {
+            
+            // LOGIC KIỂM TRA QUYỀN
+            const isLockedByAdmin = item.lockedByRole === 'Admin';
+            const isBlockedForTeacher = currentRole !== 1 && isLockedByAdmin;
+
             html += `
             <tr data-id="${item.id}" class="${item.isActive ? '' : 'table-light text-muted'}">
+                
                 <td class="text-center align-middle">
-                    <i class="bi bi-grip-vertical drag-handle" style="cursor: move; color: #ccc;"></i>
+                    ${isBlockedForTeacher 
+                        // Nếu bị khóa -> Mất class 'drag-handle', thay bằng icon Ổ khóa màu đỏ
+                        ? `<i class="bi bi-lock-fill text-danger" title="Đã bị khóa, không thể di chuyển"></i>` 
+                        // Bình thường -> Hiện icon kéo thả
+                        : `<i class="bi bi-grip-vertical drag-handle" style="cursor: move; color: #ccc;"></i>`
+                    }
                     <span class="ms-1">${index + 1}</span>
                 </td>
 
                 <td class="align-middle">
-                    <input type="text" class="form-control border-0 bg-transparent fw-bold" 
+                    <input type="text" class="form-control border-0 bg-transparent fw-bold ${isBlockedForTeacher ? 'text-danger' : ''}" 
                            value="${item.title}" 
-                           onchange="chapter.update(${item.id}, this.value)">
+                           ${isBlockedForTeacher 
+                               ? 'disabled title="Chương này đã bị Admin niêm phong, không thể đổi tên"' 
+                               : `onchange="chapter.update(${item.id}, this.value)"`} >
                 </td>
 
                 <td class="text-center align-middle">
                     <span role="button" 
-                        class="badge rounded-pill ${item.isActive ? 'bg-success' : 'bg-secondary'} p-2 px-3"
-                        style="cursor: pointer; transition: all 0.3s;"
-                        onclick="chapter.changeStatus(${item.id})">
-                        <i class="bi ${item.isActive ? 'bi-eye-fill' : 'bi-eye-slash-fill'} me-1"></i>
-                        ${item.isActive ? 'Đang hiện' : 'Tạm ẩn'}
+                        class="badge rounded-pill ${isLockedByAdmin ? 'bg-danger-subtle text-danger border border-danger' : (item.isActive ? 'bg-success' : 'bg-secondary')} p-2 px-3"
+                        style="cursor: ${isBlockedForTeacher ? 'not-allowed' : 'pointer'}; transition: all 0.3s;"
+                        onclick="${isBlockedForTeacher 
+                            ? "Swal.fire({icon: 'error', title: 'Bị chặn', text: 'Chương này đang bị Admin niêm phong!'})" 
+                            : `chapter.changeStatus(${item.id})`}">
+                        
+                        <i class="bi ${isLockedByAdmin ? 'bi-shield-lock-fill' : (item.isActive ? 'bi-eye-fill' : 'bi-eye-slash-fill')} me-1"></i>
+                        ${isLockedByAdmin ? 'Niêm phong' : (item.isActive ? 'Đang hiện' : 'Tạm ẩn')}
                     </span>
                 </td>
 
                 <td class="text-end align-middle">
                         <div class="btn-group shadow-sm">
-                                <button class="btn btn-sm btn-outline-info" title="Quản lý bài học" 
-                                onclick="Lesson.MapsToLesson(${item.id})">
-                            <i class="bi bi-collection-play-fill"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger" title="Xóa chương" 
-                                onclick="chapter.delete(${item.id})">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
+                            
+                            <button class="btn btn-sm btn-outline-info" title="Quản lý bài học" 
+                                    onclick="Lesson.MapsToLesson(${item.id})">
+                                <i class="bi bi-collection-play-fill"></i>
+                            </button>
+                            
+                            <button class="btn btn-sm btn-outline-danger ${isBlockedForTeacher ? 'opacity-50' : ''}" 
+                                    title="Xóa chương" 
+                                    onclick="${isBlockedForTeacher 
+                                        ? "Swal.fire({icon: 'error', title: 'Bị chặn', text: 'Không thể xóa chương đang bị niêm phong!'})" 
+                                        : `chapter.delete(${item.id})`}"
+                                    ${isBlockedForTeacher ? 'disabled' : ''}>
+                                <i class="bi bi-trash"></i>
+                            </button>
+                            
+                        </div>
                 </td>
             </tr>`;
         });
@@ -113,7 +169,7 @@ const chapter = {
     // 3. Đổ HTML vào body của bảng
     $('#chapterListBody').html(html);
 
-    // 4. Kích hoạt kéo thả (Nếu bác đã cài SortableJS)
+    // 4. Kích hoạt kéo thả (SortableJS sẽ chỉ móc vào những icon có class 'drag-handle')
     if (typeof Sortable !== 'undefined' && data.length > 0) {
         chapter.initSortable();
     }
@@ -141,22 +197,39 @@ initSortable: function() {
 
 updateOrder: async function(sortedIds) {
     try {
-        // Gửi mảng ID (ví dụ: [10, 15, 12...]) lên server
+        GlobalLoader.show();
+        
+        // 1. Nhớ lấy Token để vượt qua [Authorize] của Backend
+        const token = localStorage.getItem("jwt_token");
+
+        // 2. Gửi mảng ID lên server
         const response = await $.ajax({
             url: `${chapter.config.apiUrl}/reorder/${chapter.currentCourseId}`,
             type: 'POST',
+            headers: {
+                "Authorization": "Bearer " + token
+            },
             contentType: 'application/json',
             data: JSON.stringify(sortedIds)
         });
 
-        toastr.success(response.message || "Đã cập nhật thứ tự chương!");
+        Toast.fire({
+            icon: 'success',
+            title: 'Lưu thứ tự chương thành công!'
+        });
         
         chapter.loadList(chapter.currentCourseId);
 
     } catch (error) {
-        console.error("Lỗi sắp xếp:", error);
-        toastr.error("Không lưu được thứ tự mới, bác kiểm tra lại nhé!");
-        chapter.loadList(this.currentCourseId); // Reset lại vị trí cũ nếu lỗi
+    
+        Toast.fire({
+            icon: 'error',
+            title: 'Lưu thứ tự thất bại! Đang khôi phục vị trí cũ...'
+        });
+        chapter.loadList(chapter.currentCourseId); 
+    }
+    finally {
+        GlobalLoader.hide();
     }
 },
     update: async function(id, newTitle) {
@@ -167,6 +240,7 @@ updateOrder: async function(sortedIds) {
     }
     debugger;
     try {
+        GlobalLoader.show();
         const response = await $.ajax({
             url: `${chapter.config.apiUrl}/${id}`,
             type: 'PUT', 
@@ -177,29 +251,36 @@ updateOrder: async function(sortedIds) {
                 courseId: chapter.currentCourseId,
             })
         });
-        toastr.success(response.message || "Cập nhật chương thành công!");
+        Toast.fire({ icon: 'success', title: response.message || "Cập nhật chương thành công!" });
     } catch (error) {
         if (error.responseJSON && error.responseJSON.message) {
             errorMsg = error.responseJSON.message; 
         } else if (error.status === 404) {
             errorMsg = "Không tìm thấy chương!";
         }
-        toastr.error(errorMsg);
+        Toast.fire({ icon: 'error', title: errorMsg });
         chapter.loadList(chapter.currentCourseId); // Reset lại tên cũ nếu lỗi
     }
+    finally {
+            GlobalLoader.hide();
+        }
 },
 changeStatus: async function(id) {
     try {
+        GlobalLoader.show();
         const response = await $.ajax({
             url: `${chapter.config.apiUrl}/${id}/status`,
             type: 'PUT'
         });
-        toastr.success(response.message);
+        Toast.fire({ icon: 'success', title: response.message || "Đổi trạng thái thành công" });
         chapter.loadList(chapter.currentCourseId);
 
     } catch (error) {
-        toastr.error("Lỗi hệ thống!");
+        Toast.fire({ icon: 'error', title: "Lỗi đổi trạng thái!" });
     }
+    finally {
+            GlobalLoader.hide();
+        }
 },
 goToTrash: function() {
         if (!this.currentCourseId || this.currentCourseId == 0) {
@@ -222,17 +303,20 @@ delete: async function(id) {
     });
     if (result.isConfirmed) {
         try {
+            GlobalLoader.show();
             const res = await $.ajax({
                 url: `${chapter.config.apiUrl}/${id}`,
                 type: "DELETE"
             });
-            Swal.fire("Thành công!", res.message || "Đã xóa chương.", "success");
+            Toast.fire({ icon: 'success', title: res.message || "Đã xóa chương." });
             chapter.loadList(this.currentCourseId);
 
         } catch (error) {
-            console.error("Lỗi khi xóa:", error);
-            Swal.fire("Lỗi!", "Không thể xóa bản ghi này.", "error");
+            Toast.fire({ icon: 'error', title: "Không thể xóa bản ghi này." });
         }
+        finally {
+                GlobalLoader.hide();
+            }
     }
 },
 chapterTrash: {
@@ -248,33 +332,57 @@ chapterTrash: {
         }
     },
 
-    loadData: async function(page) {
-        const pageSize = 10; // Hoặc lấy từ config của bạn
-        const url = `https://lms-u2jn.onrender.com/api/Chapter/list-deleted?courseId=${chapter.currentCourseId}&page=${page}&pageSize=${pageSize}`;
+   loadData: async function(page) {
+    TableLoader.show('#chapterTrashData');
+    const pageSize = 10; 
 
-        try {
-            const response = await fetch(url);
-            const res = await response.json();
+    const keyword = document.getElementById('chapterTrashKeySearch').value || '';
+    const url = `http://127.0.0.1:5000/api/Chapter/list-deleted?courseId=${chapter.currentCourseId}&keyword=${encodeURIComponent(keyword)}&page=${page}&pageSize=${pageSize}`;
 
-            if (res.success || res.Success) {
-                this.renderTable(res.data || res.Data);
-                this.showPaging(res.total || res.Total || res.totalCount, page);
-                document.getElementById('total-records').innerText = res.total || res.totalCount || 0;
-            }
-        } catch (error) {
-            console.error("Lỗi load thùng rác chương:", error);
+    try {
+        // Lấy Token gửi kèm
+        const token = localStorage.getItem("jwt_token");
+        let currentRole = 0; 
+        const userInfoRaw = localStorage.getItem("user_info");
+        
+        if (userInfoRaw) {
+            const user = JSON.parse(userInfoRaw);
+            currentRole = parseInt(user.role);
         }
-    },
+        
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                "Authorization": "Bearer " + token 
+            }
+        });
+        const res = await response.json();
 
-renderTable: function(data) {
+        if (res.success || res.Success) {
+            const dataList = res.data || res.Data || [];
+            this.renderTable(dataList, currentRole);
+            const totalRecords = res.total || res.Total || res.totalCount || 0;
+            const totalPages = res.totalPages || Math.ceil(totalRecords / pageSize); 
+            this.showPaging(totalPages, page);
+            document.getElementById('total-records').innerText = totalRecords;
+        }
+    } catch (error) {
+        console.error("Lỗi load thùng rác chương:", error);
+    } finally {
+        GlobalLoader.hide('#chapterTrashData'); // Nhớ ẩn loader đi nhé
+    }
+},
+renderTable: function(data, roleId) {
     const tbody = document.getElementById('chapterTrashData');
     if (!tbody) return;
 
     let html = '';
+    
+    // Đã bỏ Checkbox nên colspan rút xuống còn 6
     if (!data || data.length === 0) {
         html = `
             <tr>
-                <td colspan="5" class="text-center py-5">
+                <td colspan="6" class="text-center py-5">
                     <div class="mb-3">
                         <i class="bi bi-trash3 text-muted" style="font-size: 3rem; opacity: 0.3;"></i>
                     </div>
@@ -282,126 +390,193 @@ renderTable: function(data) {
                 </td>
             </tr>`;
     } else {
+        const currentRole = parseInt(roleId);
+
         data.forEach(item => {
-            // Xử lý ngày xóa
-            const dateValue = item.deletedAt || item.updatedAt || item.createdAt;
+            const dateValue = item.updatedAt;
             const deleteDate = new Date(dateValue).toLocaleDateString('vi-VN');
-            
-            // Avatar chữ cái đầu nếu không có ảnh (như phong cách Course)
-            const firstChar = item.title ? item.title.charAt(0).toUpperCase() : '?';
+
+            // KIỂM TRA QUYỀN
+            const isDeletedByAdmin = item.deletedByRole === 'Admin' || item.deletedByRole === '1';
+            const isBlockedForTeacher = currentRole !== 1 && isDeletedByAdmin;
+
+            // RENDER NÚT BẤM
+            let actionButtons = '';
+            if (isBlockedForTeacher) {
+                actionButtons = `
+                    <button class="btn-action text-secondary opacity-50" style="cursor: not-allowed; border: none; background: transparent;" 
+                            onclick="Swal.fire({icon: 'error', title: 'Bị chặn', text: 'Chương này do Admin xóa vì vi phạm, bạn không thể can thiệp!'})" 
+                            title="Khóa bởi Admin">
+                        <i class="bi bi-shield-lock-fill fs-5"></i>
+                    </button>
+                `;
+            } else {
+                actionButtons = `
+                    <button class="btn-action btn-restore text-success" style="border: none; background: transparent;" 
+                            onclick="chapter.chapterTrash.restore(${item.id})" title="Khôi phục">
+                        <i class="bi bi-arrow-counterclockwise fs-5"></i>
+                    </button>
+                    <button class="btn-action btn-delete text-danger" style="border: none; background: transparent;" 
+                            onclick="chapter.chapterTrash.hardDelete(${item.id})" title="Xóa vĩnh viễn">
+                        <i class="bi bi-trash3-fill fs-5"></i>
+                    </button>
+                `;
+            }
+
+            // RENDER BADGE TRẠNG THÁI
+            let statusBadge = isDeletedByAdmin 
+                ? `<span class="badge bg-danger-subtle text-danger border border-danger">Admin Xóa</span>`
+                : `<span class="badge bg-secondary-subtle text-secondary border border-secondary">Đã xóa mềm</span>`;
 
             html += `
             <tr class="align-middle">
-                <!-- Cột 1: ID -->
+                
                 <td class="ps-4" style="width: 80px">
                     <span class="text-muted fw-bold">#${item.id}</span>
                 </td>
                 
-                <!-- Cột 2: Thông tin chính (Thumbnail + Title) -->
                 <td>
-                    <div class="d-flex align-items-center">
-                        <div class="symbol symbol-45px me-3">
-                           
-                        </div>
-                        <div class="d-flex flex-column">
-                            <a href="javascript:void(0)" class="text-dark fw-bold text-hover-primary mb-1 fs-6 text-decoration-none">
-                                ${item.title}
-                            </a>
-                            <span class="text-muted fw-semibold fs-7">Chương học</span>
-                        </div>
+                    <div class="d-flex flex-column">
+                        <a href="javascript:void(0)" class="text-dark fw-bold text-hover-primary mb-1 fs-6 text-decoration-none">
+                            ${item.title}
+                        </a>
+                        <span class="text-muted fw-semibold fs-7">Chương học</span>
                     </div>
                 </td>
 
-                <!-- Cột 3: Thứ tự hiển thị -->
                 <td>
                     <span class="badge bg-light-info text-info border-0 fw-bold px-3 py-2">
                         STT: ${item.orderIndex || item.order || 0}
                     </span>
                 </td>
 
-                <!-- Cột 4: Ngày xóa -->
+                <td>${statusBadge}</td>
+
                 <td>
                     <div class="d-flex flex-column">
-                        <span class="text-dark fw-bold mb-1">${deleteDate}</span>
+                        <span class="text-danger fw-bold mb-1">${deleteDate}</span>
                         <span class="text-muted fs-7">Ngày xóa tạm</span>
                     </div>
                 </td>
 
-                <!-- Cột 5: Hành động (Căn giữa hoặc phải tùy thẩm mỹ) -->
                 <td class="text-end pe-4">
                     <div class="d-flex justify-content-end gap-2">
-                        <button class="btn-action btn-restore" onclick="chapter.chapterTrash.restore(${item.id})" title="Khôi phục">
-                            <i class="bi bi-arrow-counterclockwise"></i>
-                        </button>
-                        <button class="btn-action btn-delete" onclick="chapter.chapterTrash.hardDelete(${item.id})" title="Xóa vĩnh viễn">
-                            <i class="bi bi-trash3-fill"></i>
-                        </button>
+                        ${actionButtons}
                     </div>
                 </td>
             </tr>`;
         });
     }
     tbody.innerHTML = html;
-    
-    // Cập nhật tổng số bản ghi
-    const totalElem = document.getElementById('total-records');
-    if (totalElem) totalElem.innerText = data.length;
+},
+resetFilter: function() {
+    // 1. Tìm ô input và xóa trắng nội dung
+    const searchInput = document.getElementById('chapterTrashKeySearch');
+    if (searchInput) {
+        searchInput.value = '';
+    }
+
+    // 2. Gọi lại hàm load dữ liệu, bắt đầu từ trang 1
+    this.loadData(1);
 },
 restore: function(id) {
-            Swal.fire({
-                title: 'Khôi phục chương?',
-                text: "Chương này sẽ quay lại danh sách hiển thị chính.",
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#198754',
-                confirmButtonText: 'Đồng ý',
-                cancelButtonText: 'Hủy'
-            }).then(async (result) => {
-                if (result.isConfirmed) {
-                    const response = await fetch(`${chapter.config.apiUrl}/restore/${id}`, { method: 'POST' });
-                    const res = await response.json();
-                    if (res.success || res.Success) {
-                        Swal.fire('Thành công!', 'Đã khôi phục chương.', 'success');
-                        this.loadData(1);
-                    }
-                }
-            });
-        },
+        Swal.fire({
+            title: 'Khôi phục chương học?',
+            text: "Chương này sẽ quay lại danh sách hiển thị chính.",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#198754',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Đồng ý khôi phục',
+            cancelButtonText: 'Hủy'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    // 3. KHÓA MÀN HÌNH BẢO VỆ TIẾN TRÌNH KHÔI PHỤC CHƯƠNG
+                    GlobalLoader.show();
 
-        hardDelete: function(id) {
-            Swal.fire({
-                title: 'Xóa vĩnh viễn?',
-                text: "Dữ liệu sẽ bị xóa sạch khỏi hệ thống và không thể khôi phục!",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                confirmButtonText: 'Xóa ngay',
-                cancelButtonText: 'Hủy'
-            }).then(async (result) => {
-                if (result.isConfirmed) {
-                    const response = await fetch(`${chapter.config.apiUrl}/hard-delete/${id}`, { method: 'DELETE' });
+                    const parentObj = (typeof chapter !== 'undefined') ? chapter : Chapter;
+                    const token = localStorage.getItem("jwt_token");
+
+                    const response = await fetch(`${parentObj.config.apiUrl}/restore/${id}`, { 
+                        method: 'POST',
+                        headers: { "Authorization": "Bearer " + token }
+                    });
                     const res = await response.json();
+                    
                     if (res.success || res.Success) {
-                        Swal.fire('Đã xóa!', 'Chương học đã bị xóa vĩnh viễn.', 'success');
+                        // ĐỒNG BỘ: Sử dụng Toast thông báo mượt mà góc màn hình
+                        Toast2.fire({ icon: 'success', title: 'Chương học đã được khôi phục thành công!' });
                         this.loadData(1);
                     } else {
-                        Swal.fire('Thất bại!', res.message || 'Có lỗi xảy ra.', 'error');
+                        Toast2.fire({ icon: 'error', title: res.message || 'Khôi phục chương học thất bại!' });
                     }
+                } catch (err) { 
+                    console.error(err);
+                    Toast2.fire({ icon: 'error', title: 'Không thể kết nối đến máy chủ hệ thống!' });
+                } finally {
+                    // LUÔN MỞ KHÓA MÀN HÌNH Ở FINALLY
+                    GlobalLoader.hide();
                 }
-            });
-        },
+            }
+        });
+    },
+        hardDelete: function(id) {
+        Swal.fire({
+            title: 'Xóa vĩnh viễn chương học?',
+            text: "Toàn bộ bài học bên trong chương này sẽ bị phá hủy, hành động này không thể hoàn tác!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Xóa sạch ngay',
+            cancelButtonText: 'Hủy'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    // 4. KHÓA MÀN HÌNH BẢO VỆ TIẾN TRÌNH PHÁ HỦY VĨNH VIỄN
+                    GlobalLoader.show();
 
-    showPaging: function(totalCount, currentPage) {
-        $('#paging-ul').twbsPagination('destroy');
-        const totalPages = Math.ceil(totalCount / 10);
-        if (totalPages > 0) {
-            $('#paging-ul').twbsPagination({
-                totalPages: totalPages,
-                startPage: currentPage,
-                visiblePages: 5,
-                onPageClick: (event, page) => { if (page !== currentPage) this.loadData(page); }
-            });
-        }
+                    const parentObj = (typeof chapter !== 'undefined') ? chapter : Chapter;
+                    const token = localStorage.getItem("jwt_token");
+
+                    const response = await fetch(`${parentObj.config.apiUrl}/hard-delete/${id}`, { 
+                        method: 'DELETE',
+                        headers: { "Authorization": "Bearer " + token }
+                    });
+                    const res = await response.json();
+                    
+                    if (res.success || res.Success) {
+                        Toast2.fire({ icon: 'success', title: 'Chương học đã bị xóa sạch hoàn toàn khỏi DB.' });
+                        this.loadData(1);
+                    } else {
+                        Toast2.fire({ icon: 'error', title: res.message || 'Có lỗi xảy ra hoặc dính ràng buộc dữ liệu bài học.' });
+                    }
+                } catch (err) { 
+                    Toast2.fire({ icon: 'error', title: 'Mất kết nối máy chủ thiết lập.' });
+                } finally {
+                    GlobalLoader.hide();
+                }
+            }
+        });
+    },
+
+    showPaging: function (totalPages, currentPage) {
+    if (!totalPages || totalPages <= 1) {
+        $('#paging-ul').empty().removeData("twbs-pagination").unbind("page");
+        return;
     }
+    
+    $('#paging-ul').twbsPagination('destroy');
+    $('#paging-ul').twbsPagination({
+        totalPages: totalPages,
+        visiblePages: 5,
+        startPage: currentPage,
+        first: '«', prev: '‹', next: '›', last: '»',
+        onPageClick: (event, page) => { 
+            if (page !== currentPage) this.loadData(page); 
+        }
+    });
+}
 }
 };
