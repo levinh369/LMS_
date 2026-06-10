@@ -77,30 +77,65 @@ namespace LMS.Services
         }
         public async Task<UpdateProfileResponse> UpdateProfile(int userId, UpdateProfileRequestDTO request)
         {
-            var user = await userRepository.GetByIdAsync(userId);
-            if (user == null) throw new Exception("Không tìm thấy người dùng!");
-            if (!string.IsNullOrEmpty(request.NewPassword))
+            try
             {
-                // 1. Check xem có nhập mật khẩu hiện tại không
-                if (string.IsNullOrEmpty(request.CurrentPassword))
-                    throw new Exception("Bạn phải nhập mật khẩu hiện tại mới đổi được mật khẩu mới!");
-                if (request.NewPassword != request.ConfirmPassword)
-                    throw new Exception("Mật khẩu xác nhận không khớp!");
-                if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
-                    throw new Exception("Mật khẩu hiện tại không chính xác!");
+                var user = await userRepository.GetByIdAsync(userId);
+                if (user == null) throw new Exception("Không tìm thấy người dùng!");
 
-                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+                string oldAvatarUrl = user.AvatarUrl;
+
+
+                if (!string.IsNullOrEmpty(request.NewPassword))
+                {
+                    if (user.Provider == "Google")
+                    {
+                        throw new Exception("Tài khoản đăng nhập bằng Google không thể đổi mật khẩu theo cách này!");
+                    }
+
+                    if (string.IsNullOrEmpty(request.CurrentPassword))
+                        throw new Exception("Bạn phải nhập mật khẩu hiện tại mới đổi được mật khẩu mới!");
+
+                    if (request.NewPassword != request.ConfirmPassword)
+                        throw new Exception("Mật khẩu xác nhận không khớp!");
+
+                    if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
+                        throw new Exception("Mật khẩu hiện tại không chính xác!");
+
+                    user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+                }
+
+                if (request.AvatarFile != null)
+                {
+                    try
+                    {
+ 
+                        user.AvatarUrl = await cloudinaryService.UploadImageAsync(request.AvatarFile);
+                        if (!string.IsNullOrEmpty(oldAvatarUrl))
+                        {
+                            await cloudinaryService.DeleteImageFromUrlAsync(oldAvatarUrl);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new Exception("Lỗi khi tải ảnh đại diện lên Cloudinary: " + ex.Message);
+                    }
+                }
+
+                user.FullName = request.FullName;
+                user.UpdatedAt = DateTime.UtcNow;
+
+                await userRepository.UpdateAsync(user);
+
+                return new UpdateProfileResponse
+                {
+                    FullName = user.FullName,
+                    AvatarUrl = user.AvatarUrl
+                };
             }
-
-            // Xử lý Avatar và FullName như cũ...
-            if (request.AvatarFile != null)
+            catch (Exception ex)
             {
-                user.AvatarUrl = await cloudinaryService.UploadImageAsync(request.AvatarFile);
+                throw new Exception("Có lỗi xảy ra khi cập nhật hồ sơ: " + ex.Message);
             }
-            user.FullName = request.FullName;
-
-            await userRepository.UpdateAsync(user);
-            return new UpdateProfileResponse { FullName = user.FullName, AvatarUrl = user.AvatarUrl };
         }
         public async Task DeleteAsync(int id)
         {

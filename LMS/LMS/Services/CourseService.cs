@@ -195,13 +195,25 @@ namespace LMS.Services
             try
             {
                 var course = await courseRepository.GetById(id);
+                if (course == null)
+                    throw new Exception("Không tìm thấy khóa học!");
+
                 if (course.IsDeleted)
                     throw new Exception("Khóa học đã bị xóa trước đó rồi!");
+
+                // 📍 1. Tạo biến lưu link ảnh cũ để xử lý xóa sau khi upload ảnh mới thành công
+                string oldImageUrl = course.ThumbnailUrl;
+
                 if (dto.ThumbnailFile != null)
                 {
                     try
                     {
+
                         course.ThumbnailUrl = await cloudinaryService.UploadImageAsync(dto.ThumbnailFile);
+                        if (!string.IsNullOrEmpty(oldImageUrl))
+                        {
+                            await cloudinaryService.DeleteImageFromUrlAsync(oldImageUrl);
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -215,6 +227,7 @@ namespace LMS.Services
                 course.CategoryId = dto.CategoryId;
                 course.Price = dto.Price;
                 course.Level = (LevelEnum)dto.Level;
+
                 course.CourseDetails.Clear();
                 if (dto.CourseDetails != null && dto.CourseDetails.Any())
                 {
@@ -228,6 +241,7 @@ namespace LMS.Services
                         });
                     }
                 }
+
                 await courseRepository.UpdateAsync(course);
             }
             catch (Exception ex)

@@ -77,45 +77,46 @@
         </div>
     </div>
 
-<div class="filter-section p-3 mb-4 shadow-sm border border-light-subtle" style="background-color: #f8f9fa; border-radius: 12px;">
-    <div class="row g-2 align-items-center">
-        <div class="col-lg-3 col-md-4">
-            <div class="input-group shadow-sm" style="border-radius: 8px; overflow: hidden;">
-                <span class="input-group-text bg-white border-0 pe-1"><i class="bi bi-search text-muted small"></i></span>
-                <input type="text" id="keySearch" class="form-control bg-white border-0 py-2 shadow-none" style="font-size: 14px;" placeholder="Tên danh mục...">
+<div class="card shadow-sm mb-4 border-start border-primary border-4" style="border-radius: 12px;">
+    <div class="card-body p-4">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label fw-bold small">Từ khóa</label>
+                <input type="text" id="keySearch" class="form-control bg-light border-0" placeholder="Tên danh mục, ID...">
             </div>
-        </div>
 
-        <div class="col-lg-2 col-md-4">
-            <div class="shadow-sm" style="border-radius: 8px;">
-                <input type="date" id="fromDate" class="form-control bg-white border-0 py-2 shadow-none" style="font-size: 14px;" title="Từ ngày tạo">
+            <div class="col-md-3">
+                <label class="form-label fw-semibold text-muted small">Từ ngày</label>
+                <input type="date" id="fromDate" class="form-control bg-light border-0">
             </div>
-        </div>
 
-        <div class="col-lg-2 col-md-4">
-            <div class="shadow-sm" style="border-radius: 8px;">
-                <input type="date" id="toDate" class="form-control bg-white border-0 py-2 shadow-none" style="font-size: 14px;" title="Đến ngày tạo">
+            <div class="col-md-3">
+                <label class="form-label fw-semibold text-muted small">Đến ngày</label>
+                <input type="date" id="toDate" class="form-control bg-light border-0">
             </div>
-        </div>
 
-        <div class="col-lg-2 col-md-4">
-            <div class="shadow-sm" style="border-radius: 8px;">
-                <select id="isActive" class="form-select bg-white border-0 py-2 shadow-none" style="font-size: 14px; cursor: pointer;">
-                    <option value="-1">Trạng thái</option>
+            <div class="col-md-2">
+                <label class="form-label fw-bold small">Trạng thái</label>
+                <select id="isActive" class="form-select bg-light border-0">
+                    <option value="-1">Tất cả</option>
                     <option value="1">Hoạt động</option>
                     <option value="0">Tạm khóa</option>
                 </select>
             </div>
-        </div>
-
-        <div class="col-lg-3 col-md-8 d-flex gap-2 justify-content-end align-items-center ms-auto">
-            <button onclick="Category.loadData(1)" class="btn btn-dark px-3 rounded-pill fw-bold shadow-sm d-flex align-items-center justify-content-center" style="height: 38px; font-size: 13px; letter-spacing: 0.5px;">
-                <i class="bi bi-funnel-fill me-1"></i> LỌC DỮ LIỆU
-            </button>
             
-            <button onclick="Category.resetSearch()" class="btn btn-white border px-3 rounded-pill fw-bold shadow-sm d-flex align-items-center justify-content-center" style="height: 38px; font-size: 13px; background: white;">
-                <i class="bi bi-arrow-clockwise text-dark me-1"></i> LÀM MỚI
-            </button>
+            <div class="col-md-12 d-flex align-items-end justify-content-end gap-2 mt-3">
+                <button onclick="Category.loadData(1)" class="btn btn-dark px-4 fw-bold shadow-sm d-flex align-items-center justify-content-center" style="height: 38px;">
+                    <i class="bi bi-search me-2"></i> TÌM KIẾM
+                </button>
+                
+                <button onclick="Category.resetSearch()" class="btn btn-white border px-4 fw-bold shadow-sm d-flex align-items-center justify-content-center" style="background: white; height: 38px;">
+                    <i class="bi bi-arrow-clockwise me-2 text-dark"></i> LÀM MỚI
+                </button>
+                
+                <a href="category_trash.html" id="btn-trash-link-admin" class="btn btn-outline-danger px-4 fw-bold shadow-sm d-flex align-items-center justify-content-center" style="height: 38px;">
+                    <i class="bi bi-trash3 me-2"></i> THÙNG RÁC
+                </a>
+            </div>
         </div>
     </div>
 </div>

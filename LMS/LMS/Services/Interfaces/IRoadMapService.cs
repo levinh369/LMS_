@@ -19,12 +19,12 @@ namespace LMS.Services.Interfaces
         Task<RoadMapResponeDTO> RoadMapDetail(int id);
         Task<bool> SaveRoadmapCourses(int roadMapId, List<RoadmapUpdateDTO> items);
         Task<(List<RoadMapResponeDTO> Data, int Total)> GetRoadMapListAsync(
-       int page, int pageSize, string keySearch, int isActive, int teacherId);
+       int page, int pageSize, string keySearch, int isActive);
         Task<bool> ToggleStatusAsync(int id, string role);
         Task RestoreAsync(int id);
         Task HardDeleteAsync(int id);
         Task<(List<RoadMapResponeDTO> Data, int Total)> GetDeletedRoadMapListAsync(
-            int page, int pageSize, string keySearch, int teacherId);
+            int page, int pageSize, string keySearch);
         Task<bool> RestoreBulkAsync(List<int> ids);
         Task<bool> HardDeleteBulkAsync(List<int> ids);
         Task<bool> SoftDeleteBulkAsync(List<int> ids);

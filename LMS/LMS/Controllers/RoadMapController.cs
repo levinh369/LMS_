@@ -141,32 +141,27 @@ namespace LMS.Controllers
         }
         [HttpGet("list-data")]
         public async Task<IActionResult> ListData(
-        int page = 1,
-        int pageSize = 10,
-        string keySearch = "",
-        int isActive = -1,
-        int teacherId =0)
+           int page = 1,
+           int pageSize = 10,
+           string keySearch = "",
+           int isActive = -1) 
         {
-            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            int currentUserId = int.TryParse(userIdClaim, out var id) ? id : 0;
-            var currentUserRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
-            int filterTeacherId;
-            if (currentUserRole == "Admin")
+            try
             {
-                filterTeacherId = teacherId;
+               
+                var (data, total) = await roadMapService.GetRoadMapListAsync(page, pageSize, keySearch, isActive);
+
+                return Ok(new
+                {
+                    success = true,
+                    total = total,
+                    data = data
+                });
             }
-            else
+            catch (Exception ex)
             {
-                filterTeacherId = currentUserId;
+                return BadRequest(new { success = false, message = ex.Message });
             }
-            var (data, total) = await roadMapService.GetRoadMapListAsync(
-                page, pageSize, keySearch, isActive, filterTeacherId);
-            return Ok(new
-            {
-                success = true,
-                total = total,
-                data = data
-            });
         }
         [HttpPut("toggle-status/{id}")]
         public async Task<IActionResult> ToggleStatus(int id, [FromQuery] string role)
@@ -188,11 +183,11 @@ namespace LMS.Controllers
             }
         }
         [HttpGet("list-deleted")]
-        public async Task<IActionResult> GetDeletedList(int page = 1, int pageSize = 10, string? keySearch = "", int teacherId= 0)
+        public async Task<IActionResult> GetDeletedList(int page = 1, int pageSize = 10, string? keySearch = "")
         {
             try
             {
-                var (data, total) = await roadMapService.GetDeletedRoadMapListAsync(page, pageSize, keySearch ?? "",teacherId);
+                var (data, total) = await roadMapService.GetDeletedRoadMapListAsync(page, pageSize, keySearch ?? "");
 
                 return Ok(new
                 {

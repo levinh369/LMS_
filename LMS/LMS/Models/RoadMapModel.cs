@@ -11,10 +11,9 @@ namespace LMS.Models
         public string? Description { get; set; }
 
         public string? ThumbnailUrl { get; set; }
-        public int? TeacherId { get; set; }
-        [ForeignKey("TeacherId")]
-        public UserModel? Teacher { get; set; }
-        public string? LockedByRole { get; set; }
+        public int? CreatedById { get; set; }
+        [ForeignKey("CreatedById")]
+        public UserModel? CreatedBy { get; set; }
         public ICollection<RoadmapCourseModel> RoadmapCourses { get; set; } = new List<RoadmapCourseModel>();
     }
 }

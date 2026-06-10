@@ -28,17 +28,13 @@ namespace LMS.Repositories
                 .FirstOrDefaultAsync(r => r.Title.ToLower() == name.ToLower() && !r.IsDeleted);
         }
 
-        public async Task<(List<RoadMapModel> Data, int Total)> GetPagedAsync(int page, int pageSize, string keySearch, int isActive, int teacherId)
+        public async Task<(List<RoadMapModel> Data, int Total)> GetPagedAsync(int page, int pageSize, string keySearch, int isActive)
         {
             var query = _context.RoadMapModels
                 .Include(c => c.RoadmapCourses) 
-                .Include(c => c.Teacher)
                 .AsNoTracking()
                 .Where(c => !c.IsDeleted);
-            if (teacherId > 0)
-            {
-                query = query.Where(c => c.TeacherId == teacherId);
-            }
+          
             if (!string.IsNullOrEmpty(keySearch))
             {
                 query = query.Where(d => d.Title.Contains(keySearch));
@@ -62,7 +58,6 @@ namespace LMS.Repositories
         public async Task<RoadMapModel?> GetRoadmapDetail(int id)
         {
             var roadMap = await _context.RoadMapModels
-                .Include(r => r.Teacher)
                 .Include(r => r.RoadmapCourses)
                     .ThenInclude(rc => rc.Course)
                 .AsNoTracking()
@@ -122,25 +117,10 @@ namespace LMS.Repositories
         {
             var roadmap = await _context.RoadMapModels.FindAsync(id);
             if (roadmap == null) return false;
+            if (role != "Admin") return false;
+            roadmap.IsActive = !roadmap.IsActive;
 
-            if (role == "Admin")
-            {
-                
-                roadmap.IsActive = !roadmap.IsActive;
-                roadmap.LockedByRole = !roadmap.IsActive ? "Admin" : null;
-            }
-            else if (role == "Teacher")
-            {
-                if (roadmap.LockedByRole == "Admin")
-                {
-                    return false; 
-                }
-
-                roadmap.IsActive = !roadmap.IsActive;
-                roadmap.LockedByRole = null; 
-            }
             roadmap.UpdatedAt = DateTime.UtcNow.AddHours(7);
-
             await _context.SaveChangesAsync();
             return true;
         }

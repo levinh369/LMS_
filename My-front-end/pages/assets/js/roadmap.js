@@ -23,42 +23,58 @@ var RoadMap = {
         return;
     }
 
-    const user = JSON.parse(userInfoRaw);
-    const roleId = parseInt(user.role); 
-    // Nếu là Admin thì khởi chạy như bình thường
-    if (typeof this.renderHeader === 'function') this.renderHeader(roleId);
+    // 📍 BẬT LUÔN: Vì mặc định trang này giờ chỉ có Admin vào, render luôn không cần check roleId
+    if (typeof this.renderHeader === 'function') this.renderHeader();
     if (typeof this.registerEvents === 'function') this.registerEvents();
-    if (typeof this.loadTeacherSelect === 'function') this.loadTeacherSelect();
+
     
     this.loadData(1);
 },
-    registerCheckboxEvents: function () {
-        const _this = this;
 
-        $(document).off('change', '#check-all').on('change', '#check-all', function () {
-            const isChecked = $(this).prop('checked');
-            
-            if (isChecked) {
-                // CHỈ tích chọn những ô checkbox KHÔNG bị disabled (Không bị Admin khóa)
-                $('.item-check').not(':disabled').prop('checked', true);
-            } else {
-                // Khi bỏ chọn tất cả thì cứ thoải mái gỡ chọn toàn bộ
-                $('.item-check').prop('checked', false);
-            }
-            
-            // Gọi hàm cập nhật ẩn/hiện thanh công cụ xóa hàng loạt
-            _this.toggleBulkActions();
-        });
+renderHeader: function() {
+    // 📍 ĐỒNG BỘ CỘT: Hiện cố định ô Chọn tất cả (check-all) và cột Người tạo (Admin) cho giao diện Admin
+    let html = `
+        <tr>
+            <th class="ps-4" style="width: 50px;">
+                <input class="form-check-input border-secondary" type="checkbox" id="check-all" style="cursor: pointer;">
+            </th>
+            <th class="ps-4" style="width: 80px;">Ảnh</th>
+            <th>Thông tin lộ trình</th>
+            <th>Người tạo</th>
+            <th class="text-center">Số khóa học</th>
+            <th class="text-center">Trạng thái</th>
+            <th class="text-center">Hành động</th>
+        </tr>`;
+    $('#table-head').html(html);
+},
 
-        // Sự kiện từng ô lẻ
-        $(document).off('change', '.item-check').on('change', '.item-check', function () {
-            const total = $('.item-check').length;
-            const checked = $('.item-check:checked').length;
-            $('#check-all').prop('checked', total > 0 && total === checked);
-            _this.toggleBulkActions();
-        });
-    }, toggleBulkActions: function () {
-    const selectedCount = $('.item-check:checked').not(':disabled').length;
+registerCheckboxEvents: function () {
+    const _this = this;
+
+    // Sự kiện ô Chọn tất cả trên header
+    $(document).off('change', '#check-all').on('change', '#check-all', function () {
+        const isChecked = $(this).prop('checked');
+        
+        // 📍 Cắt bỏ .not(':disabled') vì Admin có quyền tối cao, không có file nào bị disabled nữa
+        $('.item-check').prop('checked', isChecked);
+        
+        _this.toggleBulkActions();
+    });
+
+    // Sự kiện từng ô checkbox lẻ dưới hàng dữ liệu
+    $(document).off('change', '.item-check').on('change', '.item-check', function () {
+        const total = $('.item-check').length;
+        const checked = $('.item-check:checked').length;
+        
+        // Nếu tích đủ hết các ô lẻ thì tự động sáng nút Chọn tất cả ở trên đầu
+        $('#check-all').prop('checked', total > 0 && total === checked);
+        _this.toggleBulkActions();
+    });
+},
+
+toggleBulkActions: function () {
+    // 📍 Cắt bỏ hoàn toàn .not(':disabled')
+    const selectedCount = $('.item-check:checked').length;
     const $bulkArea = $('#bulk-actions');
     const $countDisplay = $('#selected-count');
 
@@ -68,40 +84,25 @@ var RoadMap = {
     } else {
         $bulkArea.css('opacity', '0');
         setTimeout(() => {
-            // SỬA TẠI ĐÂY: Check lại chính xác số lượng thực tế trước khi ẩn hẳn thanh công cụ
-            if ($('.item-check:checked').not(':disabled').length === 0) {
+            // 📍 Đồng bộ loại bỏ nốt đoạn check .not(':disabled') trong setTimeout
+            if ($('.item-check:checked').length === 0) {
                 $bulkArea.css('visibility', 'hidden');
             }
         }, 200);
         
-        // Tự động gỡ tích chọn ở nút "Chọn tất cả" trên đầu bảng nếu không còn mục nào được chọn hợp lệ
         $('#check-all').prop('checked', false);
     }
 },
-    uncheckAll: function() {
-        $('.item-check, #check-all').prop('checked', false);
-        this.toggleBulkActions();
-    },
-     registerEvents: function () {
-        this.registerCheckboxEvents()
-    },
-    renderHeader: function(roleId) {
-        let html = `
-            <tr>
-           ${roleId === 3 ? `
-                <th class="ps-4" style="width: 50px;">
-                    <input class="form-check-input border-secondary" type="checkbox" id="check-all" style="cursor: pointer;">
-                </th>
-            ` : ''}
-                <th class="ps-4" style="width: 80px;">Ảnh</th>
-                <th>Thông tin lộ trình</th>
-                ${roleId === 1 ? '<th>Giảng viên</th>' : ''}
-                <th class="text-center">Số khóa học</th>
-                <th class="text-center">Trạng thái</th>
-                <th class="text-center">Hành động</th>
-            </tr>`;
-        $('#table-head').html(html); // Đảm bảo trong <table> bác có <thead id="table-head">
-    },
+
+uncheckAll: function() {
+    $('.item-check, #check-all').prop('checked', false);
+    this.toggleBulkActions();
+},
+
+registerEvents: function () {
+    this.registerCheckboxEvents();
+    // Bác có thể thêm các sự kiện click nút Tìm kiếm, Xóa hàng loạt... của Admin vào đây
+},
       resetFilter: function() {
         const userInfoRaw = localStorage.getItem("user_info");
         const user = JSON.parse(userInfoRaw);
@@ -118,27 +119,7 @@ var RoadMap = {
 
         this.loadData(1);
     },
-    loadTeacherSelect: async function() {
-        const token = localStorage.getItem("jwt_token");
-        try {
-            const response = await fetch(`http://127.0.0.1:5000/api/course/get-all-teachers`, {
-            method: 'GET',
-            headers: { 
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-            const res = await response.json();
-            if (res.success || res.Success) {
-                let html = '<option value="0">Tất cả giảng viên</option>';
-                const teachers = res.data || res.Data;
-                teachers.forEach(t => {
-                    html += `<option value="${t.id}">${t.fullName}</option>`;
-                });
-                $('#filterTeacherId').html(html);
-            }
-        } catch (error) { console.error("Lỗi load giảng viên:", error); }
-    },
+
 loadData: async function(page) {
     const userInfoRaw = localStorage.getItem("user_info");
     const user = JSON.parse(userInfoRaw);
@@ -188,44 +169,33 @@ loadData: async function(page) {
         if (typeof TableLoader !== 'undefined') TableLoader.hide('#roadmapBody');
     }
 },
-renderTable: function (data, roleId) {
+renderTable: function (data) { // 📍 BỎ tham số roleId vì mặc định luôn là Admin dùng
     let html = '';
     if (!data || data.length === 0) {
-        const colSpan = roleId === 1 ? 7 : 6;
-        html = `<tr><td colspan="${colSpan}" class="text-center py-5 text-muted">Không tìm thấy lộ trình nào bác ơi!</td></tr>`;
+        // Cố định colSpan là 6 cột vì giao diện đã được chuẩn hóa cố định cho Admin
+        html = `<tr><td colspan="6" class="text-center py-5 text-muted">Không tìm thấy lộ trình nào bác ơi!</td></tr>`;
     } else {
         data.forEach(item => {
-            const isLockedByAdmin = item.lockedByRole === 'Admin';
-            
-                    html += `
+            html += `
             <tr>
-            ${roleId === 3 ? `
                 <td class="ps-4">
-                    <input class="form-check-input item-check" type="checkbox" value="${item.id}" 
-                        style="cursor: ${isLockedByAdmin ? 'not-allowed' : 'pointer'};"
-                        ${isLockedByAdmin ? 'disabled' : ''}>
+                    <input class="form-check-input item-check" type="checkbox" value="${item.id}" style="cursor: pointer;">
                 </td>
-            ` : ''}
+
                 <td class="ps-4">
                     <img src="${item.thumbnailUrl || 'https://via.placeholder.com/100x60'}" 
                         class="roadmap-img shadow-sm" style="width:70px; height:45px; object-fit:cover; border-radius:8px">
                 </td>
+
                 <td>
                     <div class="fw-bold text-dark">${item.title}</div>
                     <div class="text-muted small" style="font-size: 0.7rem;">ID: #${item.id}</div>
-                    
-                    <!-- THÔNG BÁO DANGER CHO TEACHER KHI BỊ KHÓA -->
-                    ${roleId !== 1 && isLockedByAdmin ? 
-                        `<div class="badge bg-danger-subtle text-danger mt-1" style="font-size: 0.6rem;">
-                            <i class="bi bi-exclamation-triangle-fill me-1"></i>Đã bị Admin niêm phong
-                        </div>` : ''}
                 </td>
 
-                ${roleId === 1 ? `
                 <td>
-                    <div class="fw-bold small">${item.instructorName || 'Chưa rõ'}</div>
-                    <div class="text-muted" style="font-size:0.7rem">ID: ${item.instructorId}</div>
-                </td>` : ''}
+                    <div class="fw-bold small">${item.createdByName || 'Hệ thống'}</div>
+                    <div class="text-muted" style="font-size:0.7rem">ID Admin: ${item.createdById || 'N/A'}</div>
+                </td>
 
                 <td class="text-center">
                     <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary px-3">
@@ -235,20 +205,15 @@ renderTable: function (data, roleId) {
 
                 <td class="text-center">
                     <button class="btn btn-sm px-3 rounded-pill fw-bold shadow-sm transition-all
-                            ${isLockedByAdmin ? 'btn-outline-danger' : (item.isActive ? 'btn-light-success text-success border-success' : 'btn-light-secondary text-secondary border-secondary')} 
-                            ${roleId !== 1 && isLockedByAdmin ? 'opacity-50' : ''}" 
+                            ${item.isActive ? 'btn-light-success text-success border-success' : 'btn-light-secondary text-secondary border-secondary'}" 
                             style="min-width: 120px; font-size: 0.75rem; border-width: 2px;"
-                            onclick="${roleId !== 1 && isLockedByAdmin 
-                                ? "Swal.fire({icon: 'error', title: 'Truy cập bị chặn', text: 'Lộ trình này đã bị Admin niêm phong!', confirmButtonColor: '#d33'})" 
-                                : `RoadMap.toggleStatus(${item.id})`}"
-                            ${roleId !== 1 && isLockedByAdmin ? 'disabled' : ''}>
-                        ${isLockedByAdmin ? '<i class="bi bi-shield-lock-fill me-1"></i>Niêm phong' : (item.isActive ? '<i class="bi bi-check-circle-fill me-1"></i>Hoạt động' : '<i class="bi bi-pause-circle-fill me-1"></i>Tạm ẩn')}
+                            onclick="RoadMap.toggleStatus(${item.id})">
+                        ${item.isActive ? '<i class="bi bi-check-circle-fill me-1"></i>Hoạt động' : '<i class="bi bi-pause-circle-fill me-1"></i>Tạm ẩn'}
                     </button>
                 </td>
 
                 <td class="text-center">
                     <div class="d-flex justify-content-center gap-2">
-                        <!-- NÚT XEM CHI TIẾT (DETAIL) -->
                         <button class="btn btn-sm btn-outline-info" onclick="RoadMap.viewDetail(${item.id})" title="Xem chi tiết">
                             <i class="bi bi-eye"></i>
                         </button>
@@ -261,20 +226,9 @@ renderTable: function (data, roleId) {
                             <i class="bi bi-pencil-square"></i>
                         </button>
                         
-                        ${roleId === 1 ? `
-                            <button class="btn btn-sm ${isLockedByAdmin ? 'btn-danger' : 'btn-outline-danger'}" 
-                                    onclick="RoadMap.toggleStatus(${item.id})" 
-                                    title="${isLockedByAdmin ? 'Mở khóa' : 'Niêm phong'}">
-                                <i class="bi ${isLockedByAdmin ? 'bi-lock-fill' : 'bi-unlock-fill'}"></i>
-                            </button>
-                        ` : `
-                            <button class="btn btn-sm btn-outline-danger ${isLockedByAdmin ? 'opacity-50' : ''}" 
-                                    onclick="${isLockedByAdmin ? "Swal.fire('Bị chặn', 'Lộ trình đang bị niêm phong, không thể xóa!', 'warning')" : `RoadMap.delete(${item.id})`}" 
-                                    ${isLockedByAdmin ? 'disabled' : ''}
-                                    title="Xóa lộ trình">
-                                <i class="bi bi-trash3-fill"></i>
-                            </button>
-                        `}
+                        <button class="btn btn-sm btn-outline-danger" onclick="RoadMap.delete(${item.id})" title="Xóa lộ trình">
+                            <i class="bi bi-trash3-fill"></i>
+                        </button>
                     </div>
                 </td>
             </tr>`;
@@ -282,13 +236,12 @@ renderTable: function (data, roleId) {
     }
     $('#roadmapBody').html(html);
 },
+
 viewDetail: async function(id) {
     try {
-        // 1. Khóa màn hình & Bật modal
         GlobalLoader.show();
         $('#modalDetail').modal('show');
         
-        // Hiện trạng thái đang tải list course, ẩn các state khác
         $('#detail-course-loading').removeClass('d-none');
         $('#detail-course-empty, #detail-course-list').addClass('d-none');
 
@@ -304,43 +257,31 @@ viewDetail: async function(id) {
 
         const data = result.data || result.Data;
 
-        // ==========================================
-        // 2. RENDER THÔNG TIN LỘ TRÌNH (BÊN TRÁI)
-        // ==========================================
+        // Render thông tin lộ trình (Bên trái)
         $('#detail-img').attr('src', data.thumbnailUrl || data.ThumbnailUrl || '/assets/img/default-roadmap.png');
         $('#detail-title').text(data.title || data.Title);
         $('#detail-id').text('ID: #' + (data.id || data.Id));
         $('#detail-desc').text(data.description || data.Description || 'Không có mô tả cho lộ trình này.');
         $('#detail-created-at').text(new Date(data.createdAt || data.CreatedAt).toLocaleDateString('vi-VN'));
         
-        // Render thông tin giảng viên
-        const instructorName = data.instructorName || data.InstructorName || 'Chưa rõ';
-        const instructorId = data.instructorId || data.InstructorId;
+        // 📍 Đồng bộ thông tin Người tạo sang tên Admin
+        const adminName = data.createdByName || data.CreatedByName || 'Hệ thống';
+        const adminId = data.createdById || data.CreatedById;
         
-        $('#detail-teacher-name').text(instructorName);
-        $('#detail-teacher-id').text(instructorId ? 'ID Giảng viên: ' + instructorId : 'N/A');
-        $('#detail-teacher-avatar-text').text(instructorName !== 'Chưa rõ' ? instructorName.charAt(0).toUpperCase() : '?');
+        $('#detail-teacher-name').text(adminName);
+        $('#detail-teacher-id').text(adminId ? 'ID Admin: ' + adminId : 'N/A');
+        $('#detail-teacher-avatar-text').text(adminName !== 'Hệ thống' ? adminName.charAt(0).toUpperCase() : 'A');
 
-        // Xử lý huy hiệu trạng thái Lộ trình
-        const lockedByRole = data.lockedByRole || data.LockedByRole;
+        // 📍 Xóa bỏ hoàn toàn phần check lockedByRole == 'Admin', chỉ hiện Hoạt động / Tạm ẩn
+        $('#danger-overlay').addClass('d-none'); // Ẩn luôn màn sương đỏ cũ
         const isActive = data.isActive !== undefined ? data.isActive : data.IsActive;
+        const statusHtml = isActive 
+            ? '<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Hoạt động</span>'
+            : '<span class="badge bg-secondary"><i class="bi bi-pause-circle me-1"></i>Tạm ẩn</span>';
+        $('#detail-status').html(statusHtml);
 
-        if (lockedByRole === 'Admin') {
-            $('#detail-status').html('<span class="badge bg-danger"><i class="bi bi-lock-fill me-1"></i>Đã niêm phong</span>');
-            $('#danger-overlay').removeClass('d-none'); // Hiện màn sương mờ màu đỏ
-        } else {
-            $('#danger-overlay').addClass('d-none');
-            const statusHtml = isActive 
-                ? '<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Hoạt động</span>'
-                : '<span class="badge bg-secondary"><i class="bi bi-pause-circle me-1"></i>Tạm ẩn</span>';
-            $('#detail-status').html(statusHtml);
-        }
-
-        // ==========================================
-        // 3. RENDER DANH SÁCH KHÓA HỌC/GIAI ĐOẠN (BÊN PHẢI)
-        // ==========================================
+        // Render danh sách khóa học trong lộ trình (Bên phải)
         const courses = data.courses || data.Courses || [];
-        
         $('#detail-course-loading').addClass('d-none');
 
         if (courses.length === 0) {
@@ -353,13 +294,11 @@ viewDetail: async function(id) {
                 const orderIndex = course.orderIndex !== undefined ? course.orderIndex : (course.OrderIndex || 0);
 
                 if (isPhase) {
-                    // Nếu là một GIAI ĐOẠN (Phase) -> Render dải phân cách nổi bật
                     courseHtml += `
                     <div class="alert alert-secondary border-0 fw-bold mb-2 mt-3 py-2 d-flex align-items-center shadow-sm" style="border-radius: 10px;">
                         <i class="bi bi-flag-fill me-2 text-primary"></i> Giai đoạn ${orderIndex}: ${title}
                     </div>`;
                 } else {
-                    // Nếu là một KHÓA HỌC -> Render dạng Card
                     const priceValue = course.isFree !== undefined ? course.isFree : (course.IsFree || 0);
                     const priceText = priceValue == 0 
                         ? '<span class="text-success fw-bold">Miễn phí</span>' 
@@ -400,17 +339,9 @@ viewDetail: async function(id) {
         GlobalLoader.hide();
     }
 },
+
 toggleStatus: function (id) {
-    // Lấy thông tin user từ localStorage để xác định Role
-    const userInfo = JSON.parse(localStorage.getItem("user_info"));
-    if (!userInfo) {
-        Toast.fire({ icon: 'warning', title: 'Vui lòng đăng nhập để thực hiện!' });
-        return;
-    }
-
-    // Chuyển đổi mã Role sang String để khớp với logic Backend (1: Admin, 3: Teacher)
-    const roleName = parseInt(userInfo.role) === 1 ? "Admin" : "Teacher";
-
+    // 📍 Gạt sạch vai trò Teacher, tự động hiểu luôn là Admin gọi API
     Swal.fire({
         title: 'Xác nhận thay đổi?',
         text: "Bạn có chắc chắn muốn thay đổi trạng thái hiển thị của lộ trình này?",
@@ -420,30 +351,25 @@ toggleStatus: function (id) {
         cancelButtonColor: '#6c757d',
         confirmButtonText: 'Đồng ý',
         cancelButtonText: 'Hủy'
-    }).then(async (result) => { // Thêm async ở đây để xử lý đồng bộ mượt mà
+    }).then(async (result) => { 
         if (result.isConfirmed) {
             try {
-                // 1. KHÓA CỨNG MÀN HÌNH CHỐNG USER SPAM CLICK LÀM LOẠN DB
                 GlobalLoader.show();
-
                 const token = localStorage.getItem("jwt_token");
 
-                // Chuyển $.ajax truyền thống sang cú pháp await cực kỳ gọn và chuyên nghiệp
+                // 📍 Sửa lại query string gửi cứng role=Admin khớp khít với hàm Backend mới sửa
                 const res = await $.ajax({
-                    url: `${RoadMap.config.apiUrl}/toggle-status/${id}?role=${roleName}`,
+                    url: `${RoadMap.config.apiUrl}/toggle-status/${id}?role=Admin`,
                     type: 'PUT',
                     contentType: 'application/json',
-                    headers: { 'Authorization': `Bearer ${token}` } // Luôn bọc token bảo vệ API
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
 
                 if (res.success || res.Success) {
-                    // 2. ĐỒNG BỘ: Sử dụng Toast hệ thống thay thế Swal popup cũ
                     Toast.fire({ 
                         icon: 'success', 
                         title: res.message || res.Message || 'Đã cập nhật trạng thái lộ trình thành công!' 
                     });
-                    
-                    // Tải lại danh sách lộ trình
                     RoadMap.loadData(1); 
                 } else {
                     Toast.fire({ 
@@ -453,25 +379,17 @@ toggleStatus: function (id) {
                 }
             } catch (err) {
                 console.error("Lỗi khi gọi API toggle-status:", err);
-                
-                // Bóc tách lỗi chuyên sâu từ BadRequest của C# trả về
                 let errMsg = 'Server đang bận hoặc lỗi kết nối!';
                 if (err.responseJSON) {
                     errMsg = err.responseJSON.message || err.responseJSON.Message || JSON.stringify(err.responseJSON);
-                } else if (err.responseText) {
-                    errMsg = err.responseText;
                 }
-
-                // Hiện lỗi cho admin/teacher biết bằng Toast đồng bộ
                 Toast.fire({ icon: 'error', title: errMsg });
             } finally {
-                // 3. LUÔN LUÔN NHẢ MÀN HÌNH RA Ở KHỐI FINALLY
                 GlobalLoader.hide();
             }
         }
     });
-},
-        // 3. Xử lý Image Preview
+},      // 3. Xử lý Image Preview
        previewImage: function(input) {
     const $img = $('#previewImg');
     const $placeholder = $('#previewPlaceholder');
@@ -1054,40 +972,41 @@ softDeleteBulk: function() {
 trash: {
     init: function() {
         const userInfoRaw = localStorage.getItem("user_info");
-        let roleId = null;
-        if (userInfoRaw) {
-            const user = JSON.parse(userInfoRaw);
-            roleId = user.role;
+        if (!userInfoRaw) {
+            window.location.href = "/pages/auth/login.html";
+            return;
         }
-       const adminFilter = document.getElementById("adminTeacherFilter");
-        if (adminFilter) {
-            if (roleId == 1) {
-                adminFilter.classList.remove("d-none"); // Hiện filter
-                // Gọi thêm hàm load danh sách giảng viên vào select tại đây nếu cần
-            } else {
-                adminFilter.classList.add("d-none");    // Ẩn filter
-            }
-        }
+
+        // 📍 BỎ HẲN: Đoạn check adminTeacherFilter ẩn/hiện và hàm loadTeacherSelect cũ vì không còn dùng tới
+        
         this.loadData(1);
-        this.loadTeacherSelect();
-        RoadMap.registerCheckboxEvents();
+        
+        // Kích hoạt sự kiện check-all chọn nhiều để xóa/khôi phục hàng loạt trong thùng rác
+        if (typeof RoadMap.registerCheckboxEvents === 'function') {
+            RoadMap.registerCheckboxEvents();
+        }
     },
-resetFilter: function() {
-    // 1. Reset ô tìm kiếm về rỗng
-    $('#trashKeySearch').val('');
-    
-    // 2. Reset select danh mục về giá trị mặc định (0)
-    $('#trashFilterCategory').val('0');
-    
-    // 3. Gọi lại hàm loadData để lấy lại toàn bộ danh sách ban đầu (trang 1)
-    this.loadData(1);
-},
+
+    resetFilter: function() {
+        // 1. Reset ô tìm kiếm về rỗng
+        $('#trashKeySearch').val('');
+        
+        // 2. Reset select danh mục về giá trị mặc định (Nếu giao diện thùng rác của bác có lọc Category)
+        if ($('#trashFilterCategory').length) {
+            $('#trashFilterCategory').val('0');
+        }
+        
+        // 3. Load lại trang đầu
+        this.loadData(1);
+    },
+
     loadData: async function(page) {
         TableLoader.show('#roadmap-trash-table-body');
         const keySearch = $('#trashKeySearch').val() || "";
-        const teacherId = $('#filterTeacherId').val() || 0;
         const pageSize = RoadMap.config.pageSize || 10;
-        const url = `${RoadMap.config.apiUrl}/list-deleted?page=${page}&pageSize=${pageSize}&keySearch=${encodeURIComponent(keySearch)}&teacherId=${teacherId}`;
+        
+        // 📍 FIX: Cắt bỏ hoàn toàn tham số &teacherId=${teacherId} khỏi URL
+        const url = `${RoadMap.config.apiUrl}/list-deleted?page=${page}&pageSize=${pageSize}&keySearch=${encodeURIComponent(keySearch)}`;
 
         try {
             const token = localStorage.getItem("jwt_token");
@@ -1098,7 +1017,10 @@ resetFilter: function() {
 
             if (res.success || res.Success) {
                 this.renderTable(res.data || res.Data);
-                this.showPaging(res.total || res.Total, page);
+                // Gọi hàm phân trang chung của đối tượng cha RoadMap
+                if (typeof RoadMap.showPaging === 'function') {
+                    RoadMap.showPaging(res.total || res.Total, page);
+                }
             }
         } catch (error) {
             console.error("Lỗi load thùng rác lộ trình:", error);
@@ -1111,20 +1033,20 @@ resetFilter: function() {
 
         let html = '';
         if (!data || data.length === 0) {
-            html = '<tr><td colspan="5" class="text-center py-5 text-muted">Thùng rác lộ trình trống</td></tr>';
+            // 📍 Sửa colspan thành 6 cho khớp khít hệ thống bảng mới (Checkbox, Ảnh, Thông tin, Số khóa, Ngày xóa, Hành động)
+            html = '<tr><td colspan="6" class="text-center py-5 text-muted">Thùng rác lộ trình trống bác ơi!</td></tr>';
         } else {
             data.forEach(item => {
-                // Ưu tiên hiển thị ngày xóa từ updatedAt vì bác đã xác nhận dùng field này
                 const deleteDate = item.updatedAt || item.deletedAt;
                 const formattedDate = deleteDate ? new Date(deleteDate).toLocaleDateString('vi-VN') : 'Vừa xong';
 
                 html += `
                 <tr>
-                  <td class="ps-4">
+                    <td class="ps-4">
                         <input class="form-check-input item-check" type="checkbox" value="${item.id}">
                     </td>
                     <td class="ps-4">
-                        <img src="${item.thumbnailUrl || '/assets/img/default-roadmap.png'}" class="roadmap-img shadow-sm">
+                        <img src="${item.thumbnailUrl || '/assets/img/default-roadmap.png'}" class="roadmap-img shadow-sm" style="width:70px; height:45px; object-fit:cover; border-radius:8px">
                     </td>
                     <td>
                         <div class="fw-bold text-dark">${item.title}</div>
@@ -1137,10 +1059,10 @@ resetFilter: function() {
                     </td>
                     <td><span class="text-danger small fw-bold">${formattedDate}</span></td>
                     <td class="text-center">
-                        <button class="btn-action btn-restore me-1" onclick="RoadMap.trash.restore(${item.id})" title="Khôi phục">
+                        <button class="btn btn-sm btn-outline-success me-1 rounded-circle" onclick="RoadMap.trash.restore(${item.id})" title="Khôi phục">
                             <i class="bi bi-arrow-counterclockwise"></i>
                         </button>
-                        <button class="btn-action btn-delete" onclick="RoadMap.trash.hardDelete(${item.id})" title="Xóa vĩnh viễn">
+                        <button class="btn btn-sm btn-outline-danger rounded-circle" onclick="RoadMap.trash.hardDelete(${item.id})" title="Xóa vĩnh viễn">
                             <i class="bi bi-trash3-fill"></i>
                         </button>
                     </td>
@@ -1327,41 +1249,7 @@ restore: function(id) {
         getSelectedIds: function() {
             return Array.from($('.item-check:checked')).map(cb => parseInt($(cb).val()));
         },
-    showPaging: function(totalCount, currentPage) {
-        const pageSize = RoadMap.config.pageSize || 10;
-        const totalPages = Math.ceil(totalCount / pageSize);
-        $('#paging-ul').twbsPagination('destroy');
-        if (totalPages > 0) {
-            $('#paging-ul').twbsPagination({
-                totalPages: totalPages,
-                startPage: currentPage,
-                visiblePages: 5,
-                first: 'Đầu',
-                last: 'Cuối',
-                prev: 'Trước',
-                next: 'Sau',
-                onPageClick: (event, page) => { 
-                    if (page !== currentPage) this.loadData(page); 
-                }
-            });
-        }
-    },
-    loadTeacherSelect: async function() {
-        const token = localStorage.getItem("jwt_token");
-        try {
-            const response = await fetch(`http://127.0.0.1:5000/api/course/get-all-teachers`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const res = await response.json();
-            if (res.success || res.Success) {
-                let html = '<option value="0">Tất cả giảng viên</option>';
-                const teachers = res.data || res.Data;
-                teachers.forEach(t => {
-                    html += `<option value="${t.id}">${t.fullName}</option>`;
-                });
-                $('#filterTeacherId').html(html);
-            }
-        } catch (error) { console.error("Lỗi load giảng viên:", error); }
-    },
+  
+
 }
 }

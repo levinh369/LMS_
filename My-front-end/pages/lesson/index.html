@@ -107,82 +107,66 @@
 </head>
 <body>
     <div id="sidebar-placeholder"></div>
-<div class="container-fluid py-4 px-lg-5">
-    <div class="card shadow-sm border-0 mb-4" style="border-radius: 15px;">
-        <div class="card-body p-4">
-            <div class="row g-3 align-items-end">
-                
-                <!-- CỘT TÌM KIẾM -->
-                <div class="col-md-3">
-                    <div class="position-relative"> <!-- Thêm position-relative ở đây -->
-                        <label class="form-label fw-bold small text-muted text-uppercase mb-2">Tìm kiếm tiêu đề</label>
-                        <div class="input-group">
-                            <span class="input-group-text bg-light border-end-0"><i class="bi bi-search"></i></span>
-                            <input type="text" id="keySearch" class="form-control bg-light border-start-0 ps-0" placeholder="Nhập tên bài học..." style="height: 38px;">
-                        </div>
-                        <!-- Dải thông báo nằm tuyệt đối để không đẩy khung -->
-                        <div id="bulk-actions" class="text-danger fw-bold transition" 
-                             style="visibility: hidden; opacity: 0; font-size: 11px; position: absolute; bottom: -20px; left: 0; white-space: nowrap;">
-                            <i class="bi bi-check2-circle"></i> Đã chọn: <span id="selected-count">0</span> bài học
-                        </div>
+<div class="card shadow-sm mb-4 border-start border-primary border-4" style="border-radius: 15px;">
+    <div class="card-body p-4">
+        <div class="row g-3">
+            
+            <div class="col-md-5">
+                <div class="position-relative">
+                    <label class="form-label fw-bold small text-muted">Từ khóa</label>
+                    <div class="input-group shadow-sm" style="border-radius: 50px; overflow: hidden;">
+                        <span class="input-group-text bg-light border-0 pe-1"><i class="bi bi-search text-muted small"></i></span>
+                        <input type="text" id="keySearch" class="form-control bg-light border-0 py-2 shadow-none" style="font-size: 14px; height: 38px;" placeholder="Nhập tên bài học, ID...">
+                    </div>
+                    <div id="bulk-actions" class="text-danger fw-bold transition" 
+                         style="visibility: hidden; opacity: 0; font-size: 11px; position: absolute; bottom: -22px; left: 15px; white-space: nowrap;">
+                        <i class="bi bi-check2-circle"></i> Đã chọn: <span id="selected-count">0</span> bài học
                     </div>
                 </div>
+            </div>
 
-                <!-- LOẠI BÀI HỌC -->
-                <div class="col-md-2">
-                    <label class="form-label fw-bold small text-muted text-uppercase mb-2">Loại bài học</label>
-                    <select id="isPreview" class="form-select bg-light border-0" style="height: 38px;">
-                        <option value="">Tất cả loại</option>
+            <div class="col-md-4">
+                <label class="form-label fw-bold small text-muted">Loại bài học</label>
+                <div class="shadow-sm" style="border-radius: 50px; overflow: hidden;">
+                    <select id="isPreview" class="form-select bg-light border-0 py-2 shadow-none" style="font-size: 14px; height: 38px; cursor: pointer;">
+                        <option value="">Tất cả loại bài học</option>
                         <option value="true">Cho phép học thử</option>
                         <option value="false">Nội dung chính</option>
                     </select>
                 </div>
+            </div>
 
-                <!-- TRẠNG THÁI -->
-                <div class="col-md-2">
-                    <label class="form-label fw-bold small text-muted text-uppercase mb-2">Trạng thái</label>
-                    <select id="isActive" class="form-select bg-light border-0" style="height: 38px;">
-                        <option value="-1">Tất cả</option>
+            <div class="col-md-3">
+                <label class="form-label fw-bold small text-muted">Trạng thái</label>
+                <div class="shadow-sm" style="border-radius: 50px; overflow: hidden;">
+                    <select id="isActive" class="form-select bg-light border-0 py-2 shadow-none" style="font-size: 14px; height: 38px; cursor: pointer;">
+                        <option value="-1">Tất cả trạng thái</option>
                         <option value="1">Hoạt động</option>
                         <option value="0">Tạm ẩn</option>
                     </select>
                 </div>
+            </div>
+            
+            <div class="col-md-12 d-flex align-items-end justify-content-end gap-2 mt-3">
+                
+                <button id="btn-bulk-delete" onclick="Lesson.softDeleteBulk()" class="btn btn-danger px-4 rounded-pill fw-bold shadow-sm d-flex align-items-center justify-content-center" style="height: 38px; font-size: 13px;">
+                    <i class="bi bi-trash-fill me-1"></i> XÓA CHỌN
+                </button>
 
-                <!-- CỤM NÚT ĐIỀU KHIỂN -->
-              <div class="col-md-5">
-    <div class="d-flex gap-2 justify-content-end align-items-center" style="height: 38px;">
-        
-        <!-- NÚT XÓA CHỌN: Màu đỏ dịu, bo tròn hoàn toàn -->
-        <button id="btn-bulk-delete" 
-                class="btn btn-danger btn-sm fw-bold rounded-pill px-3 shadow-sm transition border-0" 
-                style="height: 34px; font-size: 12px;"
-                onclick="Lesson.softDeleteBulk()">
-            <i class="bi bi-trash-fill"></i> XÓA CHỌN
-        </button>
+                <button onclick="Lesson.loadData(1)" class="btn btn-dark px-4 rounded-pill fw-bold shadow-sm d-flex align-items-center justify-content-center" style="height: 38px; font-size: 13px;">
+                    <i class="bi bi-funnel-fill me-1"></i> LỌC DỮ LIỆU
+                </button>
+                
+                <button onclick="Lesson.resetFilter()" class="btn btn-white border px-4 rounded-pill fw-bold shadow-sm d-flex align-items-center justify-content-center" style="background: white; height: 38px; font-size: 13px;">
+                    <i class="bi bi-arrow-clockwise text-dark me-1"></i> Làm mới
+                </button>
+                
+                <button type="button" onclick="Lesson.goToTrash()" class="btn btn-outline-danger px-4 rounded-pill fw-bold shadow-sm d-flex align-items-center justify-content-center" style="height: 38px; font-size: 13px;">
+                    <i class="bi bi-trash3-fill me-1"></i> THÙNG RÁC
+                </button>
+            </div>
 
-        <!-- NÚT LỌC: Đổi sang màu Indigo (Xanh tím) cho sang, bo tròn hoàn toàn -->
-        <button class="btn btn-primary btn-sm px-4 fw-bold rounded-pill shadow-sm border-0" 
-                onclick="Lesson.loadData(1)"
-                style="height: 34px; font-size: 12px; background-color: #6366f1;">
-            <i class="bi bi-funnel-fill me-1"></i> LỌC DỮ LIỆU
-        </button>
-        
-        <!-- NÚT LÀM MỚI: Dạng hình tròn hoàn hảo -->
-        <button class="btn btn-light btn-sm rounded-circle shadow-sm border-0 d-flex align-items-center justify-content-center" 
-                onclick="Lesson.resetFilter()" 
-                title="Làm mới" 
-                style="width: 34px; height: 34px;">
-            <i class="bi bi-arrow-clockwise fs-6"></i>
-        </button>
-        
-        <!-- NÚT THÙNG RÁC: Dùng màu xám đỏ nhạt, bo tròn mịn -->
-        <button type="button" 
-                onclick="Lesson.goToTrash()" 
-                class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-bold border-0 shadow-sm"
-                style="height: 34px; font-size: 12px; background-color: #fff5f5;">
-            <i class="bi bi-trash3-fill me-1"></i> THÙNG RÁC
-        </button>
-
+        </div>
     </div>
 </div>
             </div>

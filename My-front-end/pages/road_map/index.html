@@ -60,45 +60,45 @@
             <p class="text-muted small mb-0">Quản lý, định hướng nghề nghiệp và xây dựng lộ trình học tập cho học viên</p>
         </div>
     </div>
-
-<div class="filter-section p-3 mb-3" style="background-color: #f8f9fa; border-radius: 12px;">
-    <div class="row g-2 align-items-center">
-        <div class="col-md-3">
-            <div class="input-group">
-                <span class="input-group-text bg-white border-0"><i class="bi bi-search"></i></span>
-                <input type="text" class="form-control bg-white border-0" id="keySearch" placeholder="Tìm tên lộ trình...">
+<div class="card shadow-sm mb-4 border-start border-primary border-4" style="border-radius: 15px;">
+    <div class="card-body p-4">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label fw-bold small text-muted">Từ khóa</label>
+                <div class="input-group shadow-sm" style="border-radius: 50px; overflow: hidden;">
+                    <span class="input-group-text bg-light border-0 pe-1"><i class="bi bi-search text-muted small"></i></span>
+                    <input type="text" id="keySearch" class="form-control bg-light border-0 py-2 shadow-none" style="font-size: 14px;" placeholder="Tên lộ trình, ID...">
+                </div>
             </div>
-        </div>
 
-        <div class="col-md-3 d-none" id="adminFilterGroup">
-            <select class="form-select bg-white border-0" id="filterTeacherId">
-                <option value="0">Tất cả giảng viên</option>
-            </select>
-        </div>
-
-        <div class="col-md-2">
-            <select class="form-select bg-white border-0" id="isActive">
-                <option value="-1">Trạng thái</option>
-                <option value="1">Hoạt động</option>
-                <option value="0">Tạm ẩn/Khóa</option>
-            </select>
-        </div>
-
-        <div class="col-md-4 d-flex gap-2">
-            <button class="btn btn-dark px-3 rounded-pill fw-bold shadow-sm d-flex align-items-center" 
-                    onclick="RoadMap.loadData(1)" style="height: 38px;">
-                <i class="bi bi-funnel-fill me-1"></i> LỌC
-            </button>
+            <div class="col-md-6">
+                <label class="form-label fw-bold small text-muted">Trạng thái</label>
+                <div class="shadow-sm" style="border-radius: 50px; overflow: hidden;">
+                    <select id="isActive" class="form-select bg-light border-0 py-2 shadow-none" style="font-size: 14px; cursor: pointer;">
+                        <option value="-1">Tất cả trạng thái</option>
+                        <option value="1">Hoạt động</option>
+                        <option value="0">Tạm ẩn/Khóa</option>
+                    </select>
+                </div>
+            </div>
             
-       <button class="btn btn-white border rounded-pill shadow-sm d-flex align-items-center justify-content-center px-3" 
-        onclick="RoadMap.resetFilter()" style="height: 38px; background: white;">
-    <i class="bi bi-arrow-clockwise text-dark me-1"></i> LÀM MỚI
-</button>
+            <div class="col-md-12 d-flex align-items-end justify-content-end gap-2 mt-3">
+                <button onclick="RoadMap.loadData(1)" class="btn btn-dark px-4 rounded-pill fw-bold shadow-sm d-flex align-items-center justify-content-center" style="height: 38px; font-size: 13px;">
+                    <i class="bi bi-funnel-fill me-1"></i> LỌC DỮ LIỆU
+                </button>
+                
+                <button onclick="RoadMap.resetFilter()" class="btn btn-white border px-4 rounded-pill fw-bold shadow-sm d-flex align-items-center justify-content-center" style="background: white; height: 38px; font-size: 13px;">
+                    <i class="bi bi-arrow-clockwise text-dark me-1"></i> LÀM MỚI
+                </button>
 
-            <button class="btn btn-primary px-3 rounded-pill fw-bold shadow-sm d-flex align-items-center" 
-                    onclick="RoadMap.openModal()" style="height: 38px;">
-                <i class="bi bi-plus-lg me-1"></i> TẠO LỘ TRÌNH
-            </button>
+                <button onclick="RoadMap.openModal()" class="btn btn-primary px-4 rounded-pill fw-bold shadow-sm d-flex align-items-center justify-content-center" style="height: 38px; font-size: 13px;">
+                    <i class="bi bi-plus-lg me-1"></i> TẠO LỘ TRÌNH
+                </button>
+                
+                <a href="road-map_trash.html" id="btn-trash-link-admin" class="btn btn-outline-danger px-4 rounded-pill fw-bold shadow-sm d-flex align-items-center justify-content-center" style="height: 38px; font-size: 13px;">
+                    <i class="bi bi-trash3 me-1"></i> THÙNG RÁC
+                </a>
+            </div>
         </div>
     </div>
 </div>
@@ -115,11 +115,6 @@
                 onclick="RoadMap.softDeleteBulk()" style="height: 34px; font-size: 12px;">
             <i class="bi bi-trash-fill me-1"></i> XÓA MỤC CHỌN
         </button>
-
-        <a href="road-map_trash.html" id="btn-trash-link" class="btn btn-outline-secondary btn-sm px-3 rounded-pill fw-bold d-flex align-items-center" 
-           style="height: 34px; font-size: 12px;">
-            <i class="bi bi-trash3 me-1"></i> THÙNG RÁC
-        </a>
     </div>
 </div>
 </div>

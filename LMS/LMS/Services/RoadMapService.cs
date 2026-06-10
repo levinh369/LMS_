@@ -53,7 +53,6 @@ namespace LMS.Services
                 ThumbnailUrl = imageUrl,
                 CreatedAt = DateTime.UtcNow.AddHours(7),
                 UpdatedAt = DateTime.UtcNow.AddHours(7),
-                TeacherId = teacherId,
             };
             await roadMapRepository.AddAsync(roadMap);
         }
@@ -113,7 +112,7 @@ namespace LMS.Services
                 IsActive = entity.IsActive,
                 Description = entity.Description,
                 ThumbnailUrl = entity.ThumbnailUrl,
-                LockedByRole = entity.LockedByRole,
+
             };
             return roadMap;
         }
@@ -190,9 +189,9 @@ namespace LMS.Services
                 AvailableCourses = leftSideCourses 
             };
         }
-        public async Task<(List<RoadMapResponeDTO> Data, int Total)> GetRoadMapListAsync(int page, int pageSize, string keySearch, int isActive, int teacherId)
+        public async Task<(List<RoadMapResponeDTO> Data, int Total)> GetRoadMapListAsync(int page, int pageSize, string keySearch, int isActive)
         {
-            var (entities, total) = await roadMapRepository.GetPagedAsync(page, pageSize, keySearch, isActive, teacherId);
+            var (entities, total) = await roadMapRepository.GetPagedAsync(page, pageSize, keySearch, isActive);
             var modelList = entities.Select(c => new RoadMapResponeDTO
             {
                 Id = c.Id,
@@ -203,9 +202,8 @@ namespace LMS.Services
                 ThumbnailUrl= c.ThumbnailUrl,
                 CreatedAt = c.CreatedAt,
                 CourseCount = c.RoadmapCourses?.Count() ??0,
-                InstructorId = c.Teacher?.Id ?? 0, 
-                InstructorName = c.Teacher?.FullName ?? "Chưa xác định", 
-                LockedByRole = c.LockedByRole,
+                InstructorId = c.CreatedBy?.Id ?? 0, 
+                InstructorName = c.CreatedBy?.FullName ?? "Chưa xác định", 
             }).ToList();
             return (modelList, total);
         }
@@ -242,11 +240,10 @@ namespace LMS.Services
                 IsActive = detail.IsActive,
                 CreatedAt = detail.CreatedAt,
                 UpdatedAt = detail.UpdatedAt,
-                LockedByRole = detail.LockedByRole,
                 CourseCount = detail.RoadmapCourses?.Count ?? 0,
 
-                InstructorId = detail.TeacherId,
-                InstructorName = detail.Teacher?.FullName ?? "Chưa rõ",
+                InstructorId = detail.CreatedById,
+                InstructorName = detail.CreatedBy?.FullName ?? "Chưa rõ",
 
                 Courses = detail.RoadmapCourses?
                     .OrderBy(rc => rc.OrderIndex)
@@ -275,44 +272,58 @@ namespace LMS.Services
 
         public async Task UpdateAsync(int id, RoadMapRequestDTO dto)
         {
-            var roadMap = await GetByIdOrThrowAsync(id);
-            if (roadMap.IsDeleted)
-                throw new Exception("Lộ trình đã bị xóa trước đó rồi!");
-            if (dto.ImageFile != null)
+            try
             {
-                try
+                var roadMap = await GetByIdOrThrowAsync(id);
+                if (roadMap.IsDeleted)
+                    throw new Exception("Lộ trình đã bị xóa trước đó rồi!");
+                string oldImageUrl = roadMap.ThumbnailUrl;
+
+                if (dto.ImageFile != null)
                 {
-                    roadMap.ThumbnailUrl = await cloudinaryService.UploadImageAsync(dto.ImageFile);
+                    try
+                    {
+                        roadMap.ThumbnailUrl = await cloudinaryService.UploadImageAsync(dto.ImageFile);
+                        if (!string.IsNullOrEmpty(oldImageUrl))
+                        {
+                            await cloudinaryService.DeleteImageFromUrlAsync(oldImageUrl);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new Exception("Lỗi khi tải ảnh lên Cloudinary: " + ex.Message);
+                    }
                 }
-                catch (Exception ex)
-                {
-                    throw new Exception("Lỗi khi tải ảnh lên Cloudinary: " + ex.Message);
-                }
+
+                roadMap.Title = dto.Title;
+                roadMap.UpdatedAt = DateTime.UtcNow;
+                roadMap.IsActive = dto.IsActive;
+                roadMap.Description = dto.Description;
+
+                await roadMapRepository.UpdateAsync(roadMap);
             }
-            roadMap.Title = dto.Title;
-            roadMap.UpdatedAt = DateTime.UtcNow;
-            roadMap.IsActive = dto.IsActive;
-            roadMap.Description = dto.Description;
-            await roadMapRepository.UpdateAsync(roadMap);
+            catch (Exception ex)
+            {
+                throw new Exception("Có lỗi xảy ra khi cập nhật lộ trình: " + ex.Message);
+            }
         }
         public async Task<bool> ToggleStatusAsync(int id, string role)
         {
             return await roadMapRepository.ToggleStatusAsync(id, role);
         }
-        public async Task<(List<RoadMapResponeDTO> Data, int Total)> GetDeletedRoadMapListAsync(int page, int pageSize, string keySearch, int teacherId)
+        public async Task<(List<RoadMapResponeDTO> Data, int Total)> GetDeletedRoadMapListAsync(int page, int pageSize, string keySearch)
         {
-            Expression<Func<RoadMapModel, bool>> filter = x =>
-        (string.IsNullOrEmpty(keySearch) || x.Title.Contains(keySearch)) &&
-        (teacherId == 0 || x.TeacherId == teacherId);
 
-            // 2. Gọi Repo lấy Entity
+            Expression<Func<RoadMapModel, bool>> filter = x =>
+                string.IsNullOrEmpty(keySearch) || x.Title.Contains(keySearch);
+
             var (entities, total) = await roadMapRepository.GetDeletedListAsync(
                 filter,
                 page,
-                pageSize
+                pageSize,
+                c=>c.RoadmapCourses
             );
 
-            // 3. Map sang DTO
             var dtoList = entities.Select(c => new RoadMapResponeDTO
             {
                 Id = c.Id,
@@ -320,14 +331,12 @@ namespace LMS.Services
                 Description = c.Description,
                 IsActive = c.IsActive,
                 ThumbnailUrl = c.ThumbnailUrl,
-                UpdatedAt = c.UpdatedAt,
+                UpdatedAt = c.UpdatedAt, 
                 CourseCount = c.RoadmapCourses?.Count() ?? 0,
-
             }).ToList();
 
             return (dtoList, total);
         }
-
         public async Task HardDeleteAsync(int id)
         {
             var entity = await roadMapRepository.GetByIdAsync(id);
