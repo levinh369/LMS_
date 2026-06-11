@@ -47,13 +47,13 @@ namespace LMS.Controllers
         {
             var result = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
 
-            // Link mặc định nếu không có returnUrl (Sửa localhost thành link Vercel của ông)
-            string defaultVercelUrl = "https://lms-azure-mu.vercel.app/pages/auth/login-success.html";
+            // 📍 ĐƯỜNG DẪN CHUẨN: Xóa hoàn toàn chữ /pages cho đúng cấu trúc Frontend Vercel của bác
+            string defaultVercelUrl = "https://lms-azure-mu.vercel.app/auth/login-success.html";
 
             if (!result.Succeeded)
             {
-                // Chỗ này cũng phải sửa localhost thành Vercel
-                return Redirect("https://lms-azure-mu.vercel.app/pages/auth/login.html?error=external_auth_failed");
+                // Điều hướng về trang login kèm thông báo lỗi nếu xác thực thất bại
+                return Redirect("https://lms-azure-mu.vercel.app/auth/login.html?error=external_auth_failed");
             }
 
             var provider = result.Properties.Items[".AuthScheme"] ?? "Unknown";
@@ -67,18 +67,23 @@ namespace LMS.Controllers
 
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
 
-            // --- LOGIC ĐIỀU HƯỚNG LINH HOẠT ---
-            // Nếu returnUrl gửi lên từ JS là localhost, nó sẽ dùng cái đó. 
-            // Nếu không có hoặc lỗi, nó dùng defaultVercelUrl.
+            // --- LOGIC ĐIỀU HƯỚNG ---
             var finalBaseUrl = string.IsNullOrEmpty(returnUrl) ? defaultVercelUrl : returnUrl;
+
+            // Tự động dọn sạch chữ /pages nếu phía Frontend truyền lên sót link cũ
+            if (finalBaseUrl.Contains("/pages/auth/"))
+            {
+                finalBaseUrl = finalBaseUrl.Replace("/pages/auth/", "/auth/");
+            }
 
             string separator = finalBaseUrl.Contains("?") ? "&" : "?";
 
+            // Mã hóa bảo mật các tham số truyền trên URL đường dẫn quay về
             var finalRedirectUrl = $"{finalBaseUrl}{separator}" +
-                 $"token={tokens.AccessToken}" +
-                 $"&refreshToken={tokens.RefreshToken}" + 
+                 $"token={Uri.EscapeDataString(tokens.AccessToken)}" +
+                 $"&refreshToken={Uri.EscapeDataString(tokens.RefreshToken ?? "")}" +
                  $"&userId={user.Id}" +
-                 $"&username={Uri.EscapeDataString(user.FullName)}" +
+                 $"&username={Uri.EscapeDataString(user.FullName ?? "")}" +
                  $"&email={Uri.EscapeDataString(user.Email ?? "")}" +
                  $"&avatar={Uri.EscapeDataString(user.AvatarUrl ?? "")}" +
                  $"&role={user.RoleId}";

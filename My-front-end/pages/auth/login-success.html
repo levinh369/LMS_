@@ -1,34 +1,39 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
     <title>Đang xử lý đăng nhập...</title>
 </head>
 <body>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="../assets/js/common.js"></script> <script>
-    // 1. Lấy tất cả thông tin từ URL
+    <script src="../assets/js/common.js"></script> 
+    <script>
+    // 1. Lấy tất cả thông tin bốc từ URL do Backend Render bắn về
     const params = new URLSearchParams(window.location.search);
     
+    // 📍 ÉP ĐÚNG TÊN PROPERTY MÀ HÀM SAVEAUTH ĐANG YÊU CẦU (.accessToken và .avatarUrl)
     const authData = {
-        token: params.get('token'),
+        accessToken: params.get('token'),               // Đồng bộ chuẩn với authData.accessToken
+        refreshToken: params.get('refreshToken') || "", 
         userId: params.get('userId'),
         username: params.get('username'),
-        avatarUrl: params.get('avatar'),
+        avatarUrl: params.get('avatar'),                // Đồng bộ chuẩn với authData.avatarUrl
         role: params.get('role'),
         email: params.get('email')
     };
 
-    if (authData.token && authData.userId) {
-        // 2. GỌI HÀM SAVEAUTH CỦA VINH Ở ĐÂY
-        // Nó sẽ tự động lưu cả token, user_id và user_info vào localStorage
+    // Kiểm tra dữ liệu cốt lõi xem có hợp lệ không
+    if (authData.accessToken && authData.userId) {
+        // 2. Gọi hàm lưu trữ dùng chung của hệ thống
+        // Hàm này tự động nạp Token và Object user_info sạch sẽ vào localStorage
         AuthHelper.saveAuth(authData);
         
-        // 3. Đợi 1 chút rồi về Home cho mượt
+        // 3. Chờ 0.5 giây tạo hiệu ứng chuyển cảnh mượt rồi đá về Home
         setTimeout(() => {
             window.location.href = "/index.html";
         }, 500);
     } else {
-        alert("Lỗi dữ liệu đăng nhập!");
+        alert("Lỗi dữ liệu xác thực từ mạng xã hội!");
         window.location.href = "/auth/login.html";
     }
 </script>

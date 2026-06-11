@@ -55,9 +55,9 @@ var Auth = {
                 } else {
                     // Ưu tiên 2: Điều hướng theo vai trò (Role-based Redirect)
                     if (roleId === 1) {
-                        window.location.href = "/dashboard/index.html"; // Admin -> Thống kê hệ thống
+                        window.location.href = "/Dashboard/index.html"; // Admin -> Thống kê hệ thống
                     } else if (roleId === 3) {
-                        window.location.href = "/dashboard/Dashboard-teacher.html";    // Teacher -> Khóa học của tôi
+                        window.location.href = "/Dashboard/Dashboard-teacher.html";    // Teacher -> Khóa học của tôi
                     } else {
                         window.location.href = "/index.html";            // Student/Guest -> Trang chủ
                     }
