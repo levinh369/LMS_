@@ -60,6 +60,9 @@ builder.Services.AddSignalR(options =>
 {
     options.EnableDetailedErrors = true; // Bật dòng này lên để xem chi tiết lỗi C# ở Frontend
 });
+builder.Configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+                     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: false)
+                     .AddEnvironmentVariables();
 builder.Services.AddScoped<IDashBoardRepository, DashBoardRepository>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
@@ -159,17 +162,11 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
                        Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto
 });
 
-// 2. Cấu hình Swagger cho môi trường Dev
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+// 2. Đưa Swagger ra ngoài để chạy trên Render vẫn dùng được
+app.UseSwagger();
+app.UseSwaggerUI();
 
-// 3. Tạm thời COMMENT dòng này nếu lỗi CORS vẫn bị (do Render đã có HTTPS sẵn)
-// app.UseHttpsRedirection();
-
-// 4. Kích hoạt Routing - CỰC KỲ QUAN TRỌNG (Phải đứng trước CORS)
+// 4. Kích hoạt Routing
 app.UseRouting();
 
 // 5. Kích hoạt CORS ngay sau Routing và trước Auth
@@ -179,12 +176,11 @@ app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
 
-// 7. Map các Endpoint (Hub và Controller)
+// 7. Map các Endpoint
 app.MapControllers();
 app.MapHub<NotificationHub>("/notificationHub");
 
 app.Run();
-//
 
 
 

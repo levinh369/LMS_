@@ -1,7 +1,7 @@
 
 var Auth = {
     config: {
-        apiUrl: "http://127.0.0.1:5000/api/Auth"
+        apiUrl: "https://lms-u2jn.onrender.com/api/Auth"
     },
     
     login: async function(btn) {
@@ -55,11 +55,11 @@ var Auth = {
                 } else {
                     // Ưu tiên 2: Điều hướng theo vai trò (Role-based Redirect)
                     if (roleId === 1) {
-                        window.location.href = "/pages/dashboard/index.html"; // Admin -> Thống kê hệ thống
+                        window.location.href = "/dashboard/index.html"; // Admin -> Thống kê hệ thống
                     } else if (roleId === 3) {
-                        window.location.href = "/pages/dashboard/Dashboard-teacher.html";    // Teacher -> Khóa học của tôi
+                        window.location.href = "/dashboard/Dashboard-teacher.html";    // Teacher -> Khóa học của tôi
                     } else {
-                        window.location.href = "/pages/index.html";            // Student/Guest -> Trang chủ
+                        window.location.href = "/index.html";            // Student/Guest -> Trang chủ
                     }
                 }
             });
@@ -120,11 +120,11 @@ var Auth = {
                     window.location.href = `/learn/learning.html?id=${courseId}`;
                 } else {
                      if (roleId === 1) {
-                        window.location.href = "/pages/dashboard/index.html"; // Admin -> Thống kê hệ thống
+                        window.location.href = "/dashboard/index.html"; // Admin -> Thống kê hệ thống
                     } else if (roleId === 3) {
-                        window.location.href = "/pages/dashboard/Dashboard-teacher.html";    // Teacher -> Khóa học của tôi
+                        window.location.href = "/dashboard/Dashboard-teacher.html";    // Teacher -> Khóa học của tôi
                     } else {
-                        window.location.href = "/pages/index.html";            // Student/Guest -> Trang chủ
+                        window.location.href = "/index.html";            // Student/Guest -> Trang chủ
                     }
                 }
             });
@@ -145,7 +145,7 @@ var Auth = {
             ? `${frontendDomain}/Home/detail.html?id=${courseId}`
             : `${frontendDomain}/auth/login-success.html`;
 
-        const backendUrl = `http://127.0.0.1:5000/api/auth/external-login?provider=${provider}&returnUrl=${encodeURIComponent(returnUrl)}`;
+        const backendUrl = `https://lms-u2jn.onrender.com/api/auth/external-login?provider=${provider}&returnUrl=${encodeURIComponent(returnUrl)}`;
         window.location.href = backendUrl;
     }
 };

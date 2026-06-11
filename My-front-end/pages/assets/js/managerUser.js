@@ -14,8 +14,8 @@ const Toast = Swal.mixin({
 var Manager = {
     config: {
         pageSize: 10,
-        apiUrl: "http://127.0.0.1:5000/api/user",
-        apiUrlEnroll: "http://127.0.0.1:5000/api/Enroll"
+        apiUrl: "https://lms-u2jn.onrender.com/api/user",
+        apiUrlEnroll: "https://lms-u2jn.onrender.com/api/Enroll"
     },
     roleId: 0,
     tempCourses: {},
@@ -71,7 +71,7 @@ var Manager = {
     init: function () {
         const userInfoRaw = localStorage.getItem("user_info");
         if (!userInfoRaw) {
-            window.location.href = "/pages/auth/login.html";
+            window.location.href = "/auth/login.html";
             return;
         }
 
@@ -140,7 +140,7 @@ var Manager = {
     try {
         const token = localStorage.getItem("jwt_token"); // Hoặc "access_token" tùy bác lưu
         if (!token) return;
-        const response = await fetch('http://127.0.0.1:5000/api/course/lookup', {
+        const response = await fetch('https://lms-u2jn.onrender.com/api/course/lookup', {
             method: 'GET',
             headers: { 
                 "Authorization": "Bearer " + token,
@@ -640,7 +640,7 @@ openCourseModal: function(userId, fullName) {
         const token = localStorage.getItem("jwt_token");
 
         try {
-            const response = await fetch(`http://127.0.0.1:5000/api/Withdrawal/admin/teacher-history/${userId}?pageIndex=${pageIndex}&pageSize=5`, {
+            const response = await fetch(`https://lms-u2jn.onrender.com/api/Withdrawal/admin/teacher-history/${userId}?pageIndex=${pageIndex}&pageSize=5`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',

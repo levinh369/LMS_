@@ -14,7 +14,7 @@ const Toast = Swal.mixin({
 var Category = {
     config: {
         pageSize: 10,
-        apiUrl: "http://127.0.0.1:5000/api/category"
+        apiUrl: "https://lms-u2jn.onrender.com/api/category"
     },
 
     // Hàm khởi tạo - Gọi khi trang load xong
@@ -87,13 +87,13 @@ loadData: async function(page) {
 
         // 📍 XỬ LÝ LỖI TRƯỚC KHI THỬ JSON
         if (response.status === 403) {
-            window.location.href = "/pages/403.html"; // Điều hướng khi bị cấm
+            window.location.href = "/403.html"; // Điều hướng khi bị cấm
             return;
         }
 
         if (response.status === 401) {
             alert("Phiên đăng nhập đã hết hạn!");
-            window.location.href = "/pages/auth/login.html";
+            window.location.href = "/auth/login.html";
             return;
         }
 
@@ -486,7 +486,7 @@ loadData: async function(page) {
         // 📍 BẮT LỖI 403 Ở ĐÂY
         if (error.status === 403) {
             console.error("403 Forbidden: Bác không có quyền truy cập!");
-            window.location.href = "/pages/error/403.html"; 
+            window.location.href = "/error/403.html"; 
             return;
         }
 

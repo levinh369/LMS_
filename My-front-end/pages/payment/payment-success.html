@@ -35,10 +35,10 @@
             // 3. Nếu trên URL có courseId, thì sửa cái link của nút đó
             if (courseId) {
                 // Thay đổi đường dẫn này cho khớp với cấu trúc thư mục của bác
-                btnLearnNow.href = `/pages/learn/learning.html?courseId=${courseId}`;
+                btnLearnNow.href = `/learn/learning.html?courseId=${courseId}`;
             } else {
                 // Nếu vì lý do nào đó không có khóa học, thì cho nút này bay về trang hồ sơ học tập của user
-                btnLearnNow.href = "/pages/user/my-courses.html";
+                btnLearnNow.href = "/user/my-courses.html";
             }
         });
     </script>

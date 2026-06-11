@@ -15,7 +15,7 @@ var Course = {
     editDetails: [],
     config: {
         pageSize: 10,
-        apiUrl: "http://127.0.0.1:5000/api/course"
+        apiUrl: "https://lms-u2jn.onrender.com/api/course"
     },
     CourseLevel : {
         0: "Người mới bắt đầu",
@@ -43,7 +43,7 @@ init: function () {
             }
         } else {
             // Chưa login đá về trang đăng nhập
-            window.location.href = "/pages/auth/login.html";
+            window.location.href = "/auth/login.html";
             return;
         }
 
@@ -191,7 +191,7 @@ loadTeacherSelect: async function() {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
-        if (response.status === 401) return window.location.href = "/pages/auth/login.html";
+        if (response.status === 401) return window.location.href = "/auth/login.html";
         
         const res = await response.json();
         if (res.success || res.Success) {
@@ -345,7 +345,7 @@ loadCategories: async function () {
     }
 
     try {
-        const response = await fetch(`http://127.0.0.1:5000/api/Category`);
+        const response = await fetch(`https://lms-u2jn.onrender.com/api/Category`);
         const result = await response.json(); 
         Course.categories = result.data || []; 
 
@@ -817,7 +817,7 @@ toggleStatus: function (id) {
             if (result.isConfirmed) {
                 // Gọi API Put
                 $.ajax({
-                    url: `http://127.0.0.1:5000/api/Course/toggle-status/${id}?role=${roleName}`,
+                    url: `https://lms-u2jn.onrender.com/api/Course/toggle-status/${id}?role=${roleName}`,
                     type: 'PUT',
                     contentType: 'application/json',
                     success: function (res) {
@@ -1242,7 +1242,7 @@ resetFilter: function() {
         const selectEl = document.getElementById('trashFilterCategory');
 
         try {
-            const response = await fetch(`http://127.0.0.1:5000/api/Category`);
+            const response = await fetch(`https://lms-u2jn.onrender.com/api/Category`);
             const result = await response.json(); 
             Course.categories = result.data || []; 
             let filterHtml = '<option value="0">-- Tất cả danh mục --</option>';

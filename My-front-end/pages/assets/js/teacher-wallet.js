@@ -12,7 +12,7 @@ const Toast = Swal.mixin({
 });
 
 const withdrawTeacher = {
-    baseUrl: 'http://127.0.0.1:5000/api/Withdrawal', // Đổi port cho chuẩn với BE của bác
+    baseUrl: 'https://lms-u2jn.onrender.com/api/Withdrawal', // Đổi port cho chuẩn với BE của bác
     pageSize: 5, 
     currentStatus: -1, // -1: Tất cả, 0: Chờ duyệt, 1: Thành công, 2: Thất bại
     currentPage: 1,

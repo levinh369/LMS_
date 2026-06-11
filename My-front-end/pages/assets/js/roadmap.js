@@ -12,14 +12,14 @@ const Toast = Swal.mixin({
 var RoadMap = {
     currentPage : 0,
     config: {
-        apiUrl: "http://127.0.0.1:5000/api/roadmap",
+        apiUrl: "https://lms-u2jn.onrender.com/api/roadmap",
         pageSize : 10
     },
    init: function () {
     const userInfoRaw = localStorage.getItem("user_info");
     
     if (!userInfoRaw) {
-        window.location.href = "/pages/auth/login.html";
+        window.location.href = "/auth/login.html";
         return;
     }
 
@@ -157,7 +157,7 @@ loadData: async function(page) {
         // 📍 XỬ LÝ LỖI 403 (Forbidden)
         if (error.status === 403) {
             console.warn("Truy cập bị từ chối (403). Đang điều hướng...");
-            window.location.href = "/pages/403.html"; // Bác trỏ đúng đường dẫn file 403 của bác nhé
+            window.location.href = "/403.html"; // Bác trỏ đúng đường dẫn file 403 của bác nhé
             return;
         }
 
@@ -873,7 +873,7 @@ handleGoToDetail: async function(courseId) {
 
     try {
         const res = await $.ajax({
-            url: `http://127.0.0.1:5000/api/course/course-detail/${courseId}`,
+            url: `https://lms-u2jn.onrender.com/api/course/course-detail/${courseId}`,
             type: 'GET',
             headers: { 'Authorization': `Bearer ${token}` } // QUAN TRỌNG: Phải có dòng này
         });
@@ -973,7 +973,7 @@ trash: {
     init: function() {
         const userInfoRaw = localStorage.getItem("user_info");
         if (!userInfoRaw) {
-            window.location.href = "/pages/auth/login.html";
+            window.location.href = "/auth/login.html";
             return;
         }
 

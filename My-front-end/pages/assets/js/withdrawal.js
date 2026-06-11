@@ -12,7 +12,7 @@ const Toast = Swal.mixin({
 });
 
 const Withdrawal = {
-    baseUrl: 'http://127.0.0.1:5000/api/Withdrawal', // Cổng Backend C# của bác
+    baseUrl: 'https://lms-u2jn.onrender.com/api/Withdrawal', // Cổng Backend C# của bác
     pageSize: 10,
     currentPage: 1,
   loadData: async function (pageIndex = 1) {

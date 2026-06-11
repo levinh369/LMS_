@@ -2,7 +2,7 @@ var RoadMapBuider = {
     currentPage: 0,
     roadmapId: null,
     config: {
-        apiUrl: "http://127.0.0.1:5000/api/roadmap",
+        apiUrl: "https://lms-u2jn.onrender.com/api/roadmap",
         pageSize: 10
     },
 

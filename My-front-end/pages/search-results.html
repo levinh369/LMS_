@@ -184,7 +184,7 @@ $('.filter-level:checked').each(function() {
 
         try {
             // Thực hiện gọi AJAX endpoint bản full của bác
-            const response = await $.get('http://127.0.0.1:5000/api/course/search-result', requestData);
+            const response = await $.get('https://lms-u2jn.onrender.com/api/course/search-result', requestData);
             
             if (response.success && response.data) {
                 const result = response.data;

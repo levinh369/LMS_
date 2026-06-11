@@ -14,7 +14,7 @@ const chapter = {
     currentCourseId: 0, // Lưu ID khóa học đang chọn
     config: {
         pageSize: 10,
-        apiUrl: "http://127.0.0.1:5000/api/chapter"
+        apiUrl: "https://lms-u2jn.onrender.com/api/chapter"
     },
     openModal: async function(courseId) {
         TableLoader.show('#chapterListBody');
@@ -288,7 +288,7 @@ goToTrash: function() {
             return;
         }
         // Chuyển hướng kèm theo tham số courseId trên URL
-        window.location.href = `/pages/chapter/chapter_trash.html?courseId=${this.currentCourseId}`;
+        window.location.href = `/chapter/chapter_trash.html?courseId=${this.currentCourseId}`;
     },
 delete: async function(id) {
     const result = await Swal.fire({
@@ -337,7 +337,7 @@ chapterTrash: {
     const pageSize = 10; 
 
     const keyword = document.getElementById('chapterTrashKeySearch').value || '';
-    const url = `http://127.0.0.1:5000/api/Chapter/list-deleted?courseId=${chapter.currentCourseId}&keyword=${encodeURIComponent(keyword)}&page=${page}&pageSize=${pageSize}`;
+    const url = `https://lms-u2jn.onrender.com/api/Chapter/list-deleted?courseId=${chapter.currentCourseId}&keyword=${encodeURIComponent(keyword)}&page=${page}&pageSize=${pageSize}`;
 
     try {
         // Lấy Token gửi kèm

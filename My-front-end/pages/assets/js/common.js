@@ -118,7 +118,7 @@ showGuestUI: function($guest, $user) {
 // Hàm này CHỈ gọi khi người dùng bấm vào nút "Đăng xuất"
 logout: function() {
     AuthHelper.clearAuthSilently();
-    window.location.href = "/pages/auth/login.html";
+    window.location.href = "/auth/login.html";
 },
     initMyCoursesEvents: function() {
         $(document).on('click', '#btnMyCourses', function(e) {
@@ -144,7 +144,7 @@ logout: function() {
 
     try {
         const response = await $.ajax({
-            url: "http://127.0.0.1:5000/api/Course/my-course", // URL API của ông
+            url: "https://lms-u2jn.onrender.com/api/Course/my-course", // URL API của ông
             type: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}` // Gửi token lên để Backend lấy UserId
@@ -259,7 +259,7 @@ $(document).ajaxError(async function(event, xhr, settings, thrownError) {
         try {
             // Gọi API đi xin Token mới
             const res = await $.ajax({
-                url: "http://127.0.0.1:5000/api/auth/refresh-token", 
+                url: "https://lms-u2jn.onrender.com/api/auth/refresh-token", 
                 type: "POST",
                 contentType: "application/json",
                 data: JSON.stringify({ refreshToken: refreshToken })
@@ -310,7 +310,7 @@ function forceLogout() {
 // 1. Sửa lại hàm renderItem để khớp với DTO từ Backend C#
 AuthHelper.renderItem = function(item) {
     // Chuyển Id thành URL chi tiết
-    const detailUrl = `/pages/Home/detail.html?id=${item.id}`;
+    const detailUrl = `/Home/detail.html?id=${item.id}`;
     // ThumbnailUrl từ C# sẽ thành thumbnailUrl (viết thường chữ t)
     const imgUrl = item.thumbnailUrl || '../assets/img/default-course.png';
 
@@ -346,7 +346,7 @@ $(document).on('input', '#mainSearchInput', function() {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(async () => {
         try {
-            const res = await $.get(`http://127.0.0.1:5000/api/course/search?query=${encodeURIComponent(query)}`);
+            const res = await $.get(`https://lms-u2jn.onrender.com/api/course/search?query=${encodeURIComponent(query)}`);
             
             // Xử lý dữ liệu: Nếu Backend trả về trực tiếp mảng hoặc object có .data
             const results = Array.isArray(res) ? res : (res.data || []);
@@ -379,7 +379,7 @@ $(document).on('click', function (e) {
 // TRONG FILE common.js
 $(document).ready(function() {
     // 1. Nạp Header - Chỉ nạp 1 lần duy nhất
-    $("#header-placeholder").load("/pages/shared/header.html", function() {
+    $("#header-placeholder").load("/shared/header.html", function() {
         console.log("🚩 Hệ thống: Header đã load xong.");
 
         // 2. Kiểm tra trạng thái đăng nhập
@@ -403,7 +403,7 @@ $(document).ready(function() {
     });
 
     // 5. Nạp Footer
-    $("#footer-placeholder").load("/pages/shared/footer.html", function() {
+    $("#footer-placeholder").load("/shared/footer.html", function() {
         console.log("🚩 Hệ thống: Footer đã load xong.");
     });
 });

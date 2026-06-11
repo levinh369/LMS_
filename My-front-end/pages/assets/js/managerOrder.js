@@ -12,7 +12,7 @@ const Toast = Swal.mixin({
 const AdminOrder = {
     config: {
         pageSize: 10,
-        apiUrl: "http://127.0.0.1:5000/api/order" // Đúng Route bác đã viết ở Controller
+        apiUrl: "https://lms-u2jn.onrender.com/api/order" // Đúng Route bác đã viết ở Controller
     },
 
    init: function () {
@@ -185,7 +185,7 @@ loadTeacherSelect: async function() {
     const token = localStorage.getItem("jwt_token");
     try {
         // SỬA LẠI DÒNG NÀY: Bỏ ${} đi, nối chuỗi bình thường
-        const response = await fetch(`http://127.0.0.1:5000/api/Course/get-all-teachers`, {
+        const response = await fetch(`https://lms-u2jn.onrender.com/api/Course/get-all-teachers`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         

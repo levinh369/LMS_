@@ -17,7 +17,7 @@ var Lesson = {
     currentCourseId : 0,
     isChapterNameLoaded: false,
     config: {
-        apiUrl: "http://127.0.0.1:5000/api/Lesson"
+        apiUrl: "https://lms-u2jn.onrender.com/api/Lesson"
     },
     
     // Hàm khởi tạo - Gọi khi trang load xong
@@ -610,7 +610,7 @@ openDetailModal: async function (id) {
 
         // 📍 Dùng $.ajax (Nó tự parse JSON rồi, kết quả là biến 'item' hoặc 'res')
         const item = await $.ajax({
-            url: `http://127.0.0.1:5000/api/Lesson/${id}`,
+            url: `https://lms-u2jn.onrender.com/api/Lesson/${id}`,
             type: 'GET',
             headers: { "Authorization": `Bearer ${token}` }
         });
@@ -652,7 +652,7 @@ goToTrash: function() {
             return;
         }
         // Chuyển hướng kèm theo tham số courseId trên URL
-        window.location.href = `/pages/lesson/lesson_trash.html?chapterId=${this.currentChapterId}`;
+        window.location.href = `/lesson/lesson_trash.html?chapterId=${this.currentChapterId}`;
     },
 renderDetailTable: function (data) {
     let html = '';
@@ -877,7 +877,7 @@ delete: async function(id) {
 
         try {
             console.log("Gọi API lấy danh mục lần đầu");
-            const response = await fetch(`http://127.0.0.1:5000/api/Lesson`);
+            const response = await fetch(`https://lms-u2jn.onrender.com/api/Lesson`);
             Lesson.categories = await response.json(); 
             console.log(Lesson.categories)
             let filterHtml = '<option value="">Tất cả danh mục</option>';

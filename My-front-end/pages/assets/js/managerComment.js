@@ -13,7 +13,7 @@ const Toast = Swal.mixin({
 const AdminComment = {
     config: {
         pageSize: 5,
-        apiUrl: "http://127.0.0.1:5000/api/comment", // Check kỹ port nhé bác
+        apiUrl: "https://lms-u2jn.onrender.com/api/comment", // Check kỹ port nhé bác
         token: localStorage.getItem('jwt_token') // Lấy token để authenticate
     },
     currentPage:null,
@@ -320,7 +320,7 @@ sendReply: async function(parentId) {
 
     try {
         GlobalLoader.show();
-        const response = await fetch('http://127.0.0.1:5000/api/comment', {
+        const response = await fetch('https://lms-u2jn.onrender.com/api/comment', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -572,7 +572,7 @@ loadCourses: async function(teacherId = 'all') {
         // 2. Xử lý cái vụ 'all' (Nếu backend C# của bác mong đợi số nguyên thì 'all' đổi thành 0)
         const param = teacherId === 'all' ? 0 : teacherId; 
 
-        let url = `http://127.0.0.1:5000/api/course/by-teacher?teacherId=${param}`;
+        let url = `https://lms-u2jn.onrender.com/api/course/by-teacher?teacherId=${param}`;
         
         // 3. 📍 PHẢI KẸP THÊM CỤC OPTIONS NÀY VÀO FETCH
         const response = await fetch(url, {
@@ -610,7 +610,7 @@ loadCourses: async function(teacherId = 'all') {
 loadTeacherSelect: async function() {
     const token = localStorage.getItem("jwt_token");
     try {
-        const response = await fetch(`http://127.0.0.1:5000/api/course/get-all-teachers`, {
+        const response = await fetch(`https://lms-u2jn.onrender.com/api/course/get-all-teachers`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const res = await response.json();
@@ -637,7 +637,7 @@ loadLessons: async function(courseId) {
         return;
     }
     try {
-        const response = await fetch(`http://127.0.0.1:5000/api/lesson/list-lesson/${courseId}`);
+        const response = await fetch(`https://lms-u2jn.onrender.com/api/lesson/list-lesson/${courseId}`);
         const res = await response.json();
         
         if (res.success && res.data) {
@@ -804,7 +804,7 @@ callPinApi: async function (data, isNew) {
         // 1. KHÓA MÀN HÌNH CHỐNG SPAM CLICK KHI ĐANG GHIM
         GlobalLoader.show();
 
-        const response = await fetch('http://127.0.0.1:5000/api/comment/pin-handler', {
+        const response = await fetch('https://lms-u2jn.onrender.com/api/comment/pin-handler', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

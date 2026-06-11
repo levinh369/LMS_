@@ -10,7 +10,7 @@ const Toast = Swal.mixin({
     }
 });
 const Rank = {
-    baseUrl: 'http://127.0.0.1:5000/api/Rank',
+    baseUrl: 'https://lms-u2jn.onrender.com/api/Rank',
     init: function () {
         this.loadDashboard();
         this.registerEvents();
@@ -211,7 +211,7 @@ const Rank = {
                 <td class="small text-muted">${u.email}</td>
                 <td class="small fw-bold text-success">${this.formatCurrency(u.totalRevenue)}</td>
                 <td class="text-end">
-                    <a href="/pages/managerUser/index.html?openId=${u.userId}" class="btn btn-sm btn-light border">
+                    <a href="/managerUser/index.html?openId=${u.userId}" class="btn btn-sm btn-light border">
                         <i class="bi bi-arrow-right"></i>
                     </a>
                 </td>

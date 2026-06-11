@@ -12,7 +12,7 @@ const Toast = Swal.mixin({
 const ForgotPassword = {
     // Biến lưu tạm email đang thao tác
     currentEmail: "",
-    apiUrl: "http://127.0.0.1:5000/api/Auth", // Đổi lại URL API của bác nếu cần
+    apiUrl: "https://lms-u2jn.onrender.com/api/Auth", // Đổi lại URL API của bác nếu cần
 
     // Mở Modal và reset form về trạng thái ban đầu
     showModal: function() {

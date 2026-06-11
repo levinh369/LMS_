@@ -10,7 +10,7 @@ const Enrollment = {
             studentName = userInfo.username || "Học viên";
         }
         return $.ajax({
-            url: 'http://127.0.0.1:5000/api/enroll/register',
+            url: 'https://lms-u2jn.onrender.com/api/enroll/register',
             type: 'POST',
             contentType: 'application/json',
             headers: {

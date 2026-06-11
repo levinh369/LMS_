@@ -59,7 +59,7 @@ const Dashboard = {
 
         // URL này phải khớp với Route trong Controller .NET của bác
         $.ajax({
-            url: `http://127.0.0.1:5000/api/Dashboard/statistics?fromDate=${fromDate}&toDate=${toDate}`,
+            url: `https://lms-u2jn.onrender.com/api/Dashboard/statistics?fromDate=${fromDate}&toDate=${toDate}`,
             type: 'GET',
             headers: {
             "Authorization": "Bearer " + token

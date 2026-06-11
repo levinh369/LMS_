@@ -79,7 +79,7 @@ window.DashboardTeacher = {
         const endDate = $("#filter-end-date").val();
 
         // Xây dựng đường dẫn URL kèm Query String lọc ngày tháng
-        let apiUrl = "http://127.0.0.1:5000/api/DashBoard/dashboard-data";
+        let apiUrl = "https://lms-u2jn.onrender.com/api/DashBoard/dashboard-data";
         if (startDate && endDate) {
             apiUrl += `?startDate=${startDate}&endDate=${endDate}`;
         }
@@ -430,7 +430,7 @@ document.addEventListener("DOMContentLoaded", function () {
             const token = localStorage.getItem("jwt_token"); 
 
             try {
-                const response = await fetch('http://127.0.0.1:5000/api/Withdrawal/request', { 
+                const response = await fetch('https://lms-u2jn.onrender.com/api/Withdrawal/request', { 
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

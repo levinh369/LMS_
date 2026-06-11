@@ -4,14 +4,14 @@ $(document).ready(function () {
 
 function loadAdminLayout() {
     // 1. Nạp Banner/Sidebar dùng chung
-    $("#sidebar-placeholder").load("/pages/shared/banner.html", function () {
+    $("#sidebar-placeholder").load("/shared/banner.html", function () {
         const path = window.location.pathname;
         let pageTitle = "Hệ thống quản lý";
         let breadcrumb = "Admin";
         
         const userInfoRaw = localStorage.getItem("user_info");
         if (!userInfoRaw) {
-            window.location.href = "/pages/auth/login.html";
+            window.location.href = "/auth/login.html";
             return;
         }
         
@@ -33,7 +33,7 @@ function loadAdminLayout() {
             $("#btn-nav-withdraw-history").remove(); 
 
             // 📍 THÊM MỚI TẠI ĐÂY: GỌI API LẤY SỐ LƯỢNG LÚC VỪA LOAD TRANG
-            fetch('http://127.0.0.1:5000/api/Dashboard/pending-counts', { // Nhớ sửa port 5001 thành port Backend của bác nhé
+            fetch('https://lms-u2jn.onrender.com/api/Dashboard/pending-counts', { // Nhớ sửa port 5001 thành port Backend của bác nhé
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`,
