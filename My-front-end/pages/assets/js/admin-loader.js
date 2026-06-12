@@ -63,7 +63,7 @@ function loadAdminLayout() {
 
         } else { // NẾU LÀ GIẢNG VIÊN
             roleText = "GIẢNG VIÊN";
-            $("#btn-nav-dashboard").attr("href", "/dashboard/dashboard-teacher.html"); 
+            $("#btn-nav-dashboard").attr("href", "/Dashboard/dashboard-teacher.html"); 
             
             // Xóa các quyền không cần thiết của Teacher
             $("#btn-nav-rank").remove();

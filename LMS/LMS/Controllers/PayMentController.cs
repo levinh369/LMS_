@@ -115,7 +115,7 @@ public class PaymentController : ControllerBase
         public int OrderId { get; set; }
         public int teacherId {  get; set; }
     }
-
+    [AllowAnonymous]
     [HttpGet("vnpay-callback")]
     public async Task<IActionResult> PaymentCallback()
     {
@@ -148,7 +148,7 @@ public class PaymentController : ControllerBase
             if (order == null) return NotFound("Đơn hàng không tồn tại.");
             if (order.Status != OrderStatusEnum.Pending)
             {
-                return Redirect($"http://127.0.0.1:5500/pages/course/detail.html?id={order.CourseId}");
+                return Redirect($"https://lms-azure-mu.vercel.app/course/detail.html?id={order.CourseId}");
             }
 
             // TRƯỜNG HỢP 1: THANH TOÁN THÀNH CÔNG
@@ -206,7 +206,7 @@ public class PaymentController : ControllerBase
                 await _enrollmentService.AddEnrollAsync(order.UserId, enrollDto);
                 await _context.SaveChangesAsync();
 
-                return Redirect($"http://127.0.0.1:5500/pages/payment/payment-success.html?courseId={order.CourseId}");
+                return Redirect($"https://lms-azure-mu.vercel.app/payment/payment-success.html?courseId={order.CourseId}");
             }
             // TRƯỜNG HỢP 2: NGƯỜI DÙNG NHẤN HỦY (MÃ 24)
             else if (vnp_ResponseCode == "24")
@@ -214,8 +214,7 @@ public class PaymentController : ControllerBase
                 order.Status = OrderStatusEnum.Cancelled; // Cập nhật Enum đã thêm
                 await _context.SaveChangesAsync();
 
-                // Redirect về trang Detail và kèm param để Frontend hiện SweetAlert thông báo hủy
-                return Redirect($"http://127.0.0.1:5500/pages/course/detail.html?id={order.CourseId}&paymentStatus=cancel");
+                return Redirect($"https://lms-azure-mu.vercel.app/course/detail.html?id={order.CourseId}&paymentStatus=cancel");
             }
             // TRƯỜNG HỢP 3: CÁC LỖI KHÁC (THẺ SAI, KHÔNG ĐỦ TIỀN, HẾT HẠN...)
             else
@@ -223,7 +222,7 @@ public class PaymentController : ControllerBase
                 order.Status = OrderStatusEnum.Failed;
                 await _context.SaveChangesAsync();
 
-                return Redirect($"http://127.0.0.1:5500/pages/course/detail.html?id={order.CourseId}&paymentStatus=fail");
+                return Redirect($"https://lms-azure-mu.vercel.app/course/detail.html?id={order.CourseId}&paymentStatus=fail");
             }
         }
 
