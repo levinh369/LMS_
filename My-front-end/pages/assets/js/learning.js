@@ -801,7 +801,6 @@ loadReplies: async function(parentId, btnElement) {
         $btn.prop('disabled', false);
     }
 },
-
 postComment: async function(parentId = null) {
     const selector = parentId ? `#replyInput-${parentId}` : '#commentInput';
     const $input = $(selector);
@@ -821,7 +820,6 @@ postComment: async function(parentId = null) {
         replyToUserName: $input.data('reply-to-name') || null
     };
 
-    // --- BƯỚC 1: LẤY THÔNG TIN USER ĐỂ CHẾ ĐƠN VỊ DATA ẢO ---
     const userInfo = AuthHelper.getUserInfo();
     const userAvatar = userInfo?.avatar || "../assets/img/default-avatar.png";
     const userName = userInfo?.fullName || userInfo?.username || "Học viên";
@@ -830,7 +828,6 @@ postComment: async function(parentId = null) {
     // Tạo một ID tạm thời để định vị phần tử ảo trên DOM
     const tempId = "temp_cmt_" + Date.now();
 
-    // Giả lập một object data giống cấu trúc Backend trả về
     const mockCommentData = {
         id: tempId,
         content: dto.content,
@@ -848,14 +845,11 @@ postComment: async function(parentId = null) {
 
     // --- BƯỚC 2: CẬP NHẬT GIAO DIỆN TỨC THÌ (OPTIMISTIC) ---
     if (parentId) {
-        // 2.1 Xử lý render ảo cho REPLY CON
         const replyHtml = this.renderSingleReply(mockCommentData, teacherId);
         const $repliesContainer = $(`#replies-container-${parentId}`);
-        
         $repliesContainer.removeClass('d-none').prepend(replyHtml);
-        $(`#reply-box-${parentId}`).hide(); // Ẩn tạm khung nhập
+        $(`#reply-box-${parentId}`).hide(); 
     } else {
-        // 2.2 Xử lý render ảo cho COMMENT CHA
         const commentHtml = this.renderCommentItem(mockCommentData, teacherId);
         const $list = $('#commentList');
 
@@ -871,64 +865,58 @@ postComment: async function(parentId = null) {
         }
     }
 
-    // Làm mờ nhẹ comment ảo để biểu thị trạng thái "Đang gửi..."
+    // Nếu bác muốn bấm phát rõ luôn không mờ, bác bỏ dòng opacity 0.6 này đi nhé, ở đây tớ giữ nguyên làm mờ nhẹ tí
     const $mockElement = $(`#comment-${tempId}`);
-    $mockElement.css('opacity', '0.6');
+    $mockElement.css('opacity', '0.7');
 
-    // Reset ô input ngay lập tức, nút bấm không cần hiện spinner xoay nữa
     $input.val('');
 
     try {
-        // --- BƯỚC 3: GỌI API CHẠY NGẦM + TIMEOUT 5 GIÂY ---
+        // --- BƯỚC 3: GỌI API CHẠY NGẦM ---
         const res = await $.ajax({
             url: 'https://lms-u2jn.onrender.com/api/comment',
             type: 'POST',
             contentType: 'application/json',
-            timeout: 5000, // 📍 Quá 5 giây tự động hủy để nhảy xuống catch hủy comment ảo
+            timeout: 5000,
             headers: { "Authorization": "Bearer " + localStorage.getItem("jwt_token") },
             data: JSON.stringify(dto)
         });
 
-        // --- BƯỚC 4: THÀNH CÔNG -> ĐỒNG BỘ ID THẬT CỦA DATABASE ---
+        // --- BƯỚC 4: THÀNH CÔNG -> ĐỔI HTML GIẢ THÀNH HTML THẬT ---
         if (res && res.success) {
             if (typeof Toast !== 'undefined') Toast.fire({ icon: 'success', title: "Thành công!" });
             const newComment = res.data;
 
-            // Loại bỏ độ mờ ảo, gán lại ID thật từ server cấp vào thuộc tính HTML
-            $mockElement.css('opacity', '1').attr('id', `comment-${newComment.id}`);
-            
-            // Cập nhật lại các ID trong các nút bấm Reaction/Reply nằm trong cụm comment vừa tạo
-            $mockElement.find(`[onclick*="${tempId}"]`).each(function() {
-                const oldOnclick = $(this).attr('onclick');
-                const newOnclick = oldOnclick.replace(new RegExp(tempId, 'g'), newComment.id);
-                $(this).attr('onclick', newOnclick);
-            });
+            // 📍 GIẢI PHÁP ĐỘT PHÁ: Dùng chính hàm render xịn để vẽ lại bản ghi từ server
+            let realHtml = "";
+            if (parentId) {
+                realHtml = this.renderSingleReply(newComment, teacherId);
+            } else {
+                realHtml = this.renderCommentItem(newComment, teacherId);
+            }
 
-            // Nếu là Reply, dọn dẹp hẳn khung nhập cũ
+            // Dán đè cụm HTML thật vào vị trí cụm HTML giả $\rightarrow$ Mất mờ và ăn luôn các onclick chuẩn 100%!
+            $mockElement.replaceWith(realHtml);
+
             if (parentId) {
                 $(`#reply-box-${parentId}`).empty().show();
             }
 
-            // Cuộn nhẹ đến comment vừa gửi thành công
+            // Cuộn nhẹ đến phần tử xịn
             document.getElementById(`comment-${newComment.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         } else {
-            // Đề phòng trường hợp API trả về false
             throw new Error("API return success false");
         }
     } catch (err) {
-        // --- BƯỚC 5: LỖI HOẶC TIMEOUT -> ROLLBACK TRẢ LẠI TRẠNG THÁI ---
+        // --- BƯỚC 5: ROLLBACK NẾU LỖI ---
         console.error("Post Error:", err);
         if (typeof Toast !== 'undefined') {
-            Toast.fire({ icon: 'error', title: "Mạng chậm hoặc lỗi: Không thể gửi bình luận!" });
+            Toast.fire({ icon: 'error', title: "Không thể gửi bình luận!" });
         }
 
-        // Xóa bình luận ảo khỏi màn hình vì gửi thất bại
         $mockElement.remove();
-
-        // Điền lại nội dung cũ vào ô input để user không mất công gõ lại
         $input.val(content);
 
-        // Hiện lại hộp thoại reply nếu là luồng reply con
         if (parentId) {
             $(`#reply-box-${parentId}`).show();
         }
@@ -991,29 +979,36 @@ initCommentEvents: function() {
         $replyBox.html(html);
         $(`#replyInput-${rootId}`).focus();
     },
+
+cancelEdit: function(id) {
+    const $contentElement = $(`#content-${id}`);
+    const oldHtml = $contentElement.data('old-html');
+    if (oldHtml) {
+        $contentElement.html(oldHtml);
+    }
+},
 editComment: function(id) {
     const $contentElement = $(`#content-${id}`);
-    
-    // 1. Kiểm tra xem có tìm thấy phần tử không (Để debug nếu cần)
-    if ($contentElement.length === 0) {
-        console.error(`Không tìm thấy thẻ #content-${id}`);
-        return;
+    if ($contentElement.length === 0) return;
+
+    // 📍 1. Bốc cái thẻ span chứa tên người được reply (nếu có) và lưu tạm vào data()
+    const $replySpan = $contentElement.find('span').first();
+    if ($replySpan.length > 0) {
+        $contentElement.data('reply-user-html', $replySpan[0].outerHTML);
+    } else {
+        $contentElement.data('reply-user-html', ''); // Trống nếu là comment cha
     }
 
-    // 2. Lưu HTML cũ để đề phòng nhấn "Hủy"
-    $contentElement.data('old-html', $contentElement.html());
-
-    // 3. LẤY NỘI DUNG THÔ (Cách mới: Chắc cú hơn)
-    // Mình clone ra một bản tạm, xóa cái thẻ span (@user) đi rồi mới bốc text
+    // 2. Lấy nội dung thô loại bỏ span
     let currentText = $contentElement
-        .clone()            // Tạo bản sao
-        .find('span')       // Tìm thằng @user
-        .remove()           // Xóa nó đi khỏi bản sao
-        .end()              // Quay lại bản sao ban đầu
-        .text()             // Lấy text còn lại
-        .trim();            // Dọn dẹp khoảng trắng
+        .clone()            
+        .find('span')       
+        .remove()           
+        .end()              
+        .text()             
+        .trim();            
 
-    // 4. Tạo giao diện sửa (Để trống textarea để tí nữa mình dùng .val() đổ vào cho chuẩn)
+    // 3. Tạo giao diện sửa
     const editHtml = `
         <div class="edit-wrapper mt-2 animate__animated animate__fadeIn">
             <textarea id="editInput-${id}" class="form-control form-control-sm mb-2 shadow-sm" 
@@ -1027,28 +1022,20 @@ editComment: function(id) {
 
     $contentElement.html(editHtml);
 
-    // 5. ĐỔ DỮ LIỆU VÀO VÀ FOCUS
     const $input = $(`#editInput-${id}`);
-    $input.val(currentText); // Dùng .val() đổ dữ liệu là cách an toàn nhất, chấp mọi loại ký tự đặc biệt
+    $input.val(currentText); 
     $input.focus();
 
-    // Đưa con trỏ xuống cuối dòng cho người dùng sửa luôn
     const el = $input[0];
     if (el.setSelectionRange) {
         const len = el.value.length;
         el.setSelectionRange(len, len);
     }
 },
-cancelEdit: function(id) {
-    const $contentElement = $(`#content-${id}`);
-    const oldHtml = $contentElement.data('old-html');
-    if (oldHtml) {
-        $contentElement.html(oldHtml);
-    }
-},
+
 saveEdit: async function(id) {
     const newContent = $(`#editInput-${id}`).val().trim();
-    if (!newContent) return; // Chặn trống
+    if (!newContent) return; 
 
     try {
         const token = localStorage.getItem("jwt_token");
@@ -1060,14 +1047,16 @@ saveEdit: async function(id) {
             data: JSON.stringify(newContent)
         });
 
-        // --- BẮT ĐẦU CẬP NHẬT GIAO DIỆN ---
         const $contentElement = $(`#content-${id}`);
-        $contentElement.html(newContent); // Thay nội dung mới (mất @user như bác muốn)
-
-        // DÁN ĐOẠN CODE CỦA BÁC VÀO ĐÂY
-        const $timeText = $(`#comment-${id}`).find('.time-text').first();
         
-        // Kiểm tra xem đã có chữ "(Đã chỉnh sửa)" chưa để tránh bị lặp
+        // 📍 4. Lấy lại cái thẻ span @user đã cất giấu từ lúc nãy
+        const savedReplyHtml = $contentElement.data('reply-user-html') || '';
+        
+        // Cập nhật giao diện: Gắn kèm thẻ @user trở lại đầu chuỗi nội dung mới
+        $contentElement.html(savedReplyHtml + " " + newContent); 
+
+        // Thêm nhãn (Đã chỉnh sửa) vào phần thời gian
+        const $timeText = $(`#comment-${id}`).find('.time-text').first();
         if (!$timeText.find('.edited-mark').length) {
             $timeText.append(' <span class="text-muted edited-mark" style="font-size: 9px;">(Đã chỉnh sửa)</span>');
         }
