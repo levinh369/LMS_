@@ -821,57 +821,117 @@ postComment: async function(parentId = null) {
         replyToUserName: $input.data('reply-to-name') || null
     };
 
-    const originalBtnHtml = $btn.html();
-    $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+    // --- BƯỚC 1: LẤY THÔNG TIN USER ĐỂ CHẾ ĐƠN VỊ DATA ẢO ---
+    const userInfo = AuthHelper.getUserInfo();
+    const userAvatar = userInfo?.avatar || "../assets/img/default-avatar.png";
+    const userName = userInfo?.fullName || userInfo?.username || "Học viên";
+    const teacherId = this.currentTeacherId;
+
+    // Tạo một ID tạm thời để định vị phần tử ảo trên DOM
+    const tempId = "temp_cmt_" + Date.now();
+
+    // Giả lập một object data giống cấu trúc Backend trả về
+    const mockCommentData = {
+        id: tempId,
+        content: dto.content,
+        parentId: dto.parentId,
+        replyToUserName: dto.replyToUserName,
+        createdAt: new Date().toISOString(),
+        userId: userInfo?.id || 0,
+        userFullName: userName,
+        userAvatar: userAvatar,
+        isPinned: false,
+        totalReactions: 0,
+        topReactionTypes: [],
+        reactionStats: []
+    };
+
+    // --- BƯỚC 2: CẬP NHẬT GIAO DIỆN TỨC THÌ (OPTIMISTIC) ---
+    if (parentId) {
+        // 2.1 Xử lý render ảo cho REPLY CON
+        const replyHtml = this.renderSingleReply(mockCommentData, teacherId);
+        const $repliesContainer = $(`#replies-container-${parentId}`);
+        
+        $repliesContainer.removeClass('d-none').prepend(replyHtml);
+        $(`#reply-box-${parentId}`).hide(); // Ẩn tạm khung nhập
+    } else {
+        // 2.2 Xử lý render ảo cho COMMENT CHA
+        const commentHtml = this.renderCommentItem(mockCommentData, teacherId);
+        const $list = $('#commentList');
+
+        if ($list.find('.comment-item').length === 0) {
+            $list.empty();
+        }
+
+        const $lastPinned = $list.find('.comment-item.is-pinned').last();
+        if ($lastPinned.length > 0) {
+            $lastPinned.after(commentHtml);
+        } else {
+            $list.prepend(commentHtml);
+        }
+    }
+
+    // Làm mờ nhẹ comment ảo để biểu thị trạng thái "Đang gửi..."
+    const $mockElement = $(`#comment-${tempId}`);
+    $mockElement.css('opacity', '0.6');
+
+    // Reset ô input ngay lập tức, nút bấm không cần hiện spinner xoay nữa
+    $input.val('');
 
     try {
+        // --- BƯỚC 3: GỌI API CHẠY NGẦM + TIMEOUT 5 GIÂY ---
         const res = await $.ajax({
             url: 'https://lms-u2jn.onrender.com/api/comment',
             type: 'POST',
             contentType: 'application/json',
+            timeout: 5000, // 📍 Quá 5 giây tự động hủy để nhảy xuống catch hủy comment ảo
             headers: { "Authorization": "Bearer " + localStorage.getItem("jwt_token") },
             data: JSON.stringify(dto)
         });
 
+        // --- BƯỚC 4: THÀNH CÔNG -> ĐỒNG BỘ ID THẬT CỦA DATABASE ---
         if (res && res.success) {
-            if(typeof Toast !== 'undefined') Toast.fire({ icon: 'success', title: "Thành công!" });
+            if (typeof Toast !== 'undefined') Toast.fire({ icon: 'success', title: "Thành công!" });
             const newComment = res.data;
-            const teacherId = this.currentTeacherId;
 
+            // Loại bỏ độ mờ ảo, gán lại ID thật từ server cấp vào thuộc tính HTML
+            $mockElement.css('opacity', '1').attr('id', `comment-${newComment.id}`);
+            
+            // Cập nhật lại các ID trong các nút bấm Reaction/Reply nằm trong cụm comment vừa tạo
+            $mockElement.find(`[onclick*="${tempId}"]`).each(function() {
+                const oldOnclick = $(this).attr('onclick');
+                const newOnclick = oldOnclick.replace(new RegExp(tempId, 'g'), newComment.id);
+                $(this).attr('onclick', newOnclick);
+            });
+
+            // Nếu là Reply, dọn dẹp hẳn khung nhập cũ
             if (parentId) {
-                // Đăng REPLY
-                const replyHtml = this.renderSingleReply(newComment, teacherId);
-                const $repliesContainer = $(`#replies-container-${parentId}`);
-                
-                // Mở d-none để hiển thị ngay, prepend vào đầu danh sách con
-                $repliesContainer.removeClass('d-none').prepend(replyHtml); 
-                $(`#reply-box-${parentId}`).empty();
-            } else {
-                // Đăng COMMENT CHA
-                const commentHtml = this.renderCommentItem(newComment, teacherId);
-                const $list = $('#commentList');
-
-                // Xóa placeholder nếu có
-                if ($list.find('.comment-item').length === 0) {
-                    $list.empty();
-                }
-
-                const $lastPinned = $list.find('.comment-item.is-pinned').last();
-                if ($lastPinned.length > 0) {
-                    $lastPinned.after(commentHtml);
-                } else {
-                    $list.prepend(commentHtml);
-                }
+                $(`#reply-box-${parentId}`).empty().show();
             }
-            $input.val('');
 
+            // Cuộn nhẹ đến comment vừa gửi thành công
             document.getElementById(`comment-${newComment.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+            // Đề phòng trường hợp API trả về false
+            throw new Error("API return success false");
         }
     } catch (err) {
+        // --- BƯỚC 5: LỖI HOẶC TIMEOUT -> ROLLBACK TRẢ LẠI TRẠNG THÁI ---
         console.error("Post Error:", err);
-        if(typeof Toast !== 'undefined') Toast.fire({ icon: 'error', title: "Lỗi: " + (err.responseJSON?.message || "Không thể gửi") });
-    } finally {
-        $btn.prop('disabled', false).html(originalBtnHtml);
+        if (typeof Toast !== 'undefined') {
+            Toast.fire({ icon: 'error', title: "Mạng chậm hoặc lỗi: Không thể gửi bình luận!" });
+        }
+
+        // Xóa bình luận ảo khỏi màn hình vì gửi thất bại
+        $mockElement.remove();
+
+        // Điền lại nội dung cũ vào ô input để user không mất công gõ lại
+        $input.val(content);
+
+        // Hiện lại hộp thoại reply nếu là luồng reply con
+        if (parentId) {
+            $(`#reply-box-${parentId}`).show();
+        }
     }
 },
 initCommentEvents: function() {
@@ -1174,6 +1234,19 @@ handleReaction: async function(commentId, type, btn) {
     const $oldSummary = $actionRow.find('> .reaction-summary-pos');
     const oldSummaryHtml = $oldSummary.length ? $oldSummary[0].outerHTML : '';
 
+    // 📍 XÁC ĐỊNH REACTION CŨ USER ĐANG CHỌN DỰA TRÊN CLASS MÀU CỦA NÚT BẤM
+    let oldType = 0;
+    if ($btnLike.hasClass('text-primary')) oldType = 1;     // Like
+    else if ($btnLike.hasClass('text-danger')) {
+        if ($btnLike.find('i').hasClass('bi-heart-fill')) oldType = 2; // Tym
+        else oldType = 6; // Phẫn nộ
+    }
+    else if ($btnLike.hasClass('text-warning')) {
+        if ($btnLike.find('i').hasClass('bi-emoji-laughing-fill')) oldType = 3;
+        else if ($btnLike.find('i').hasClass('bi-emoji-surprise-fill')) oldType = 4;
+        else oldType = 5;
+    }
+
     // --- BƯỚC 2: CẬP NHẬT GIAO DIỆN TỨC THÌ (OPTIMISTIC) ---
     const targetType = parseInt(type);
     const config = reactionConfig[targetType];
@@ -1184,40 +1257,27 @@ handleReaction: async function(commentId, type, btn) {
     if ($btnLike.find('.btn-text').length) $btnLike.find('.btn-text').text(config.text);
     $btnLike.addClass('is-loading');
 
-    // 2.2 Xử lý dải Summary thông minh (Giữ nguyên các Reaction cũ)
+    // 2.2 Xử lý toán học dải số đếm Summary chuẩn chỉnh không phụ thuộc API
     let currentTotal = parseInt($oldSummary.find('.reaction-total-count').text()) || 0;
-    const isUnliking = targetType === 0;
-    const optimisticTotal = isUnliking ? Math.max(0, currentTotal - 1) : (currentTotal + ($oldSummary.length ? 0 : 1));
+    
+    // Tính toán tổng số lượt tương tác ảo:
+    let optimisticTotal = currentTotal;
+    if (oldType === 0 && targetType > 0) {
+        optimisticTotal += 1; // Chưa tương tác gì -> Bấm chọn 1 loại => Tăng 1
+    } else if (oldType > 0 && targetType === 0) {
+        optimisticTotal = Math.max(0, optimisticTotal - 1); // Đang tương tác -> Bấm bỏ chọn => Giảm 1
+    } // Nếu đổi từ reaction này sang loại khác (oldType > 0 && targetType > 0) thì tổng giữ nguyên không đổi
 
     if (optimisticTotal === 0) {
         $oldSummary.remove();
     } else {
-        // 📍 Bốc lại mảng icon emoji đang hiển thị trên màn hình hiện tại
-        let optimisticTopTypes = [];
-        if ($oldSummary.length > 0) {
-            $oldSummary.find('.summary-icon-item').each(function() {
-                const emoji = $(this).text().trim();
-                if (emoji === '👍') optimisticTopTypes.push(1);
-                else if (emoji === '❤️') optimisticTopTypes.push(2);
-                else if (emoji === '😂') optimisticTopTypes.push(3);
-                else if (emoji === '😮') optimisticTopTypes.push(4);
-                else if (emoji === '😢') optimisticTopTypes.push(5);
-                else if (emoji === '😡') optimisticTopTypes.push(6);
-            });
-        }
-
-        // Nếu bấm một icon mới (không phải hủy thích) và mảng chưa có thì đẩy vào dải icon
-        if (!isUnliking && !optimisticTopTypes.includes(targetType)) {
-            optimisticTopTypes.push(targetType);
-        }
-
-        // 📍 Trích xuất dữ liệu cũ trong Tooltip và tính toán cộng/trừ số lượng ảo
+        // 📍 Trích xuất dữ liệu cũ trong Tooltip và tính toán CỘNG / TRỪ logic
         let optimisticStats = [];
         let foundCurrentTypeInStats = false;
 
         if ($oldSummary.length > 0) {
             $oldSummary.find('.reaction-custom-tooltip .stat-item').each(function() {
-                const txt = $(this).text().trim(); // Ví dụ: "👍 3"
+                const txt = $(this).text().trim();
                 const emoji = txt.substring(0, 2).trim();
                 let count = parseInt(txt.replace(/[^0-9]/g, '')) || 0;
                 
@@ -1229,11 +1289,15 @@ handleReaction: async function(commentId, type, btn) {
                 else if (emoji === '😢') typeId = 5;
                 else if (emoji === '😡') typeId = 6;
 
+                // 1. Trừ bớt số lượng của cái cũ nếu đổi loại
+                if (typeId === oldType && oldType > 0) {
+                    count = Math.max(0, count - 1);
+                }
+
+                // 2. Cộng thêm số lượng cho cái mới bấm
                 if (typeId === targetType) {
                     foundCurrentTypeInStats = true;
-                    if (isUnliking) {
-                        count = Math.max(0, count - 1);
-                    } else {
+                    if (targetType > 0) {
                         count += 1;
                     }
                 }
@@ -1244,12 +1308,15 @@ handleReaction: async function(commentId, type, btn) {
             });
         }
 
-        // Nếu loại reaction vừa bấm chưa từng xuất hiện trong cụm tooltip thống kê cũ, tự tạo mới với số lượng bằng 1
-        if (!isUnliking && !foundCurrentTypeInStats && targetType > 0) {
+        // Nếu loại reaction mới bấm chưa từng tồn tại trong tooltip cũ, nạp mới với giá trị khởi tạo = 1
+        if (targetType > 0 && !foundCurrentTypeInStats) {
             optimisticStats.push({ type: targetType, count: 1 });
         }
 
-        // Vẽ giao diện ảo hoàn chỉnh chứa đầy đủ dữ liệu cũ + cập nhật mới
+        // 📍 Cập nhật lại dải icon Top emoji ảo dựa trên mảng stats mới tính toán xong
+        let optimisticTopTypes = optimisticStats.map(s => s.type);
+
+        // Vẽ giao diện ảo hoàn chỉnh lên màn hình
         const optimisticHtml = this.renderReactionSummary({
             id: commentId,
             totalReactions: optimisticTotal,
@@ -1270,12 +1337,12 @@ handleReaction: async function(commentId, type, btn) {
             url: `https://lms-u2jn.onrender.com/api/comment/handleLike/${commentId}`,
             type: 'POST',
             contentType: 'application/json',
-            timeout: 5000, // Quá 5 giây tự động hủy và nhảy vào catch để Rollback
+            timeout: 5000, 
             headers: { 'Authorization': `Bearer ${token}` },
             data: JSON.stringify({ type: targetType }) 
         });
 
-        // --- BƯỚC 4: CẬP NHẬT DỮ LIỆU CHÍNH XÁC KHI SERVER TRẢ VỀ ---
+        // --- BƯỚC 4: ĐỒNG BỘ DATA KHỚP ĐÉT TỪ SERVER KHI CÓ KẾT QUẢ ---
         const result = res.data || res;
         const updatedHtml = this.renderReactionSummary({
             id: commentId,
@@ -1292,9 +1359,8 @@ handleReaction: async function(commentId, type, btn) {
         }
 
     } catch (error) {
-        // --- BƯỚC 5: ROLLBACK TRẢ LẠI GIAO DIỆN CŨ NẾU LỖI/TIMEOUT ---
-        console.error("Lỗi API hoặc hết thời gian chờ (Timeout):", error);
-        
+        // --- BƯỚC 5: ROLLBACK TRẢ LẠI GIAO DIỆN CŨ NẾU MẠNG LỖI HOẶC TIMEOUT ---
+        console.error("Lỗi API hoặc Timeout, đang rollback về ban đầu:", error);
         $btnLike.attr('class', oldBtnClass).html(oldBtnHtml);
         
         if (oldSummaryHtml) {

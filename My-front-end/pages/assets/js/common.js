@@ -1,56 +1,31 @@
-
 let searchTimeout;
 const AuthHelper = {
-    // Hàm này dùng để lưu Token và thông tin User sau khi Login/Register thành công
-   saveAuth: function(authData) {
-    localStorage.setItem("jwt_token", authData.accessToken);    // 📍 Đổi thành accessToken
-    localStorage.setItem("refresh_token", authData.refreshToken);
-    const idToSave = authData.userId; 
-    localStorage.setItem("user_id", idToSave); 
-    localStorage.setItem("user_info", JSON.stringify({
-        id: idToSave,
-        username: authData.username,
-        role: authData.role,
-        avatar: authData.avatarUrl,
-        email: authData.email
-    }));
-},
+    // 📍 1. Hàm lưu Token và thông tin User sau khi Login/Register/Social Login thành công
+    saveAuth: function(authData) {
+        localStorage.setItem("jwt_token", authData.accessToken);    
+        localStorage.setItem("refresh_token", authData.refreshToken || "");
+        
+        const idToSave = authData.userId; 
+        localStorage.setItem("user_id", idToSave); 
+        
+        // Chuẩn hóa cấu trúc Object lưu trữ đồng bộ cho toàn bộ hệ thống
+        localStorage.setItem("user_info", JSON.stringify({
+            id: idToSave,
+            username: authData.username,
+            fullName: authData.fullName || authData.username, // Đề phòng login mạng xã hội trả fullName
+            role: authData.role,
+            avatar: authData.avatarUrl || authData.avatar, // Nhận cả avatarUrl (Back) lẫn avatar (URL param)
+            email: authData.email
+        }));
+    },
 
-    // Hàm lấy thông tin User để hiển thị lên Banner
+    // 📍 2. Hàm lấy thông tin User phục vụ chế data ảo cho Optimistic UI (Comment/Reply)
     getUserInfo: function() {
         const info = localStorage.getItem("user_info");
         return info ? JSON.parse(info) : null;
     },
-    openModal: function() {
-    // 1. Lấy element của cái Modal
-    var modalEmp = document.getElementById('authChoiceModal');
-    
-    if (modalEmp) {
-        var myModal = new bootstrap.Modal(modalEmp);
-        myModal.show();
-    } else {
-        console.error("Ông giáo ơi, không tìm thấy cái Modal nào tên là #authChoiceModal trong HTML cả!");
-    }
-},
-    showLoginForm: function() {
-        $('#modalTitle').text('Đăng nhập');
-        $('#step-choice, #step-register-form').hide();
-        $('#step-login-form').fadeIn(200);
-    },
 
-    // Hiện Form Đăng ký
-    showRegisterForm: function() {
-        $('#modalTitle').text('Tạo tài khoản mới');
-        $('#step-choice, #step-login-form').hide();
-        $('#step-register-form').fadeIn(200);
-    },
-
-    // Quay lại màn hình lựa chọn ban đầu
-    showChoices: function() {
-        $('#modalTitle').text('Tham gia LMS Academy');
-        $('#step-register-form, #step-login-form').hide();
-        $('#step-choice').fadeIn(200);
-    },
+    // 📍 3. Kiểm tra tính hợp lệ và thời hạn của JWT Token
     isTokenExpired: function(token) {
         if (!token) return true;
         try {
@@ -65,61 +40,84 @@ const AuthHelper = {
         }
     },
 
-checkLoginStatus: function() {
-    const token = localStorage.getItem("jwt_token");
-    const userInfoJson = localStorage.getItem("user_info");
-    debugger
-    const $guestZone = $('#guest-zone');
-    const $userZone = $('#user-zone');
+    // 📍 4. Tự động kiểm tra trạng thái và chuyển đổi giao diện (Avatar <-> Nút Đăng nhập)
+    checkLoginStatus: function() {
+        const token = localStorage.getItem("jwt_token");
+        const userInfoJson = localStorage.getItem("user_info");
+        const $guestZone = $('#guest-zone');
+        const $userZone = $('#user-zone');
 
-    if (token && userInfoJson && !AuthHelper.isTokenExpired(token)) {
-        try {
-            const user = JSON.parse(userInfoJson);
-            
-            // UI Switch
-            $guestZone.addClass('d-none').removeClass('d-flex');
-            $userZone.removeClass('d-none').addClass('d-flex');
+        if (token && userInfoJson && !AuthHelper.isTokenExpired(token)) {
+            try {
+                const user = JSON.parse(userInfoJson);
+                
+                // Chuyển đổi vùng hiển thị sang User Zone
+                $guestZone.addClass('d-none').removeClass('d-flex');
+                $userZone.removeClass('d-none').addClass('d-flex');
 
-            // Điền tên
-            const displayName = user.fullName || user.username || "Học viên";
-            $('#nav-fullname, #nav-user-name, #nav-fullname-mobile').text(displayName);
+                // Điền tên hiển thị
+                const displayName = user.fullName || user.username || "Học viên";
+                $('#nav-fullname, #nav-user-name, #nav-fullname-mobile').text(displayName);
 
-            // Điền ảnh (Cả bên ngoài và bên trong dropdown)
-            const avatarUrl = user.avatar || "../assets/img/default-avatar.png";
-            $('#nav-avatar, #nav-avatar-inside').attr('src', avatarUrl);
+                // Điền ảnh đại diện (Ưu tiên ảnh gốc, nếu rỗng dùng ảnh mặc định)
+                const avatarUrl = user.avatar || "../assets/img/default-avatar.png";
+                $('#nav-avatar, #nav-avatar-inside').attr('src', avatarUrl);
 
-        } catch (e) {
+            } catch (e) {
+                AuthHelper.clearAuthSilently();
+                AuthHelper.showGuestUI($guestZone, $userZone);
+            }
+        } else {
             AuthHelper.clearAuthSilently();
             AuthHelper.showGuestUI($guestZone, $userZone);
         }
-    } else {
+    },
+
+    // 📍 5. Xóa sạch dữ liệu đăng nhập ngầm trong bộ nhớ
+    clearAuthSilently: function() {
+        localStorage.removeItem("jwt_token");
+        localStorage.removeItem("refresh_token"); 
+        localStorage.removeItem("user_id");       
+        localStorage.removeItem("user_info");
+    },
+
+    // 📍 6. Đổi giao diện về chế độ Khách (Chưa đăng nhập)
+    showGuestUI: function($guest, $user) {
+        if ($guest.length) $guest.removeClass('d-none').addClass('d-flex');
+        if ($user.length) $user.addClass('d-none').removeClass('d-flex');
+    },
+
+    // 📍 7. Đăng xuất hệ thống và đẩy về trang đăng nhập
+    logout: function() {
         AuthHelper.clearAuthSilently();
-        AuthHelper.showGuestUI($guestZone, $userZone);
-    }
-},
+        window.location.href = "/auth/login.html";
+    },
 
-// Hàm chỉ xóa dữ liệu, không làm gì thêm
-clearAuthSilently: function() {
-    // Xóa bộ đôi Token
-    localStorage.removeItem("jwt_token");
-    localStorage.removeItem("refresh_token"); // 📍 Bắt buộc phải có dòng này
-    
-    // Xóa thông tin cá nhân
-    localStorage.removeItem("user_id");       // Xóa nốt cái id lẻ (nếu bác có lưu)
-    localStorage.removeItem("user_info");
-},
-
-// Hàm chỉ đổi giao diện sang nút Đăng nhập/Đăng ký
-showGuestUI: function($guest, $user) {
-    $guest.removeClass('d-none').addClass('d-flex');
-    $user.addClass('d-none').removeClass('d-flex');
-},
-
-// Hàm này CHỈ gọi khi người dùng bấm vào nút "Đăng xuất"
-logout: function() {
-    AuthHelper.clearAuthSilently();
-    window.location.href = "/auth/login.html";
-},
+    // --- CÁC HÀM QUẢN LÝ MODAL GIAO DIỆN ---
+    openModal: function() {
+        var modalEmp = document.getElementById('authChoiceModal');
+        if (modalEmp) {
+            var myModal = new bootstrap.Modal(modalEmp);
+            myModal.show();
+        } else {
+            console.error("Không tìm thấy cái Modal nào tên là #authChoiceModal trong HTML!");
+        }
+    },
+    showLoginForm: function() {
+        $('#modalTitle').text('Đăng nhập');
+        $('#step-choice, #step-register-form').hide();
+        $('#step-login-form').fadeIn(200);
+    },
+    showRegisterForm: function() {
+        $('#modalTitle').text('Tạo tài khoản mới');
+        $('#step-choice, #step-login-form').hide();
+        $('#step-register-form').fadeIn(200);
+    },
+    showChoices: function() {
+        $('#modalTitle').text('Tham gia LMS Academy');
+        $('#step-register-form, #step-login-form').hide();
+        $('#step-choice').fadeIn(200);
+    },
     initMyCoursesEvents: function() {
         $(document).on('click', '#btnMyCourses', function(e) {
             e.stopPropagation();
