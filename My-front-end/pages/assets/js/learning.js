@@ -843,13 +843,15 @@ postComment: async function(parentId = null) {
         reactionStats: []
     };
 
-    // --- BƯỚC 2: CẬP NHẬT GIAO DIỆN TỨC THÌ (OPTIMISTIC) ---
+    // --- BƯỚC 2: CẬP NHẬT GIAO DIỆN TỨC THÌ (OPTIMISTIC UI) ---
     if (parentId) {
+        // Render ảo cho REPLY CON
         const replyHtml = this.renderSingleReply(mockCommentData, teacherId);
         const $repliesContainer = $(`#replies-container-${parentId}`);
         $repliesContainer.removeClass('d-none').prepend(replyHtml);
         $(`#reply-box-${parentId}`).hide(); 
     } else {
+        // Render ảo cho COMMENT CHA
         const commentHtml = this.renderCommentItem(mockCommentData, teacherId);
         const $list = $('#commentList');
 
@@ -865,50 +867,55 @@ postComment: async function(parentId = null) {
         }
     }
 
-    // Nếu bác muốn bấm phát rõ luôn không mờ, bác bỏ dòng opacity 0.6 này đi nhé, ở đây tớ giữ nguyên làm mờ nhẹ tí
+    // 📍 ĐÃ BỎ HOÀN TOÀN OPACITY MỜ ẢO -> Hiện rõ nét xịn sò luôn từ đầu!
     const $mockElement = $(`#comment-${tempId}`);
-    $mockElement.css('opacity', '0.7');
 
+    // Xóa trống ô nhập liệu lập tức
     $input.val('');
 
     try {
-        // --- BƯỚC 3: GỌI API CHẠY NGẦM ---
+        // --- BƯỚC 3: GỌI API CHẠY NGẦM VỚI TIMEOUT ---
         const res = await $.ajax({
             url: 'https://lms-u2jn.onrender.com/api/comment',
             type: 'POST',
             contentType: 'application/json',
-            timeout: 5000,
+            timeout: 5000, // Quá 5 giây tự hủy đẩy xuống catch để xóa comment ảo
             headers: { "Authorization": "Bearer " + localStorage.getItem("jwt_token") },
             data: JSON.stringify(dto)
         });
 
-        // --- BƯỚC 4: THÀNH CÔNG -> ĐỔI HTML GIẢ THÀNH HTML THẬT ---
+        // --- BƯỚC 4: THÀNH CÔNG -> ĐỒNG BỘ THUỘC TÍNH NGẦM ĐA ĐIỂM (KHÔNG NHÁY UI) ---
         if (res && res.success) {
-            if (typeof Toast !== 'undefined') Toast.fire({ icon: 'success', title: "Thành công!" });
             const newComment = res.data;
 
-            // 📍 GIẢI PHÁP ĐỘT PHÁ: Dùng chính hàm render xịn để vẽ lại bản ghi từ server
-            let realHtml = "";
-            if (parentId) {
-                realHtml = this.renderSingleReply(newComment, teacherId);
-            } else {
-                realHtml = this.renderCommentItem(newComment, teacherId);
-            }
+            // 1. Cập nhật lại ID của thẻ bọc cha
+            $mockElement.attr('id', `comment-${newComment.id}`);
+            
+            // 2. 📍 SỬA ĐÚNG SELECTOR: Đồng bộ ID thẻ text nội dung comment (Fix triệt để lỗi Edit/Reply đơ)
+            $mockElement.find(`#content-${tempId}`).attr('id', `content-${newComment.id}`);
 
-            // Dán đè cụm HTML thật vào vị trí cụm HTML giả $\rightarrow$ Mất mờ và ăn luôn các onclick chuẩn 100%!
-            $mockElement.replaceWith(realHtml);
+            // 3. Nếu là comment cha, sửa luôn ID của cái khối reply-box và replies-container chờ sẵn bên dưới nó
+            $mockElement.find(`#reply-box-${tempId}`).attr('id', `reply-box-${newComment.id}`);
+            $mockElement.find(`#replies-container-${tempId}`).attr('id', `replies-container-${newComment.id}`);
+            $mockElement.find(`[data-parent-id="${tempId}"]`).attr('data-parent-id', newComment.id);
+
+            // 4. Quét sạch tất cả các hàm onclick cũ bám theo ID tạm, đổi hàng loạt sang ID thật của DB
+            $mockElement.find(`[onclick*="${tempId}"]`).each(function() {
+                const oldOnclick = $(this).attr('onclick');
+                const newOnclick = oldOnclick.replace(new RegExp(tempId, 'g'), newComment.id);
+                $(this).attr('onclick', newOnclick);
+            });
 
             if (parentId) {
                 $(`#reply-box-${parentId}`).empty().show();
             }
-
-            // Cuộn nhẹ đến phần tử xịn
-            document.getElementById(`comment-${newComment.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Toàn bộ DOM giữ nguyên vị trí, không có một tí hiệu ứng giật hay tải lại nào!
         } else {
-            throw new Error("API return success false");
+            throw new Error("API trả về thất bại!");
         }
     } catch (err) {
-        // --- BƯỚC 5: ROLLBACK NẾU LỖI ---
+        // --- BƯỚC 5: ROLLBACK NẾU MẠNG LỖI HOẶC TIMEOUT ---
         console.error("Post Error:", err);
         if (typeof Toast !== 'undefined') {
             Toast.fire({ icon: 'error', title: "Không thể gửi bình luận!" });
