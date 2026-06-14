@@ -1178,13 +1178,13 @@ handleReaction: async function(commentId, type, btn) {
     const targetType = parseInt(type);
     const config = reactionConfig[targetType];
 
-    // 2.1 Cập nhật nút bấm ngay lập tức
+    // 2.1 Cập nhật diện mạo nút bấm ngay lập tức
     $btnLike.removeClass('text-primary text-danger text-warning text-muted').addClass(config.color);
     $btnLike.find('i').attr('class', `bi ${config.icon}`);
     if ($btnLike.find('.btn-text').length) $btnLike.find('.btn-text').text(config.text);
     $btnLike.addClass('is-loading');
 
-    // 2.2 Vẽ lại dải Summary tức thì
+    // 2.2 Xử lý dải Summary thông minh (Giữ nguyên các Reaction cũ)
     let currentTotal = parseInt($oldSummary.find('.reaction-total-count').text()) || 0;
     const isUnliking = targetType === 0;
     const optimisticTotal = isUnliking ? Math.max(0, currentTotal - 1) : (currentTotal + ($oldSummary.length ? 0 : 1));
@@ -1192,12 +1192,69 @@ handleReaction: async function(commentId, type, btn) {
     if (optimisticTotal === 0) {
         $oldSummary.remove();
     } else {
-        // Tạo HTML "ảo" để hiện lên luôn
+        // 📍 Bốc lại mảng icon emoji đang hiển thị trên màn hình hiện tại
+        let optimisticTopTypes = [];
+        if ($oldSummary.length > 0) {
+            $oldSummary.find('.summary-icon-item').each(function() {
+                const emoji = $(this).text().trim();
+                if (emoji === '👍') optimisticTopTypes.push(1);
+                else if (emoji === '❤️') optimisticTopTypes.push(2);
+                else if (emoji === '😂') optimisticTopTypes.push(3);
+                else if (emoji === '😮') optimisticTopTypes.push(4);
+                else if (emoji === '😢') optimisticTopTypes.push(5);
+                else if (emoji === '😡') optimisticTopTypes.push(6);
+            });
+        }
+
+        // Nếu bấm một icon mới (không phải hủy thích) và mảng chưa có thì đẩy vào dải icon
+        if (!isUnliking && !optimisticTopTypes.includes(targetType)) {
+            optimisticTopTypes.push(targetType);
+        }
+
+        // 📍 Trích xuất dữ liệu cũ trong Tooltip và tính toán cộng/trừ số lượng ảo
+        let optimisticStats = [];
+        let foundCurrentTypeInStats = false;
+
+        if ($oldSummary.length > 0) {
+            $oldSummary.find('.reaction-custom-tooltip .stat-item').each(function() {
+                const txt = $(this).text().trim(); // Ví dụ: "👍 3"
+                const emoji = txt.substring(0, 2).trim();
+                let count = parseInt(txt.replace(/[^0-9]/g, '')) || 0;
+                
+                let typeId = 0;
+                if (emoji === '👍') typeId = 1;
+                else if (emoji === '❤️') typeId = 2;
+                else if (emoji === '😂') typeId = 3;
+                else if (emoji === '😮') typeId = 4;
+                else if (emoji === '😢') typeId = 5;
+                else if (emoji === '😡') typeId = 6;
+
+                if (typeId === targetType) {
+                    foundCurrentTypeInStats = true;
+                    if (isUnliking) {
+                        count = Math.max(0, count - 1);
+                    } else {
+                        count += 1;
+                    }
+                }
+
+                if (count > 0) {
+                    optimisticStats.push({ type: typeId, count: count });
+                }
+            });
+        }
+
+        // Nếu loại reaction vừa bấm chưa từng xuất hiện trong cụm tooltip thống kê cũ, tự tạo mới với số lượng bằng 1
+        if (!isUnliking && !foundCurrentTypeInStats && targetType > 0) {
+            optimisticStats.push({ type: targetType, count: 1 });
+        }
+
+        // Vẽ giao diện ảo hoàn chỉnh chứa đầy đủ dữ liệu cũ + cập nhật mới
         const optimisticHtml = this.renderReactionSummary({
             id: commentId,
             totalReactions: optimisticTotal,
-            topReactionTypes: isUnliking ? [] : [targetType],
-            reactionStats: [] 
+            topReactionTypes: optimisticTopTypes,
+            reactionStats: optimisticStats
         });
         
         if ($oldSummary.length > 0) {
@@ -1208,16 +1265,17 @@ handleReaction: async function(commentId, type, btn) {
     }
 
     try {
-        // --- BƯỚC 3: GỌI API NGẦM ---
+        // --- BƯỚC 3: GỌI API NGẦM + TIMEOUT 5 GIÂY ---
         const res = await $.ajax({
             url: `https://lms-u2jn.onrender.com/api/comment/handleLike/${commentId}`,
             type: 'POST',
             contentType: 'application/json',
+            timeout: 5000, // Quá 5 giây tự động hủy và nhảy vào catch để Rollback
             headers: { 'Authorization': `Bearer ${token}` },
             data: JSON.stringify({ type: targetType }) 
         });
 
-        // --- BƯỚC 4: CẬP NHẬT CHÍNH XÁC TỪ SERVER ---
+        // --- BƯỚC 4: CẬP NHẬT DỮ LIỆU CHÍNH XÁC KHI SERVER TRẢ VỀ ---
         const result = res.data || res;
         const updatedHtml = this.renderReactionSummary({
             id: commentId,
@@ -1234,8 +1292,11 @@ handleReaction: async function(commentId, type, btn) {
         }
 
     } catch (error) {
-        // --- BƯỚC 5: ROLLBACK NẾU LỖI ---
+        // --- BƯỚC 5: ROLLBACK TRẢ LẠI GIAO DIỆN CŨ NẾU LỖI/TIMEOUT ---
+        console.error("Lỗi API hoặc hết thời gian chờ (Timeout):", error);
+        
         $btnLike.attr('class', oldBtnClass).html(oldBtnHtml);
+        
         if (oldSummaryHtml) {
             const $now = $actionRow.find('> .reaction-summary-pos');
             if ($now.length) $now.replaceWith(oldSummaryHtml);
@@ -1243,7 +1304,6 @@ handleReaction: async function(commentId, type, btn) {
         } else {
             $actionRow.find('> .reaction-summary-pos').remove();
         }
-        console.error("Lỗi API:", error);
     } finally {
         $btnLike.removeClass('is-loading');
     }
