@@ -1,4 +1,5 @@
-﻿using LMS.DTOs.Request;
+﻿using Azure.Core;
+using LMS.DTOs.Request;
 using LMS.Services;
 using LMS.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -9,7 +10,7 @@ using System.Security.Claims;
 
 namespace LMS.Controllers
 {
-    [Authorize(Roles = "Admin")]
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class InstructorApplicationController : ControllerBase
@@ -20,7 +21,9 @@ namespace LMS.Controllers
         {
             _instructorService = instructorService;
         }
+
         [HttpGet]
+        [Authorize(Roles = "Admin")] 
         public async Task<IActionResult> GetApplications(
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10,
@@ -30,8 +33,8 @@ namespace LMS.Controllers
         {
             try
             {
-                var (data, total) = await _instructorService.GetPagedAsync(page, pageSize, keySearch, status,sort);
-               
+                var (data, total) = await _instructorService.GetPagedAsync(page, pageSize, keySearch, status, sort);
+
                 return Ok(new
                 {
                     success = true,
@@ -44,7 +47,9 @@ namespace LMS.Controllers
                 return BadRequest(new { message = "Lỗi khi lấy danh sách hồ sơ: " + ex.Message });
             }
         }
+
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")] 
         public async Task<IActionResult> DeleteAynsc(int id)
         {
             await _instructorService.DeleteAsync(id);
@@ -53,15 +58,69 @@ namespace LMS.Controllers
                 message = "Xóa đơn ứng tuyển thành công"
             });
         }
+
         [HttpGet("{id}")]
+        [Authorize(Roles = "Admin")] 
         public async Task<IActionResult> GetAppAsync(int id)
         {
             var app = await _instructorService.DetailApplicationAsync(id);
             return Ok(app);
         }
-        [AllowAnonymous]
+
+        [HttpGet("pending")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetPendingApplications()
+        {
+            try
+            {
+                var applications = await _instructorService.GetPendingApplicationsAsync();
+                return Ok(applications);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("{id}/approve")]
+        [Authorize(Roles = "Admin")] 
+        public async Task<IActionResult> Approve(int id)
+        {
+            try
+            {
+                var result = await _instructorService.ApproveApplicationAsync(id);
+                if (!result) return BadRequest(new { message = "Duyệt thất bại hoặc đơn không tồn tại." });
+
+                return Ok(new { message = "Đã phê duyệt. Người dùng này đã trở thành Giảng viên." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("{id}/reject")]
+        [Authorize(Roles = "Admin")] 
+        public async Task<IActionResult> Reject(int id, [FromBody] RejectApplicationRequestDTO dto)
+        {
+            try
+            {
+                var result = await _instructorService.RejectApplicationAsync(id, dto.Reason);
+                if (!result) return BadRequest(new { message = "Từ chối thất bại hoặc đơn không tồn tại." });
+
+                return Ok(new { message = "Đã từ chối đơn đăng ký." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+
+      
+
         [HttpPost("apply")]
-        [Authorize] // Bắt buộc user phải đăng nhập
+        [Authorize] 
         public async Task<IActionResult> Apply([FromForm] ApplyInstructorRequestDTO dto)
         {
             try
@@ -78,50 +137,6 @@ namespace LMS.Controllers
                 await _instructorService.ApplyInstructorAsync(userId, userName, dto);
 
                 return Ok(new { message = "Nộp hồ sơ thành công! Vui lòng chờ quản trị viên phê duyệt." });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-        }
-
-        [HttpGet("pending")]
-        public async Task<IActionResult> GetPendingApplications()
-        {
-            try
-            {
-                var applications = await _instructorService.GetPendingApplicationsAsync();
-                return Ok(applications);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-        }
-        [HttpPost("{id}/approve")]
-        public async Task<IActionResult> Approve(int id)
-        {
-            try
-            {
-                var result = await _instructorService.ApproveApplicationAsync(id);
-                if (!result) return BadRequest(new { message = "Duyệt thất bại hoặc đơn không tồn tại." });
-
-                return Ok(new { message = "Đã phê duyệt. Người dùng này đã trở thành Giảng viên." });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-        }
-        [HttpPost("{id}/reject")]
-        public async Task<IActionResult> Reject(int id, [FromBody] RejectApplicationRequestDTO dto)
-        {
-            try
-            {
-                var result = await _instructorService.RejectApplicationAsync(id, dto.Reason);
-                if (!result) return BadRequest(new { message = "Từ chối thất bại hoặc đơn không tồn tại." });
-
-                return Ok(new { message = "Đã từ chối đơn đăng ký." });
             }
             catch (Exception ex)
             {

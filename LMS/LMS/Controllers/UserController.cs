@@ -12,7 +12,8 @@ using System.Security.Claims;
 
 namespace LMS.Controllers
 {
-    [Authorize(Roles = "Admin")]
+  
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class UserController : ControllerBase
@@ -22,8 +23,9 @@ namespace LMS.Controllers
         {
             this.userService = uservice;
         }
-        [AllowAnonymous]
-        [Authorize]
+
+
+        [Authorize] 
         [HttpGet("my-profile")]
         public async Task<IActionResult> GetProfile()
         {
@@ -36,20 +38,18 @@ namespace LMS.Controllers
 
             return Ok(profileData);
         }
-        [AllowAnonymous]
-        [Authorize]
+
+        [Authorize] 
         [HttpGet("settings-data")]
         public async Task<IActionResult> GetUserSettings()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-
             if (userIdClaim == null)
             {
                 return Unauthorized(new { message = "Vui lòng đăng nhập!" });
             }
 
             int userId = int.Parse(userIdClaim.Value);
-
             var result = await userService.GetUserSettingsAsync(userId);
 
             if (result == null)
@@ -58,8 +58,8 @@ namespace LMS.Controllers
             }
             return Ok(result);
         }
-        [AllowAnonymous]
-        [Authorize]
+
+        [Authorize] 
         [HttpPost("update-profile")]
         public async Task<IActionResult> UpdateProfile([FromForm] UpdateProfileRequestDTO model)
         {
@@ -84,16 +84,46 @@ namespace LMS.Controllers
                 return BadRequest(new { success = false, message = ex.Message });
             }
         }
+
+        [Authorize] 
+        [HttpGet("my-orders")]
+        public async Task<IActionResult> GetMyOrders()
+        {
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+            if (userIdClaim == null) return Unauthorized();
+
+            int userId = int.Parse(userIdClaim.Value);
+            var orders = await userService.GetOrdersList(userId);
+
+            return Ok(new { data = orders });
+        }
+
+
+        [Authorize(Roles = "Admin,Teacher")] 
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetUserAsync(int id)
+        {
+            var user = await userService.GetByIdAsync(id);
+            return Ok(new
+            {
+                success = true,
+                data = user
+            });
+        }
+
+
+
+        [Authorize(Roles = "Admin")] 
         [HttpGet("list-data")]
         public async Task<IActionResult> ListData(
-        int page = 1,
-        int pageSize = 10,
-        string keySearch = "",
-        DateTime? fromDate = null,
-        DateTime? toDate = null,
-        int courseId = 0,
-        int roleId = 0,
-        int isActive = -1)
+            int page = 1,
+            int pageSize = 10,
+            string keySearch = "",
+            DateTime? fromDate = null,
+            DateTime? toDate = null,
+            int courseId = 0,
+            int roleId = 0,
+            int isActive = -1)
         {
             var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             int currentUserId = int.TryParse(userIdClaim, out var id) ? id : 0;
@@ -111,17 +141,20 @@ namespace LMS.Controllers
                 data = data
             });
         }
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteAsync(int id)
+
+        [Authorize(Roles = "Admin")] 
+        [HttpPost]
+        public async Task<IActionResult> AddAsync([FromBody] UserRequestDTO dto)
         {
-            await userService.DeleteAsync(id);
+            await userService.CreateAsync(dto);
             return Ok(new
             {
-                success = true, // Thêm flag success để Frontend dễ check
-                message = "Xóa người dùng thành công"
+                success = true,
+                message = "Thêm tài khoản thành công!"
             });
         }
 
+        [Authorize(Roles = "Admin")] 
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateAsync(int id, [FromBody] UserRequestDTO dto)
         {
@@ -134,17 +167,8 @@ namespace LMS.Controllers
                 message = "Cập nhật thông tin thành công"
             });
         }
-        [Authorize(Roles = "Admin, Teacher")]
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetUserAsync(int id)
-        {
-            var user = await userService.GetByIdAsync(id);
-            return Ok(new
-            {
-                success = true,
-                data = user
-            });
-        }
+
+        [Authorize(Roles = "Admin")] 
         [HttpPatch("toggle-status/{id}")]
         public async Task<IActionResult> ToggleStatus(int id)
         {
@@ -164,29 +188,20 @@ namespace LMS.Controllers
                 return BadRequest(new { success = false, message = ex.Message });
             }
         }
-        [HttpPost]
-        public async Task<IActionResult> AddAsync([FromBody] UserRequestDTO dto)
+
+        [Authorize(Roles = "Admin")] 
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteAsync(int id)
         {
-            await userService.CreateAsync(dto);
+            await userService.DeleteAsync(id);
             return Ok(new
             {
                 success = true,
-                message = "Thêm tài khoản thành công!"
+                message = "Xóa người dùng thành công"
             });
         }
-        [AllowAnonymous]
-        [HttpGet("my-orders")]
-        public async Task<IActionResult> GetMyOrders()
-        {
-            // Lấy UserId từ Claim (Token)
-            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
-            if (userIdClaim == null) return Unauthorized();
 
-            int userId = int.Parse(userIdClaim.Value);
-            var orders = await userService.GetOrdersList(userId);
-
-            return Ok(new { data = orders });
-        }
+        [Authorize(Roles = "Admin")] 
         [HttpGet("list-deleted")]
         public async Task<IActionResult> GetDeletedList(int page = 1, int pageSize = 10, string? keySearch = "", int roleId = 0)
         {
@@ -214,13 +229,14 @@ namespace LMS.Controllers
             }
         }
 
+        [Authorize(Roles = "Admin")] 
         [HttpPost("restore/{id}")]
         public async Task<IActionResult> Restore(int id)
         {
             try
             {
                 await userService.RestoreAsync(id);
-                return Ok(new { Success = true, Message = "Khôi phục khóa học thành công" });
+                return Ok(new { Success = true, Message = "Khôi phục tài khoản thành công" }); 
             }
             catch (Exception ex)
             {
@@ -228,19 +244,22 @@ namespace LMS.Controllers
             }
         }
 
+        [Authorize(Roles = "Admin")] 
         [HttpDelete("hard-delete/{id}")]
         public async Task<IActionResult> HardDelete(int id)
         {
             try
             {
                 await userService.HardDeleteAsync(id);
-                return Ok(new { Success = true, Message = "Đã xóa vĩnh viễn khóa học" });
+                return Ok(new { Success = true, Message = "Đã xóa vĩnh viễn tài khoản thành công" });
             }
             catch (Exception ex)
             {
-                return BadRequest(new { Success = false, Message = "Không thể xóa vĩnh viễn khóa học này vì có dữ liệu liên quan." });
+                return BadRequest(new { Success = false, Message = "Không thể xóa vĩnh viễn tài khoản này vì có dữ liệu liên quan." });
             }
         }
+
+        [Authorize(Roles = "Admin")] 
         [HttpPost("soft-delete-bulk")]
         public async Task<IActionResult> SoftDeleteBulk([FromBody] List<int> ids)
         {
@@ -253,6 +272,8 @@ namespace LMS.Controllers
 
             return BadRequest(new { Success = false, Message = "Không thể xóa các mục đã chọn." });
         }
+
+        [Authorize(Roles = "Admin")] 
         [HttpPost("restore-bulk")]
         public async Task<IActionResult> RestoreBulk([FromBody] List<int> ids)
         {
@@ -266,6 +287,7 @@ namespace LMS.Controllers
             return BadRequest(new { Success = false, Message = "Khôi phục thất bại. Vui lòng thử lại." });
         }
 
+        [Authorize(Roles = "Admin")] 
         [HttpDelete("hard-delete-bulk")]
         public async Task<IActionResult> HardDeleteBulk([FromBody] List<int> ids)
         {

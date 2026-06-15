@@ -89,7 +89,6 @@ namespace LMS.Controllers
             });
         }
         [AllowAnonymous]
-        [Authorize]
         [HttpGet("lesson/{lessonId}/parents")]
         public async Task<IActionResult> GetParentComments(int lessonId, [FromQuery] int page = 1, [FromQuery] int limit = 20)
         {
@@ -98,7 +97,6 @@ namespace LMS.Controllers
             return Ok(new { success = true, result });
         }
         [AllowAnonymous]
-        [Authorize]
         [HttpGet("{parentId}/replies")]
         public async Task<IActionResult> GetReplies(int parentId, [FromQuery] int lessonId, [FromQuery] int page = 1, [FromQuery] int limit = 10)
         {
