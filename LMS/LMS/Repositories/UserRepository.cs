@@ -160,7 +160,8 @@ namespace LMS.Repositories
                     CreatedAt = o.CreatedAt,
                     // Nếu DTO của bác có thêm các trường này thì gán vào luôn
                     CustomerName = o.User.FullName,
-                    CustomerEmail = o.User.Email
+                    CustomerEmail = o.User.Email,
+                    InstructorName = o.Course.Teacher != null ? o.Course.Teacher.FullName : "Chưa cập nhật"
                 })
                 .ToListAsync();
         }

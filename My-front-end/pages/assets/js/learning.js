@@ -1399,7 +1399,7 @@ renderUserListInModal: function (filterType) {
     }
 
     const html = filteredUsers.map(u => {
-        const userId = u.UserId || 0; 
+        const userId = u.userId || 0; 
 
         return `
             <div class="user-item d-flex align-items-center p-3" 

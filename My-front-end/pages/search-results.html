@@ -113,13 +113,14 @@
 <script src="assets/js/notification.js"></script>
 <script src="assets/js/common.js"></script>
 <script>
-    // Đảm bảo cấu hình mảng truyền lên API khớp định dạng C# (levels=1&levels=2 thay vì levels[]=1)
+  // Đảm bảo cấu hình mảng truyền lên API khớp định dạng C# (levels=1&levels=2 thay vì levels[]=1)
     $.ajaxSettings.traditional = true;
 
     // Khởi tạo các tham số mặc định toàn cục cho trang
     let currentKeyword = "";
     let currentPage = 1;
     const pageSize = 6; // Số lượng bản ghi trên một trang
+    let filterTimeout;  // Biến dùng để kiểm soát bộ đếm thời gian Debounce chống spam
 
     $(document).ready(function() {
         // 1. Đọc từ khóa tìm kiếm từ URL thanh địa chỉ
@@ -131,10 +132,17 @@
         // 2. Kích hoạt cuộc gọi API lần đầu tiên khi load trang
         fetchSearchData();
 
-        // 3. Bắt sự kiện khi user Thay đổi Bộ Lọc hoặc Kiểu Sắp Xếp
+        // 3. 📍 ĐỘT PHÁ 1: Bọc cơ chế DEBOUNCE trì hoãn thông minh chống nghẽn mạng khi đổi bộ lọc liên tục
         $('.filter-level, .filter-price, #sortBySelect').on('change', function() {
             currentPage = 1; // Mỗi lần đổi bộ lọc thì reset bắt buộc về trang 1
-            fetchSearchData();
+            
+            // Xóa bộ đếm cũ nếu user vẫn đang click lựa chọn tiếp
+            clearTimeout(filterTimeout);
+            
+            // Đợi người dùng đứng im dừng click 350ms thì mới bắn 1 API duy nhất lên Render
+            filterTimeout = setTimeout(function() {
+                fetchSearchData();
+            }, 350); 
         });
 
         // 4. Bắt sự kiện khi click chuyển trang trên thanh Phân Trang (Event Delegation)
@@ -153,24 +161,30 @@
     async function fetchSearchData() {
         const $grid = $('#courseResultGrid');
         
-        // Hiển thị hiệu ứng chờ Loading quay tròn
-        $grid.html('<div class="col-12 text-center my-5"><div class="spinner-border text-primary"></div></div>');
+        // 📍 ĐỘT PHÁ 2: Không xóa HTML cũ nữa! Chỉ làm mờ nhẹ 0.5 để tạo cảm giác mượt mà đứng im ngầm (Optimistic Loading)
+        // Nếu trang chưa có dữ liệu gì (lần đầu load) thì mới hiện spinner tròn
+        if ($grid.find('.course-card').length === 0) {
+            $grid.html('<div class="col-12 text-center my-5"><div class="spinner-border text-primary"></div></div>');
+        } else {
+            // Danh sách cũ vẫn đứng vững nhưng mờ đi, báo hiệu ngầm hệ thống đang xử lý tải data mới
+            $grid.css('opacity', '0.5'); 
+        }
 
         // Thu thập mảng Trình độ (Levels) được tích chọn
-const selectedLevels = [];
-$('.filter-level:checked').each(function() {
-    const val = $(this).val();
-    if (val !== "") { // 📍 Bọc thêm dòng IF này để bỏ qua nút "Tất cả"
-        selectedLevels.push(parseInt(val));
-    }
-});
+        const selectedLevels = [];
+        $('.filter-level:checked').each(function() {
+            const val = $(this).val();
+            if (val !== "") { 
+                selectedLevels.push(parseInt(val));
+            }
+        });
 
         // Xác định bộ lọc Giá (IsFree) dựa trên trạng thái 2 checkbox
         let isFreeParam = null;
         const paidChecked = $('#price1').is(':checked');
         const freeChecked = $('#price2').is(':checked');
-        if (paidChecked && !freeChecked) isFreeParam = false; // Chỉ chọn có phí
-        else if (!paidChecked && freeChecked) isFreeParam = true;  // Chỉ chọn miễn phí
+        if (paidChecked && !freeChecked) isFreeParam = false; 
+        else if (!paidChecked && freeChecked) isFreeParam = true;  
 
         // Đóng gói toàn bộ thông số thành object gửi lên URL API
         const requestData = {
@@ -186,6 +200,9 @@ $('.filter-level:checked').each(function() {
             // Thực hiện gọi AJAX endpoint bản full của bác
             const response = await $.get('https://lms-u2jn.onrender.com/api/course/search-result', requestData);
             
+            // 📍 ĐỘT PHÁ 3: API chạy xong xuôi trả về thành công lập tức trả lại độ nét 100% cho khung lưới
+            $grid.css('opacity', '1');
+
             if (response.success && response.data) {
                 const result = response.data;
                 
@@ -195,88 +212,84 @@ $('.filter-level:checked').each(function() {
                 const endItem = Math.min(result.pageIndex * result.pageSize, result.totalRecords);
                 $('#displayPaginationStatus').text(`Hiển thị ${startItem}-${endItem} của ${result.totalRecords} kết quả`);
 
-                // Tiến hành vẽ danh sách Card Khóa học và Phân trang
+                // Tiến hành vẽ danh sách Card Khóa học và Phân trang mới đè lên vị trí cũ
                 renderCourseCards(result.data);
                 renderPagination(result.totalPages, result.pageIndex);
             } else {
                 showErrorUi("Không thể tải danh sách khóa học.");
             }
         } catch (error) {
+            $grid.css('opacity', '1'); // Khôi phục độ nét nếu dính lỗi mạng
             console.error("Lỗi gọi API Search:", error);
             showErrorUi("Lỗi kết nối hệ thống server hoặc CORS!");
         }
     }
 
-   function renderCourseCards(courses) {
-    const $grid = $('#courseResultGrid');
-    $grid.empty();
+    function renderCourseCards(courses) {
+        const $grid = $('#courseResultGrid');
+        $grid.empty(); // Chỉ dọn dẹp danh sách cũ ĐÚNG LÚC data mới đã có sẵn trên tay để thay thế ngay lập tức
 
-    if (!courses || courses.length === 0) {
-        $grid.html('<div class="col-12 text-center text-muted my-5"><i class="bi bi-folder-x display-4"></i><p class="mt-2">Không tìm thấy khóa học nào khớp với bộ lọc của bạn.</p></div>');
-        return;
-    }
-
-    courses.forEach(course => {
-        let badgeHtml = '';
-        let priceHtml = '';
-
-        // Conditional Rendering: Tự động tính toán Badge trạng thái
-        if (course.isFree) {
-            badgeHtml = `<span class="badge bg-success fw-bold position-absolute top-0 start-0 m-2 shadow-sm">MIỄN PHÍ</span>`;
-            priceHtml = `<span class="price-text text-success">MIỄN PHÍ</span>`;
-        } else {
-            badgeHtml = `<span class="badge bg-primary fw-bold position-absolute top-0 start-0 m-2 shadow-sm">PRO</span>`;
-            priceHtml = `<span class="price-text text-danger">${course.price.toLocaleString('vi-VN')}đ</span>`;
+        if (!courses || courses.length === 0) {
+            $grid.html('<div class="col-12 text-center text-muted my-5"><i class="bi bi-folder-x display-4"></i><p class="mt-2">Không tìm thấy khóa học nào khớp với bộ lọc của bạn.</p></div>');
+            return;
         }
 
-        // Bọc lót dữ liệu (nếu Backend chưa trả về thì mặc định hiện 0)
-        const studentCount = course.studentCount || 0;
-        const lessonCount = course.lessonCount || 0;
-        const duration = course.duration || "0 giờ";
+        courses.forEach(course => {
+            let badgeHtml = '';
+            let priceHtml = '';
 
-        const cardHtml = `
-            <div class="col-md-6 col-xl-4">
-                <div class="card border-0 shadow-sm course-card h-100" onclick="window.location.href='course-detail.html?id=${course.id}'">
-                    <div class="position-relative">
-                        <img src="${course.thumbnailUrl}" class="card-img-top" alt="Course Thumbnail">
-                        ${badgeHtml}
-                    </div>
-                    <div class="card-body d-flex flex-column">
-                        <h5 class="course-title text-dark mb-2">${course.title}</h5>
-                        <div class="instructor-name mb-3">Giảng viên: ${course.instructorName}</div>
-                        
-                        <div class="d-flex align-items-center gap-3 mt-auto mb-3 small text-muted">
-                            <span title="Số học viên tham gia"><i class="bi bi-people me-1"></i>${studentCount}</span>
-                            <span title="Tổng số bài học"><i class="bi bi-journal-text me-1"></i>${lessonCount} bài</span>
-                            <span title="Tổng thời lượng"><i class="bi bi-clock me-1"></i>${duration}</span>
+            if (course.isFree) {
+                badgeHtml = `<span class="badge bg-success fw-bold position-absolute top-0 start-0 m-2 shadow-sm">MIỄN PHÍ</span>`;
+                priceHtml = `<span class="price-text text-success">MIỄN PHÍ</span>`;
+            } else {
+                badgeHtml = `<span class="badge bg-primary fw-bold position-absolute top-0 start-0 m-2 shadow-sm">PRO</span>`;
+                priceHtml = `<span class="price-text text-danger">${course.price.toLocaleString('vi-VN')}đ</span>`;
+            }
+
+            const studentCount = course.studentCount || 0;
+            const lessonCount = course.lessonCount || 0;
+            const duration = course.duration || "0 giờ";
+
+            const cardHtml = `
+                <div class="col-md-6 col-xl-4">
+                    <div class="card border-0 shadow-sm course-card h-100" onclick="window.location.href='course-detail.html?id=${course.id}'">
+                        <div class="position-relative">
+                            <img src="${course.thumbnailUrl}" class="card-img-top" alt="Course Thumbnail">
+                            ${badgeHtml}
                         </div>
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="course-title text-dark mb-2">${course.title}</h5>
+                            <div class="instructor-name mb-3">Giảng viên: ${course.instructorName}</div>
+                            
+                            <div class="d-flex align-items-center gap-3 mt-auto mb-3 small text-muted">
+                                <span title="Số học viên tham gia"><i class="bi bi-people me-1"></i>${studentCount}</span>
+                                <span title="Tổng số bài học"><i class="bi bi-journal-text me-1"></i>${lessonCount} bài</span>
+                                <span title="Tổng thời lượng"><i class="bi bi-clock me-1"></i>${duration}</span>
+                            </div>
 
-                        <div class="pt-3 border-top d-flex justify-content-between align-items-center">
-                            ${priceHtml}
+                            <div class="pt-3 border-top d-flex justify-content-between align-items-center">
+                                ${priceHtml}
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        `;
-        $grid.append(cardHtml);
-    });
-}
+            `;
+            $grid.append(cardHtml);
+        });
+    }
 
-    // HÀM BỔ TRỢ 2: Vẽ thanh phân trang động dựa trên TotalPages thu về
     function renderPagination(totalPages, activePage) {
         const $pager = $('#paginationGrid');
         $pager.empty();
 
-        if (totalPages <= 1) return; // Nếu chỉ có 1 trang hoặc không có data thì ẩn luôn
+        if (totalPages <= 1) return;
 
-        // Nút Lùi trang (Previous)
         $pager.append(`
             <li class="page-item ${activePage === 1 ? 'disabled' : ''}">
                 <a class="page-link" href="#" data-page="${activePage - 1}" tabindex="-1"><i class="bi bi-chevron-left"></i> Lùi</a>
             </li>
         `);
 
-        // Các nút số trang cụ thể
         for (let i = 1; i <= totalPages; i++) {
             $pager.append(`
                 <li class="page-item ${activePage === i ? 'active' : ''}">
@@ -285,7 +298,6 @@ $('.filter-level:checked').each(function() {
             `);
         }
 
-        // Nút Tiến trang (Next)
         $pager.append(`
             <li class="page-item ${activePage === totalPages ? 'disabled' : ''}">
                 <a class="page-link" href="#" data-page="${activePage + 1}">Tiến <i class="bi bi-chevron-right"></i></a>
