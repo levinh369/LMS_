@@ -1,50 +1,59 @@
 const User = {
-   myProfile: async function() {
-        const token = localStorage.getItem("jwt_token");
-        const urlParams = new URLSearchParams(window.location.search);
-        const targetUserId = urlParams.get('id');
-        let apiUrl = "https://lms-u2jn.onrender.com/api/User/my-profile";
-        
-        if (targetUserId) {
-            apiUrl = `https://lms-u2jn.onrender.com/api/User/my-profile/${targetUserId}`;
-        }
+  myProfile: async function() {
+    const token = localStorage.getItem("jwt_token");
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetUserId = urlParams.get('id');
+    let apiUrl = "https://lms-u2jn.onrender.com/api/User/my-profile";
+    
+    if (targetUserId) {
+        apiUrl = `https://lms-u2jn.onrender.com/api/User/my-profile/${targetUserId}`;
+    }
 
-        try {
-            const res = await $.ajax({
-                url: apiUrl,
-                type: "GET",
-                headers: { "Authorization": "Bearer " + token }
-            });
+    // 📍 1. BẬT LOADER: Chặn màn hình, hiện spinner xoay ngay khi bắt đầu gọi API
+    if (typeof GlobalLoader !== 'undefined') {
+        GlobalLoader.show();
+    }
 
-            if (res) {
-                $('#profile-name').text(res.fullName);
-                $('#profile-avatar').attr('src', res.avatar || '../assets/img/default-avatar.png');
-                $('#profile-join-date').text(`Tham gia từ ${res.joinDate}`);
-                $('#stat-ongoing').text(res.ongoingCount);
-                $('#stat-completed').text(res.completedCount);
+    try {
+        const res = await $.ajax({
+            url: apiUrl,
+            type: "GET",
+            headers: { "Authorization": "Bearer " + token }
+        });
 
-                // 4. Render khóa học đang học & đã xong
-                this.renderList(res.ongoingCourses, '#ongoing-list', false);
-                this.renderList(res.completedCourses, '#completed-list', true);
-                if (targetUserId) {
-                    $('#btn-edit-profile, .btn-settings').hide(); 
-                    $('#profile-title-page').text(`Hồ sơ của ${res.fullName}`);
-                } else {
-                    $('#btn-edit-profile, .btn-settings').show();
-                    $('#profile-title-page').text("Trang cá nhân của tôi");
-                }
-            }
-        } catch (err) {
-            console.error("Lỗi tải profile:", err);
-            if (err.status === 401) {
-                // Nếu chưa đăng nhập hoặc token hết hạn, có thể đá ra trang login
-                window.location.href = "/auth/login.html";
+        if (res) {
+            $('#profile-name').text(res.fullName);
+            $('#profile-avatar').attr('src', res.avatar || '../assets/img/default-avatar.png');
+            $('#profile-join-date').text(`Tham gia từ ${res.joinDate}`);
+            $('#stat-ongoing').text(res.ongoingCount);
+            $('#stat-completed').text(res.completedCount);
+
+            // Render khóa học đang học & đã xong
+            this.renderList(res.ongoingCourses, '#ongoing-list', false);
+            this.renderList(res.completedCourses, '#completed-list', true);
+            
+            if (targetUserId) {
+                $('#btn-edit-profile, .btn-settings').hide(); 
+                $('#profile-title-page').text(`Hồ sơ của ${res.fullName}`);
             } else {
-                $('#profile-name').text("Lỗi tải dữ liệu");
+                $('#btn-edit-profile, .btn-settings').show();
+                $('#profile-title-page').text("Trang cá nhân của tôi");
             }
         }
-    },
-
+    } catch (err) {
+        console.error("Lỗi tải profile:", err);
+        if (err.status === 401) {
+            window.location.href = "/auth/login.html";
+        } else {
+            $('#profile-name').text("Lỗi tải dữ liệu");
+        }
+    } finally {
+        // 📍 2. TẮT LOADER: Cho vào khối finally để đảm bảo DÙ THÀNH CÔNG HAY LỖI thì màn hình cũng được mở lại, không bị treo cứng
+        if (typeof GlobalLoader !== 'undefined') {
+            GlobalLoader.hide();
+        }
+    }
+},
     renderList: function(courses, selector, isDone) {
         const $container = $(selector);
         $container.empty();
@@ -121,6 +130,11 @@ const User = {
         return `${day}/${month}/${year}`;
     },
     loadProfile: function() {
+    // 📍 1. BẬT LOADER: Chặn màn hình, quay spinner ngay khi bắt đầu gọi dữ liệu cấu hình
+    if (typeof GlobalLoader !== 'undefined') {
+        GlobalLoader.show();
+    }
+
     $.ajax({
         url: "https://lms-u2jn.onrender.com/api/User/settings-data",
         type: "GET",
@@ -129,17 +143,19 @@ const User = {
         },
         success: function(res) {
             if (res) {
-                // 2. Đổ dữ liệu cơ bản vào Form
+                // Đổ dữ liệu cơ bản vào Form
                 $('#input-fullname').val(res.fullName);
                 $('#display-name').text(res.fullName); // Cái tên hiện dưới ảnh
                 $('#input-email').val(res.email);
+                
                 if (res.avatar) {
                     $('#avatar-preview').attr('src', res.avatar);
                 } else {
                     $('#avatar-preview').attr('src', '../assets/img/default-avatar.png');
                 }
+                
                 if (res.hasPassword === false) {
-                    // Ẩn ô nhập mật khẩu hiện tại (vì login Face lấy đâu ra pass cũ)
+                    // Ẩn ô nhập mật khẩu hiện tại (vì login Face/Google lấy đâu ra pass cũ)
                     $('#curr-pass-group').hide();
                     
                     // Hiện dòng ghi chú giải thích
@@ -162,7 +178,18 @@ const User = {
             console.error("🚩 Lỗi load profile rồi bác ơi:", err);
             if (err.status === 401) {
                 alert("Hết phiên đăng nhập, mời bác vào lại!");
-                AuthHelper.logout(); // Nếu có AuthHelper thì gọi để dọn dẹp localstorage
+                if (typeof AuthHelper !== 'undefined') {
+                    AuthHelper.logout(); // Nếu có AuthHelper thì gọi để dọn dẹp localstorage
+                } else {
+                    localStorage.clear();
+                    window.location.href = "/auth/login.html";
+                }
+            }
+        },
+        complete: function() {
+            // 📍 2. TẮT LOADER: Khối complete luôn chạy cuối cùng kể cả khi success hay error, đảm bảo an toàn cho UI
+            if (typeof GlobalLoader !== 'undefined') {
+                GlobalLoader.hide();
             }
         }
     });
