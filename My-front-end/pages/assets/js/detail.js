@@ -329,7 +329,7 @@ formatLessonTime: function(seconds) {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 },
 handleEnroll: function(teacherId) {
-    debugger
+    
     const courseId = new URLSearchParams(window.location.search).get('id');
     
     if (!courseId) {
@@ -343,7 +343,7 @@ handleEnroll: function(teacherId) {
 
     try {
         // Gọi API qua jQuery Ajax
-        debugger
+        
         const result = await Enrollment.add(courseId, teacherId); 
 
         // Nếu Backend của bác trả về { success: true, ... }

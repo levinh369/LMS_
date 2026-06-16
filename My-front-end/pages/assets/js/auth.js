@@ -19,7 +19,7 @@ var Auth = {
             email: $form.find('#loginEmail').val(),
             password: $form.find('#loginPassword').val()
         };
-        debugger
+        
         // 2. HIỆU ỨNG LOADING: Đổi nội dung nút bấm
         const oldBtnHtml = $btn.html();
         $btn.addClass('is-loading').prop('disabled', true);

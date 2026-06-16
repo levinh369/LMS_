@@ -238,7 +238,7 @@ updateOrder: async function(sortedIds) {
         chapter.loadList(chapter.currentCourseId); 
         return;
     }
-    debugger;
+    ;
     try {
         GlobalLoader.show();
         const response = await $.ajax({

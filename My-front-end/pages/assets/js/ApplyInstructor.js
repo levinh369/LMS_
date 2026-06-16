@@ -40,7 +40,7 @@ var Apply = {
     },
 
    loadUserInfo: function() {
-    debugger
+    
     // Lấy chuỗi JSON từ localStorage
     const userInfoString = localStorage.getItem('user_info');
     

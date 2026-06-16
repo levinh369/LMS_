@@ -134,7 +134,7 @@ const AuthHelper = {
     },
     renderMyCourses: async function() {
     const token = localStorage.getItem("jwt_token");
-    debugger
+    
     if (!token) return;
 
     // Hiển thị loading nhẹ trong lúc đợi (option)
@@ -181,7 +181,7 @@ const AuthHelper = {
 },
 handleAuthRequired: function(actionIfLoggedIn) {
     const token = localStorage.getItem("jwt_token");
-    debugger
+    
     if (token && !this.isTokenExpired(token)) {
         // Có "chìa khóa" rồi -> Làm việc luôn!
         actionIfLoggedIn();

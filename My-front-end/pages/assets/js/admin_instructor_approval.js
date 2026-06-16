@@ -33,7 +33,7 @@ const AdminApp = {
     },
 
     loadData: async function(page = 1) {
-        debugger
+        
         this.config.currentPage = page;
         const keyword = document.getElementById('adminKeySearch').value;
         const status = document.getElementById('adminIsActive').value;

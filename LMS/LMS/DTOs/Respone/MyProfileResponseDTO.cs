@@ -3,6 +3,7 @@
     public class MyProfileResponseDTO
     {
             // Thông tin cá nhân
+            public int UserId {  get; set; }
             public string FullName { get; set; }
             public string Avatar { get; set; }
             public string JoinDate { get; set; } // Ví dụ: "Tháng 02/2026"

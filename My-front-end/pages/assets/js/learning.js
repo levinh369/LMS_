@@ -211,7 +211,7 @@ updateHeaderProgress: function(completed, total) {
 changeVideo: async function(newLessonId) {
     console.log("Đang chuyển sang bài học:", newLessonId);
     this.isCommentLoaded = false;
-    debugger
+    
     // 1. CHỐT HẠ BÀI CŨ (Bọc trong try catch để tránh treo hàm)
     if (currentLessonId !== 0 && currentLessonId !== newLessonId) {
         try {
@@ -374,7 +374,7 @@ markAsCompleted: async function(lessonId) {
             type: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        debugger
+        
         if (response.success) {
             // CẬP NHẬT PROGRESS BAR NGAY LẬP TỨC (Dùng dữ liệu mới nhất từ Repo trả về)
             this.updateHeaderProgress(response.completedCount, response.totalCount);
@@ -1398,14 +1398,28 @@ renderUserListInModal: function (filterType) {
         return;
     }
 
-    const html = filteredUsers.map(u => `
-        <div class="user-item d-flex align-items-center p-3">
-            <img src="${u.userAvatar || '../assets/img/default-avatar.png'}" class="rounded-circle border" style="width: 42px; height: 42px; object-fit: cover;">
-            <div class="ms-3 flex-grow-1">
-                <div class="fw-bold">${u.userFullName}</div>
-            </div>
-            <span style="font-size: 20px;">${emojiMap[u.reactionType || u.ReactionType]}</span>
-        </div>`).join('');
+    const html = filteredUsers.map(u => {
+        const userId = u.UserId || 0; 
+
+        return `
+            <div class="user-item d-flex align-items-center p-3" 
+                 onclick="window.location.href='/user/profile.html?id=${userId}'" 
+                 style="cursor: pointer; transition: background 0.2s;" 
+                 onmouseover="this.style.backgroundColor='#f8f9fa'" 
+                 onmouseout="this.style.backgroundColor='transparent'">
+                 
+                <img src="${u.userAvatar || '../assets/img/default-avatar.png'}" 
+                     class="rounded-circle border" 
+                     style="width: 42px; height: 42px; object-fit: cover;">
+                     
+                <div class="ms-3 flex-grow-1">
+                    <div class="fw-bold text-dark hover-underline">${u.userFullName}</div>
+                </div>
+                
+                <span style="font-size: 20px;">${emojiMap[u.reactionType || u.ReactionType]}</span>
+            </div>`;
+    }).join('');
+    
     $body.html(html);
 },
 renderReactionTabs : function(users) {

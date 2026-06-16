@@ -24,7 +24,7 @@ var Course = {
     },
     // 1. Hàm khởi tạo chính
 init: function () {
-        // debugger; // Bác nhớ comment/xóa dòng này khi code chạy ngon rồi nhé kẻo lên production bị khựng
+        // ; // Bác nhớ comment/xóa dòng này khi code chạy ngon rồi nhé kẻo lên production bị khựng
         const userInfoRaw = localStorage.getItem("user_info");
         if (userInfoRaw) {
             const user = JSON.parse(userInfoRaw);
@@ -771,7 +771,7 @@ addDetailToEdit : function() {
 renderDetails: function(type) { 
     // type = 'add' hoặc 'edit'
     const isEdit = type === 'edit';
-    debugger
+    
     const listUl = document.getElementById(isEdit ? 'editListDetails' : 'listDetails');
     const dataArray = isEdit ? Course.editDetails : Course.addedDetails;
     const deleteFunc = isEdit ? 'removeDetailFromEdit' : 'removeDetail';

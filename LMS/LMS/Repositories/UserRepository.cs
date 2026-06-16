@@ -30,6 +30,7 @@ namespace LMS.Repositories
                 .Where(u => u.Id == userId)
                 .Select(u => new MyProfileResponseDTO
                 {
+                    UserId = u.Id,
                     FullName = u.FullName,
                     Avatar = u.AvatarUrl,
                     JoinDate = u.CreatedAt.ToString("'Tháng' MM/yyyy"),

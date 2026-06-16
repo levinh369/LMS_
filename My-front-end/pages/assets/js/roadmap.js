@@ -864,7 +864,7 @@ getAllRoadMaps: async function() {
     }
 },
 handleGoToDetail: async function(courseId) {
-        debugger
+        
     const token = localStorage.getItem("jwt_token");
     if (!token) {
         window.location.href = "/Home/detail.html?id=" + courseId;

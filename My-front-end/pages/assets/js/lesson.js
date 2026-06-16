@@ -257,7 +257,7 @@ addBulkRow: function() {
     tbody.append(rowHtml);
 },
 MapsToLesson: async function(chapterId){
-    debugger;
+    ;
     if (!chapterId) {
         toastr.error("Không tìm thấy mã chương!");
         return;
@@ -764,7 +764,7 @@ initSortable: function() {
 //     try {
 //         const response = await fetch(`${this.config.apiUrl}/${id}`);
 //         if (!response.ok) throw new Error('Không lấy được dữ liệu');
-//         debugger;
+//         ;
 //         const res = await response.json();
 //         const item = res.data || res;      
 

@@ -1,33 +1,47 @@
 const User = {
-    myProfile: async function() {
+   myProfile: async function() {
         const token = localStorage.getItem("jwt_token");
-        if (!token) return;
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetUserId = urlParams.get('id');
+        let apiUrl = "https://lms-u2jn.onrender.com/api/User/my-profile";
+        
+        if (targetUserId) {
+            apiUrl = `https://lms-u2jn.onrender.com/api/User/my-profile/${targetUserId}`;
+        }
 
         try {
             const res = await $.ajax({
-                url: "https://lms-u2jn.onrender.com/api/User/my-profile",
+                url: apiUrl,
                 type: "GET",
-                // Header này nếu bác đã có $.ajaxSetup thì có thể bỏ qua
                 headers: { "Authorization": "Bearer " + token }
             });
 
             if (res) {
-                // 1. Cập nhật Sidebar
                 $('#profile-name').text(res.fullName);
                 $('#profile-avatar').attr('src', res.avatar || '../assets/img/default-avatar.png');
                 $('#profile-join-date').text(`Tham gia từ ${res.joinDate}`);
                 $('#stat-ongoing').text(res.ongoingCount);
                 $('#stat-completed').text(res.completedCount);
 
-                // 2. Render khóa học đang học
+                // 4. Render khóa học đang học & đã xong
                 this.renderList(res.ongoingCourses, '#ongoing-list', false);
-
-                // 3. Render khóa học đã xong
                 this.renderList(res.completedCourses, '#completed-list', true);
+                if (targetUserId) {
+                    $('#btn-edit-profile, .btn-settings').hide(); 
+                    $('#profile-title-page').text(`Hồ sơ của ${res.fullName}`);
+                } else {
+                    $('#btn-edit-profile, .btn-settings').show();
+                    $('#profile-title-page').text("Trang cá nhân của tôi");
+                }
             }
         } catch (err) {
             console.error("Lỗi tải profile:", err);
-            $('#profile-name').text("Lỗi tải dữ liệu");
+            if (err.status === 401) {
+                // Nếu chưa đăng nhập hoặc token hết hạn, có thể đá ra trang login
+                window.location.href = "/auth/login.html";
+            } else {
+                $('#profile-name').text("Lỗi tải dữ liệu");
+            }
         }
     },
 
@@ -279,12 +293,14 @@ $('#editProfileForm').on('submit', function(e) {
     // Gọi hàm update mà anh em mình vừa viết
     User.updateProfile(); 
 });
-// Hàm chuyển Tab (giữ lại logic của bác)
 function switchTab(evt, tabId) {
-    $('.tab-pane-custom').addClass('d-none');
-    $(`#${tabId}`).removeClass('d-none');
-    $('.tab-btn').removeClass('active');
-    $(evt.currentTarget).addClass('active');
+    const $targetContent = $(`#${tabId}`);
+    const $targetBtn = $(evt.currentTarget);
+    if ($targetBtn.hasClass('active')) return;
+    $('.tab-pane-custom').not('.d-none').addClass('d-none');
+    $targetContent.removeClass('d-none');
+    $('.tab-btn.active').removeClass('active');
+    $targetBtn.addClass('active');
 }
 // Sự kiện khi bác chọn ảnh từ máy tính
 $('#input-avatar-file').on('change', function(e) {

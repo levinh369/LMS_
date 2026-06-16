@@ -77,7 +77,7 @@ var Manager = {
 
         const user = JSON.parse(userInfoRaw);
         const roleId = parseInt(user.role); 
-        debugger
+        
         // Cập nhật vào thuộc tính chung để loadData sử dụng chính xác
         this.roleId = roleId; 
 
@@ -410,7 +410,7 @@ openCourseModal: function(userId, fullName) {
 }, 
 
     renderManagedCourses: function(userId, courses) {
-        debugger
+        
     let html = '';
     if (courses && courses.length > 0) {
         courses.forEach(c => {
@@ -788,7 +788,7 @@ loadDetail: async function (id) {
         // Lưu ý: emailInput phải khớp với tên thuộc tính trong Class C# của bạn
         dto.email = $('#frmUser #emailInput').val(); 
         dto.password = $('#frmUser #passwordInput').val(); 
-        debugger
+        
         // Kiểm tra nhanh ở client (validate)
         if (!dto.email || !dto.password) {
             Toast.fire({ icon: 'warning', title: 'Vui lòng nhập đầy đủ Email và Mật khẩu khi tạo mới!' });
