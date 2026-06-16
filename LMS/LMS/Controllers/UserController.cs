@@ -39,13 +39,10 @@ namespace LMS.Controllers
             return Ok(profileData);
         }
         [Authorize]
-        [HttpGet("my-profile/{id}")]
-        public async Task<IActionResult> GetProfileOfUser()
+        [HttpGet("my-profile/{id}")] 
+        public async Task<IActionResult> GetProfileOfUser(int id) 
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null) return Unauthorized();
-            int userId = int.Parse(userIdClaim.Value);
-            var profileData = await userService.GetFullProfileDataAsync(userId);
+            var profileData = await userService.GetFullProfileDataAsync(id);
 
             if (profileData == null) return NotFound(new { message = "Không tìm thấy thông tin người dùng" });
 

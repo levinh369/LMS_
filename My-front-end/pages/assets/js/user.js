@@ -1,13 +1,25 @@
 const User = {
-  myProfile: async function() {
+ myProfile: async function() {
     const token = localStorage.getItem("jwt_token");
     const urlParams = new URLSearchParams(window.location.search);
-    const targetUserId = urlParams.get('id');
-    let apiUrl = "https://lms-u2jn.onrender.com/api/User/my-profile";
-    
-    if (targetUserId) {
-        apiUrl = `https://lms-u2jn.onrender.com/api/User/my-profile/${targetUserId}`;
+    let targetUserId = urlParams.get('id');
+    let isOwnProfile = false;
+
+    // 📍 ĐỘT PHÁ: Nếu URL không có id -> Tự bốc id của CHÍNH MÌNH từ localStorage để dùng chung API có {id}
+    if (!targetUserId) {
+        // Bác check xem lúc đăng nhập, bác lưu ID dưới localStorage tên là gì nhé (ví dụ: "user_id" hoặc "userId")
+        targetUserId = localStorage.getItem("user_id"); 
+        isOwnProfile = true; // Đánh dấu đây là trang cá nhân của chính mình
     }
+
+    // Nếu cả trên URL lẫn localStorage đều không có id thì đá về trang login
+    if (!targetUserId) {
+        window.location.href = "/auth/login.html";
+        return;
+    }
+
+    // Luôn luôn gọi chung một endpoint duy nhất có truyền ID
+    const apiUrl = `https://lms-u2jn.onrender.com/api/User/my-profile/${targetUserId}`;
 
     // 📍 1. BẬT LOADER: Chặn màn hình, hiện spinner xoay ngay khi bắt đầu gọi API
     if (typeof GlobalLoader !== 'undefined') {
@@ -32,12 +44,13 @@ const User = {
             this.renderList(res.ongoingCourses, '#ongoing-list', false);
             this.renderList(res.completedCourses, '#completed-list', true);
             
-            if (targetUserId) {
-                $('#btn-edit-profile, .btn-settings').hide(); 
-                $('#profile-title-page').text(`Hồ sơ của ${res.fullName}`);
-            } else {
+            // 📍 2. Kiểm tra cờ isOwnProfile để ẩn/hiện nút sửa hồ sơ
+            if (isOwnProfile) {
                 $('#btn-edit-profile, .btn-settings').show();
                 $('#profile-title-page').text("Trang cá nhân của tôi");
+            } else {
+                $('#btn-edit-profile, .btn-settings').hide(); 
+                $('#profile-title-page').text(`Hồ sơ của ${res.fullName}`);
             }
         }
     } catch (err) {
@@ -48,7 +61,7 @@ const User = {
             $('#profile-name').text("Lỗi tải dữ liệu");
         }
     } finally {
-        // 📍 2. TẮT LOADER: Cho vào khối finally để đảm bảo DÙ THÀNH CÔNG HAY LỖI thì màn hình cũng được mở lại, không bị treo cứng
+        // 📍 3. TẮT LOADER: Cho vào khối finally để đảm bảo DÙ THÀNH CÔNG HAY LỖI thì màn hình cũng được mở lại
         if (typeof GlobalLoader !== 'undefined') {
             GlobalLoader.hide();
         }
