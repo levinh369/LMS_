@@ -113,14 +113,16 @@
 <script src="assets/js/notification.js"></script>
 <script src="assets/js/common.js"></script>
 <script>
-  // Đảm bảo cấu hình mảng truyền lên API khớp định dạng C# (levels=1&levels=2 thay vì levels[]=1)
+    // Đảm bảo cấu hình mảng truyền lên API khớp định dạng C# (levels=1&levels=2 thay vì levels[]=1)
     $.ajaxSettings.traditional = true;
 
-    // Khởi tạo các tham số mặc định toàn cục cho trang
+    // --- BỘ NHỚ ĐỆM TOÀN CỤC (CLIENT-SIDE CACHE) ---
+    let allCoursesCache = [];  // Nơi lưu trữ toàn bộ dữ liệu gốc tải từ API về
+    let filteredCourses = [];  // Nơi lưu trữ dữ liệu sau khi đã qua bộ lọc tại chỗ
+    
     let currentKeyword = "";
     let currentPage = 1;
-    const pageSize = 6; // Số lượng bản ghi trên một trang
-    let filterTimeout;  // Biến dùng để kiểm soát bộ đếm thời gian Debounce chống spam
+    const pageSize = 6;        // Số lượng bản ghi hiển thị trên một trang giao diện
 
     $(document).ready(function() {
         // 1. Đọc từ khóa tìm kiếm từ URL thanh địa chỉ
@@ -129,48 +131,60 @@
         
         $('#displayKeyword').text(currentKeyword || "Tất cả khóa học");
 
-        // 2. Kích hoạt cuộc gọi API lần đầu tiên khi load trang
-        fetchSearchData();
+        // 2. Tải toàn bộ dữ liệu từ Server về bộ nhớ đệm (Chỉ gọi DUY NHẤT 1 LẦN khi vừa load trang)
+        initLoadAllSearchData();
 
-        // 3. 📍 ĐỘT PHÁ 1: Bọc cơ chế DEBOUNCE trì hoãn thông minh chống nghẽn mạng khi đổi bộ lọc liên tục
+        // 3. 📍 ĐỘT PHÁ SIÊU TỐC: Bấm bộ lọc xử lý trực tiếp dữ liệu trên RAM, vẽ lại DOM 0ms không khựng!
         $('.filter-level, .filter-price, #sortBySelect').on('change', function() {
             currentPage = 1; // Mỗi lần đổi bộ lọc thì reset bắt buộc về trang 1
-            
-            // Xóa bộ đếm cũ nếu user vẫn đang click lựa chọn tiếp
-            clearTimeout(filterTimeout);
-            
-            // Đợi người dùng đứng im dừng click 350ms thì mới bắn 1 API duy nhất lên Render
-            filterTimeout = setTimeout(function() {
-                fetchSearchData();
-            }, 350); 
+            applyClientFiltersAndRender(); 
         });
 
-        // 4. Bắt sự kiện khi click chuyển trang trên thanh Phân Trang (Event Delegation)
+        // 4. Bắt sự kiện khi click chuyển trang trên thanh Phân Trang (Phân trang tại chỗ)
         $(document).on('click', '#paginationGrid .page-link', function(e) {
             e.preventDefault();
             const targetPage = $(this).data('page');
             if (targetPage && targetPage !== currentPage) {
                 currentPage = targetPage;
-                fetchSearchData();
+                renderDataWithPagination(); // Cắt mảng vẽ lại trang mới
                 window.scrollTo({ top: 0, behavior: 'smooth' }); // Cuộn mượt lên đầu trang
             }
         });
     });
 
-    // HÀM CHÍNH: Thu thập dữ liệu từ UI và gọi API Backend
-    async function fetchSearchData() {
+    // HÀM 1: Gọi Server bốc trọn gói cục dữ liệu theo từ khóa về RAM (Chỉ chạy 1 lần)
+    async function initLoadAllSearchData() {
         const $grid = $('#courseResultGrid');
-        
-        // 📍 ĐỘT PHÁ 2: Không xóa HTML cũ nữa! Chỉ làm mờ nhẹ 0.5 để tạo cảm giác mượt mà đứng im ngầm (Optimistic Loading)
-        // Nếu trang chưa có dữ liệu gì (lần đầu load) thì mới hiện spinner tròn
-        if ($grid.find('.course-card').length === 0) {
-            $grid.html('<div class="col-12 text-center my-5"><div class="spinner-border text-primary"></div></div>');
-        } else {
-            // Danh sách cũ vẫn đứng vững nhưng mờ đi, báo hiệu ngầm hệ thống đang xử lý tải data mới
-            $grid.css('opacity', '0.5'); 
-        }
+        $grid.html('<div class="col-12 text-center my-5"><div class="spinner-border text-primary"></div></div>');
 
-        // Thu thập mảng Trình độ (Levels) được tích chọn
+        // Gửi thông số lấy sỉ dữ liệu về Client quản lý
+        const requestData = {
+            keyword: currentKeyword,
+            pageIndex: 1,
+            pageSize: 500 // Bốc max 500 khóa học liên quan về luôn cho nhàn đầu
+        };
+
+        try {
+            const response = await $.get('https://lms-u2jn.onrender.com/api/course/search-result', requestData);
+            
+            if (response.success && response.data) {
+                // Lưu mảng gốc vào bộ nhớ đệm ẩn
+                allCoursesCache = response.data.data || [];
+                
+                // Chạy bộ lọc lần đầu để hiển thị kết quả ban đầu
+                applyClientFiltersAndRender();
+            } else {
+                showErrorUi("Không thể tải danh sách khóa học từ máy chủ.");
+            }
+        } catch (error) {
+            console.error("Lỗi gọi API Search:", error);
+            showErrorUi("Lỗi kết nối hệ thống server hoặc CORS!");
+        }
+    }
+
+    // HÀM 2: Thuật toán lọc dữ liệu cực nhanh trên RAM trình duyệt
+    function applyClientFiltersAndRender() {
+        // Thu thập mảng Trình độ (Levels) được tích chọn từ Radio
         const selectedLevels = [];
         $('.filter-level:checked').each(function() {
             const val = $(this).val();
@@ -179,55 +193,65 @@
             }
         });
 
-        // Xác định bộ lọc Giá (IsFree) dựa trên trạng thái 2 checkbox
-        let isFreeParam = null;
+        // Xác định bộ lọc Giá (IsFree) dựa trên trạng thái radio giá
         const paidChecked = $('#price1').is(':checked');
         const freeChecked = $('#price2').is(':checked');
-        if (paidChecked && !freeChecked) isFreeParam = false; 
-        else if (!paidChecked && freeChecked) isFreeParam = true;  
 
-        // Đóng gói toàn bộ thông số thành object gửi lên URL API
-        const requestData = {
-            keyword: currentKeyword,
-            levels: selectedLevels,
-            isFree: isFreeParam,
-            sortBy: $('#sortBySelect').val(),
-            pageIndex: currentPage,
-            pageSize: pageSize
-        };
-
-        try {
-            // Thực hiện gọi AJAX endpoint bản full của bác
-            const response = await $.get('https://lms-u2jn.onrender.com/api/course/search-result', requestData);
-            
-            // 📍 ĐỘT PHÁ 3: API chạy xong xuôi trả về thành công lập tức trả lại độ nét 100% cho khung lưới
-            $grid.css('opacity', '1');
-
-            if (response.success && response.data) {
-                const result = response.data;
-                
-                // Cập nhật số lượng tổng bản ghi và trạng thái hiển thị
-                $('#totalRecordsCount').text(result.totalRecords);
-                const startItem = result.totalRecords === 0 ? 0 : (result.pageIndex - 1) * result.pageSize + 1;
-                const endItem = Math.min(result.pageIndex * result.pageSize, result.totalRecords);
-                $('#displayPaginationStatus').text(`Hiển thị ${startItem}-${endItem} của ${result.totalRecords} kết quả`);
-
-                // Tiến hành vẽ danh sách Card Khóa học và Phân trang mới đè lên vị trí cũ
-                renderCourseCards(result.data);
-                renderPagination(result.totalPages, result.pageIndex);
-            } else {
-                showErrorUi("Không thể tải danh sách khóa học.");
+        // Sàng lọc mảng bằng JavaScript (Tốc độ tính bằng miligiây)
+        filteredCourses = allCoursesCache.filter(course => {
+            // 1. Lọc theo Trình độ (Nếu mảng selectedLevels rỗng nghĩa là chọn "Tất cả")
+            if (selectedLevels.length > 0 && !selectedLevels.includes(course.level)) {
+                return false;
             }
-        } catch (error) {
-            $grid.css('opacity', '1'); // Khôi phục độ nét nếu dính lỗi mạng
-            console.error("Lỗi gọi API Search:", error);
-            showErrorUi("Lỗi kết nối hệ thống server hoặc CORS!");
+            // 2. Lọc theo Giá (Có phí / Miễn phí)
+            if (paidChecked && !freeChecked && course.isFree) return false;
+            if (!paidChecked && freeChecked && !course.isFree) return false;
+            
+            return true;
+        });
+
+        // 3. Sắp xếp (Sort) mảng tại chỗ dựa trên Selectbox
+        const sortBy = $('#sortBySelect').val();
+        if (sortBy === 'newest') {
+            filteredCourses.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+        } else if (sortBy === 'price_asc') {
+            filteredCourses.sort((a, b) => (a.price || 0) - (b.price || 0));
+        } else if (sortBy === 'price_desc') {
+            filteredCourses.sort((a, b) => (b.price || 0) - (a.price || 0));
         }
+
+        // Cập nhật số lượng tổng bản ghi tìm thấy sau khi lọc
+        const totalRecords = filteredCourses.length;
+        $('#totalRecordsCount').text(totalRecords);
+
+        // Gọi hàm chia trang, cắt mảng và đổ ra HTML công khai
+        renderDataWithPagination();
     }
 
+    // HÀM 3: Cắt mảng hiển thị theo phân đoạn từng trang giao diện
+    function renderDataWithPagination() {
+        const totalRecords = filteredCourses.length;
+        const totalPages = Math.ceil(totalRecords / pageSize);
+        
+        // Cắt mảng lấy đúng 6 phần tử tương ứng của trang hiện tại
+        const startItemIndex = (currentPage - 1) * pageSize;
+        const endItemIndex = startItemIndex + pageSize;
+        const pageData = filteredCourses.slice(startItemIndex, endItemIndex);
+
+        // Cập nhật dòng trạng thái phân trang (Ví dụ: Hiển thị 1-6 của 12 kết quả)
+        const displayStart = totalRecords === 0 ? 0 : startItemIndex + 1;
+        const displayEnd = Math.min(endItemIndex, totalRecords);
+        $('#displayPaginationStatus').text(`Hiển thị ${displayStart}-${displayEnd} của ${totalRecords} kết quả`);
+
+        // Vẽ Card thật và vẽ nút điều hướng phân trang mới
+        renderCourseCards(pageData);
+        renderPagination(totalPages, currentPage);
+    }
+
+    // HÀM VẼ CARD: Đập đi xây lại tức thì (0ms) vì dữ liệu luôn có sẵn trên RAM để render lập tức
     function renderCourseCards(courses) {
         const $grid = $('#courseResultGrid');
-        $grid.empty(); // Chỉ dọn dẹp danh sách cũ ĐÚNG LÚC data mới đã có sẵn trên tay để thay thế ngay lập tức
+        $grid.empty(); // Xóa sạch rác và card cũ đi
 
         if (!courses || courses.length === 0) {
             $grid.html('<div class="col-12 text-center text-muted my-5"><i class="bi bi-folder-x display-4"></i><p class="mt-2">Không tìm thấy khóa học nào khớp với bộ lọc của bạn.</p></div>');
@@ -238,6 +262,7 @@
             let badgeHtml = '';
             let priceHtml = '';
 
+            // Kiểm tra thuộc tính hiển thị Badge
             if (course.isFree) {
                 badgeHtml = `<span class="badge bg-success fw-bold position-absolute top-0 start-0 m-2 shadow-sm">MIỄN PHÍ</span>`;
                 priceHtml = `<span class="price-text text-success">MIỄN PHÍ</span>`;

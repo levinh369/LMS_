@@ -43,36 +43,45 @@ const CourseApp = {
         if (progress > 0) btnText = "Tiếp tục học";
         if (progress === 100) btnText = "Học lại (Ôn tập)";
 
-        // 3. Xử lý Bài học cuối cùng & Thời gian (LastLearnedFriendly từ DTO bác)
+        // 3. Xử lý Bài học cuối cùng & Thời gian
         const lastActivity = course.lastLearnedFriendly || "Chưa bắt đầu";
         const lastLesson = course.lastLessonTitle || "Chưa có bài học";
 
+        // 📍 FIX: Đổi flex-direction-column thành flex-column chuẩn Bootstrap để card tự dãn đều theo chiều dọc
         return `
             <div class="col-md-6 col-lg-4">
-                <div class="card course-card shadow-sm">
+                <div class="card course-card shadow-sm h-100">
                     <div class="course-img-wrapper">
-                        <img src="${course.thumbnailUrl || '../assets/img/default-course.png'}" class="course-img">
+                        <img src="${course.thumbnailUrl || '../assets/img/default-course.png'}" class="course-img" alt="Course Thumbnail">
                     </div>
-                    <div class="card-body d-flex flex-direction-column justify-content-between">
-                        <div>
-                            <h6 class="fw-bold mb-1 text-truncate" title="${course.title}">${course.title}</h6>
-                            <p class="text-muted mb-2" style="font-size: 0.85rem;">Giảng viên: ${course.instructorName}</p>
+                    <div class="card-body d-flex flex-column justify-content-between p-3" style="min-height: 250px;">
+                        
+                        <div class="w-100 mb-2">
+                            <h5 class="fw-bold text-dark text-truncate mb-1" style="font-size: 1.05rem;" title="${course.title}">
+                                ${course.title}
+                            </h5>
+                            
+                            <p class="text-muted text-truncate mb-2" style="font-size: 0.85rem;" title="${course.instructorName}">
+                                Giảng viên: ${course.instructorName}
+                            </p>
                             
                             <div class="d-flex align-items-center mb-3 text-secondary" style="font-size: 0.75rem;">
                                 <i class="bi bi-clock-history me-1"></i>
                                 <span>${lastActivity}</span>
                             </div>
 
-                            <div class="last-lesson mb-3 border-start border-3 ps-2">
-                                <span class="d-block text-muted small">Học tiếp:</span>
-                                <span class="fw-medium text-dark">${lastLesson}</span>
+                            <div class="last-lesson mb-3 border-start border-3 border-primary ps-2">
+                                <span class="d-block text-muted small" style="font-size: 0.7rem;">Học tiếp:</span>
+                                <span class="fw-semibold text-dark text-truncate d-block small" title="${lastLesson}">
+                                    ${lastLesson}
+                                </span>
                             </div>
                         </div>
 
-                        <div>
+                        <div class="w-100 mt-auto">
                             <div class="mb-3">
                                 <div class="d-flex justify-content-between mb-1" style="font-size: 0.75rem;">
-                                    <span class="text-muted">Hoàn thành ${progress}%</span>
+                                    <span class="text-muted fw-medium">Hoàn thành ${progress}%</span>
                                     <span class="fw-bold text-success">${course.completedLessons || 0}/${course.totalLessons || 0} bài</span>
                                 </div>
                                 <div class="progress">
@@ -80,10 +89,11 @@ const CourseApp = {
                                 </div>
                             </div>
                             
-                            <a href="/learn/learning.html?id=${course.courseId}" class="btn-start">
+                            <a href="/learn/learning.html?id=${course.courseId}" class="btn-start shadow-sm">
                                 ${btnText}
                             </a>
                         </div>
+
                     </div>
                 </div>
             </div>`;

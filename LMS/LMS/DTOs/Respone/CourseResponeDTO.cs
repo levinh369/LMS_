@@ -36,7 +36,9 @@ namespace LMS.DTOs.Respone
         public DateTime UpdatedAt { get; set; }
         public string LockedByRole {  get; set; }
         public string DeletedByRole {  get; set; }
-        
+        public string LastLessonTitle { get; set; } = string.Empty;
+
+
     }
     public class CourseResponeDetailDTO
     {
