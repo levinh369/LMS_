@@ -462,25 +462,36 @@ namespace LMS.Services
 
         public async Task<List<CourseResponeDTO>> GetCoursesForUser(int userId)
         {
-            // 1. Gọi Repo lấy data thô (Entity)
             var enrollments = await enrollRepository.GetUserEnrollmentsAsync(userId);
 
             if (enrollments == null || !enrollments.Any())
                 return new List<CourseResponeDTO>();
 
-            // 2. Map sang DTO và xử lý logic hiển thị (GetTimeAgo)
-            return enrollments.Select(e => new CourseResponeDTO
+            // 2. Map sang DTO và xử lý logic hiển thị
+            return enrollments.Select(e =>
             {
-                CourseId = e.CourseId,
-                Title = e.Course.Title,
-                ThumbnailUrl = e.Course.ThumbnailUrl,
-                InstructorName = e.Course?.Teacher?.FullName ?? "Hệ thống",
-                Progress = e.ProgressPercent, // Lấy % đã lưu sẵn
-                LastLearnedFriendly = (e.LastAccessedAt == DateTime.MinValue)
-                          ? "Chưa bắt đầu"
-                          : GetTimeAgo(e.LastAccessedAt),
-                IsCompleted = e.IsCompleted,
-                TotalLessons = e.Course.Lessons.Count(),
+                var nextLesson = e.Course.Lessons
+                    .Where(l => !l.IsDeleted && l.IsActive)
+                    .OrderBy(l => l.OrderIndex) 
+                    .Select(l => l.Title)
+                    .FirstOrDefault();
+
+                return new CourseResponeDTO
+                {
+                    CourseId = e.CourseId,
+                    Title = e.Course.Title,
+                    ThumbnailUrl = e.Course.ThumbnailUrl,
+                    InstructorName = e.Course?.Teacher?.FullName ?? "Hệ thống",
+                    Progress = e.ProgressPercent, // Lấy % đã lưu sẵn
+                    LastLearnedFriendly = (e.LastAccessedAt == DateTime.MinValue)
+                              ? "Chưa bắt đầu"
+                              : GetTimeAgo(e.LastAccessedAt),
+                    IsCompleted = e.IsCompleted,
+                    TotalLessons = e.Course.Lessons.Count(l => !l.IsDeleted && l.IsActive),
+                    LastLessonTitle = e.IsCompleted
+                        ? "Đã hoàn thành khóa học 🎉"
+                        : (nextLesson ?? "Chưa có bài học")
+                };
             }).ToList();
         }
         private string GetTimeAgo(DateTime? dateTime)
