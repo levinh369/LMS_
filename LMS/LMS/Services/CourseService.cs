@@ -171,6 +171,8 @@ namespace LMS.Services
         public async Task<(List<CourseResponeDTO> Data, int Total)> GetCourseListAsync(int page, int pageSize, string keySearch, DateTime? fromDate, DateTime? toDate, int isActive, int teacherId, int categoryId)
         {
             var (entities, total) = await courseRepository.GetPagedAsync(page, pageSize, keySearch, fromDate, toDate, isActive, teacherId, categoryId);
+
+            // Nếu entities rỗng (total = 0), mảng này trả về List trống [], không bao giờ lỗi 500
             var modelList = entities.Select(c => new CourseResponeDTO
             {
                 CourseId = c.Id,
@@ -180,13 +182,14 @@ namespace LMS.Services
                 CreateAt = c.CreatedAt,
                 ThumbnailUrl = c.ThumbnailUrl,
                 Price = c.Price,
-                totalChapters = c.Chapters.Count(),
-                CategoryName = c.Category.Name,
-                InstructorId = c.Teacher?.Id ?? 0, // Nếu null thì trả về 0
-                InstructorName = c.Teacher?.FullName ?? "Chưa xác định", //
+                totalChapters = c.Chapters != null ? c.Chapters.Count() : 0, // Phòng xa nếu Chapters null
+                CategoryName = c.Category?.Name ?? "Chưa phân loại", // SỬA Ở ĐÂY: Thêm dấu ? để tránh sập lỗi 500
+                InstructorId = c.Teacher?.Id ?? 0,
+                InstructorName = c.Teacher?.FullName ?? "Chưa xác định",
                 Level = c.Level,
                 LockedByRole = c.LockedByRole
             }).ToList();
+
             return (modelList, total);
         }
 
@@ -279,7 +282,10 @@ namespace LMS.Services
         public async Task<CourseDetailDTO> GetCourseDetailAsync(int id)
         {
             var course = await courseRepository.GetCourseAndLessons(id);
-            if (course == null) throw new Exception("Khóa học không tồn tại!"); 
+            if (course == null) throw new Exception("Khóa học không tồn tại!");
+
+            // Kiểm tra an toàn xem Lessons có bị null không
+            var hasLessons = course.Lessons != null;
 
             return new CourseDetailDTO
             {
@@ -288,23 +294,28 @@ namespace LMS.Services
                 Description = course.Description,
                 Thumbnail = course.ThumbnailUrl,
                 Price = course.Price,
-                OldPrice = course.Price * 1.5m, // Ví dụ: giá cũ cao hơn 50% để làm marketing
-                InstructorName = "Nguyễn Văn A",
-                TotalLessons = course.Lessons.Count,
-                DurationDisplay = FormatDuration(course.Lessons.Sum(l => l.Duration)),
+                OldPrice = course.Price * 1.5m, // Giá marketing
+
+                // Tận dụng tên giảng viên thật nếu có quan hệ, nếu không thì để mặc định
+                InstructorName = course.Teacher?.FullName ?? "Chưa xác định",
+
+                // SỬA Ở ĐÂY: Check an toàn tránh lỗi 500 khi DB trống hoặc Lessons null
+                TotalLessons = hasLessons ? course.Lessons.Count : 0,
+                DurationDisplay = hasLessons ? FormatDuration(course.Lessons.Sum(l => l.Duration ?? 0)) : "00:00", // Check null từng bài học
                 LastUpdated = course.UpdatedAt,
 
-                // Map danh sách bài học
-                Lessons = course.Lessons.Select(l => new LessonPublicDTO
-                {
-                    Id = l.Id,
-                    Title = l.Title,
-                    Duration = l.Duration ?? 0,
-                    VideoId = l.VideoId,
-                    OrderIndex = l.OrderIndex,
-                    // Logic: Ví dụ 2 bài đầu tiên có OrderIndex nhỏ nhất sẽ được xem thử
-                    IsPreview = l.OrderIndex <= 2
-                }).ToList()
+                // Map danh sách bài học an toàn
+                Lessons = hasLessons
+                    ? course.Lessons.Select(l => new LessonPublicDTO
+                    {
+                        Id = l.Id,
+                        Title = l.Title ?? "Bài học chưa đặt tên",
+                        Duration = l.Duration ?? 0,
+                        VideoId = l.VideoId,
+                        OrderIndex = l.OrderIndex,
+                        IsPreview = l.OrderIndex <= 2
+                    }).ToList()
+                    : new List<LessonPublicDTO>() // Trả về mảng rỗng [] nếu chưa có bài học
             };
         }
 

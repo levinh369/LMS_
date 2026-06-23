@@ -60,10 +60,11 @@ namespace LMS.Services
                     RoleEnum.Teacher => "Giảng viên",
                     _ => "N/A"
                 },
+                // SỬA Ở ĐÂY: Check an toàn cho cả Enrollments lẫn Course bên trong
                 Courses = u.Enrollments != null ? u.Enrollments.Select(e => new UserCourseDTO
                 {
                     CourseId = e.CourseId,
-                    CourseName = e.Course.Title,
+                    CourseName = e.Course?.Title ?? "Khóa học không tồn tại hoặc đã bị xóa", // THÊM DẤU ? ĐỂ CHẶN LỖI 500
                     Progress = e.ProgressPercent
                 }).ToList() : new List<UserCourseDTO>()
             }).ToList();

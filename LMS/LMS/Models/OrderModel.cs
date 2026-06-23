@@ -27,7 +27,8 @@ namespace LMS.Models
 
         [ForeignKey("UserId")]
         public UserModel User { get; set; }
-        public int teacherId { get; set; }
+        [Column("teacherId")]
+        public int? TeacherId { get; set; }
 
         [ForeignKey("CourseId")]
         public CourseModel Course { get; set; }

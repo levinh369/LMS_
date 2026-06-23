@@ -17,6 +17,7 @@ namespace LMS.Models
 
         [Column(TypeName = "decimal(18,2)")]
         public decimal Price { get; set; }
+        [Column("teacherId")] // <--- THÊM CHÍNH XÁC DÒNG NÀY VÀO ĐÂY BÁC ƠI
         public int? TeacherId { get; set; } // ID của người dạy
         public int? CommissionRate { get; set; }
 

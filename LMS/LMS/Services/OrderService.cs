@@ -129,12 +129,12 @@ namespace LMS.Services
         }
 
         public async Task<(List<OrderResponeDTO> Data, int Total)> GetOrderListAsync(
-         int page,
-         int pageSize,
-         string keySearch,
-         DateTime? fromDate,
-         DateTime? toDate,
-         int status, int teacherId)
+   int page,
+   int pageSize,
+   string keySearch,
+   DateTime? fromDate,
+   DateTime? toDate,
+   int status, int teacherId)
         {
             // 1. Gọi Repository để lấy dữ liệu thực thể (Entities) và tổng số bản ghi
             var (entities, total) = await _orderRepository.GetPagedAsync(page, pageSize, keySearch, fromDate, toDate, status, teacherId);
@@ -144,13 +144,13 @@ namespace LMS.Services
             {
                 OrderId = o.Id,
                 OrderCode = $"ORD-{o.Id}",
-                CustomerName = o.User?.FullName ?? "N/A", // Đã có Include từ Repo nên không lo null
+                CustomerName = o.User?.FullName ?? "Khách hàng ẩn danh",
                 CustomerEmail = o.User?.Email ?? "N/A",
-                CourseTitle = o.Course?.Title ?? "N/A",
+                CourseTitle = o.Course?.Title ?? "Khóa học đã bị xóa", // Phòng xa luôn nếu Course bị null
                 TotalAmount = o.Amount,
-                Status = o.Status.ToString(), // Chuyển Enum sang chuỗi (Success, Pending...)
+                Status = o.Status.ToString(),
                 CreatedAt = o.CreatedAt,
-                AvatarUrl = o.User.AvatarUrl
+                AvatarUrl = o.User?.AvatarUrl ?? "/assets/img/default-avatar.png" // SỬA Ở ĐÂY: Thêm dấu ? phòng vệ chặt chẽ!
             }).ToList();
 
             return (dtoList, total);

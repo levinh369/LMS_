@@ -27,21 +27,37 @@ namespace LMS.Repositories
 
             var dto = new AdminDashboardDto();
 
-            // 2. Thẻ thống kê (Cards)
-            dto.TotalRevenue = successfulOrders.Sum(o => o.Amount);
+            // Khởi tạo danh sách trống tránh lỗi Client-side nhận mảng null
+            dto.RevenueLabels = new List<string>();
+            dto.RevenueData = new List<decimal>();
+            dto.CourseLabels = new List<string>();
+            dto.CourseData = new List<int>();
+            dto.CategoryLabels = new List<string>();
+            dto.CategoryData = new List<int>();
+
+            // 2. Thẻ thống kê (Cards) - Nếu rỗng thì mặc định là 0
+            dto.TotalRevenue = successfulOrders.Any() ? successfulOrders.Sum(o => o.Amount) : 0;
             dto.TotalOrders = successfulOrders.Count;
-            // Đếm tổng User nhưng bỏ qua Admin và Giảng viên
+
+            // Đếm tổng User hoạt động (Bảng này đã có data nên chạy an toàn)
             dto.TotalUsers = await _context.Users
-                .Include(u => u.Role) // Nhớ Include bảng Role để filter theo tên
+                .Include(u => u.Role)
                 .CountAsync(u => u.CreatedAt >= fromDate
-                            && u.CreatedAt <= toDate
-                            && u.RoleId != 1
-                            && u.RoleId != 3);
-            // Tỷ lệ hoàn thành bác có thể tính dựa trên bảng Progress (nếu có) hoặc fix tạm
+                             && u.CreatedAt <= toDate
+                             && u.RoleId != 1
+                             && u.RoleId != 3);
+
             dto.CompletionRate = 75.5;
 
-            // 3. Biểu đồ Doanh thu (Line Chart) - Group theo ngày
+            // KIỂM TRA: Nếu không có đơn hàng nào thì return luôn DTO trống, né lỗi 500 khi GroupBy
+            if (!successfulOrders.Any())
+            {
+                return dto;
+            }
+
+            // 3. Biểu đồ Doanh thu (Line Chart) - Chỉ Group khi có data
             var revenueGroup = successfulOrders
+                .Where(o => o.CreatedAt != null)
                 .GroupBy(o => o.CreatedAt.Date)
                 .OrderBy(g => g.Key)
                 .ToList();
@@ -49,8 +65,9 @@ namespace LMS.Repositories
             dto.RevenueLabels = revenueGroup.Select(g => g.Key.ToString("dd/MM")).ToList();
             dto.RevenueData = revenueGroup.Select(g => g.Sum(x => x.Amount)).ToList();
 
-            // 4. Top 5 Khóa học bán chạy (Bar Chart)
+            // 4. Top 5 Khóa học bán chạy (Bar Chart) - Thêm kiểm tra điều hướng rỗng `?`
             var topCourses = successfulOrders
+                .Where(o => o.Course != null)
                 .GroupBy(o => o.Course.Title)
                 .Select(g => new { Title = g.Key, Count = g.Count() })
                 .OrderByDescending(x => x.Count)
@@ -60,8 +77,9 @@ namespace LMS.Repositories
             dto.CourseLabels = topCourses.Select(x => x.Title).ToList();
             dto.CourseData = topCourses.Select(x => x.Count).ToList();
 
-            // 5. Phân bổ theo Danh mục (Pie Chart)
+            // 5. Phân bổ theo Danh mục (Pie Chart) - Thêm kiểm tra điều hướng rỗng `?`
             var categoryDist = successfulOrders
+                .Where(o => o.Course != null && o.Course.Category != null)
                 .GroupBy(o => o.Course.Category.Name)
                 .Select(g => new { Name = g.Key, Count = g.Count() })
                 .ToList();

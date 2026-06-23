@@ -238,7 +238,7 @@ namespace LMS.Repositories
 
         // 1. LẤY DANH SÁCH (Fix logic lọc để hiện cả con bị xóa lẻ)
         public async Task<(List<AdminCommentResponseDTO> Items, int TotalCount)> GetAdminCommentsAsync(
-     int pageIndex, int? courseId, int? lessonId, string? search, string status, int? teacherId) // Thêm lessonId ở đây
+      int pageIndex, int? courseId, int? lessonId, string? search, string status, int? teacherId)
         {
             int pageSize = 5;
             IQueryable<CommentModel> query;
@@ -252,14 +252,14 @@ namespace LMS.Repositories
                 query = _context.Comments.Where(c => !c.IsDeleted && c.ParentId == null);
             }
 
-            // --- BỘ LỌC KHÓA HỌC ---
+            // --- BỘ LỌC KHÓA HỌC (Thêm check null để tránh sập nếu quan hệ trống) ---
             if (courseId.HasValue && courseId.Value > 0)
             {
-                query = query.Where(c => c.Lesson.Chapter.CourseId == courseId.Value);
+                query = query.Where(c => c.Lesson != null && c.Lesson.Chapter != null && c.Lesson.Chapter.CourseId == courseId.Value);
             }
             if (teacherId.HasValue && teacherId.Value > 0)
             {
-                query = query.Where(c => c.Lesson.Chapter.Course.TeacherId == teacherId.Value);
+                query = query.Where(c => c.Lesson != null && c.Lesson.Chapter != null && c.Lesson.Chapter.Course != null && c.Lesson.Chapter.Course.TeacherId == teacherId.Value);
             }
             if (lessonId.HasValue && lessonId.Value > 0)
             {
@@ -269,7 +269,7 @@ namespace LMS.Repositories
             if (!string.IsNullOrWhiteSpace(search))
             {
                 string searchLower = search.ToLower();
-                query = query.Where(c => c.Content.ToLower().Contains(searchLower) || c.User.FullName.ToLower().Contains(searchLower));
+                query = query.Where(c => c.Content.ToLower().Contains(searchLower) || (c.User != null && c.User.FullName.ToLower().Contains(searchLower)));
             }
 
             int totalCount = await query.CountAsync();
@@ -277,7 +277,6 @@ namespace LMS.Repositories
             var items = await query
                 .Include(c => c.User).ThenInclude(u => u.Role)
                 .Include(c => c.Lesson).ThenInclude(l => l.Chapter).ThenInclude(ch => ch.Course)
-                // SẮP XẾP: Ghim lên đầu, rồi mới đến ngày tạo
                 .OrderByDescending(c => c.IsPinned)
                 .ThenByDescending(c => c.CreatedAt)
                 .Skip((pageIndex - 1) * pageSize)
@@ -289,19 +288,19 @@ namespace LMS.Repositories
                     CreatedAt = c.CreatedAt,
                     IsActive = c.IsActive,
                     IsDeleted = c.IsDeleted,
-                    IsPinned = c.IsPinned, // PHẢI CÓ cái này để Frontend biết đường mà hiện Icon 📌
-                    UserName = c.User.FullName,
-                    UserAvatar = c.User.AvatarUrl,
-                    LessonName = c.Lesson.Title,
-                    LessonId = c.Lesson.Id,
-                    CourseTitle = c.Lesson.Chapter.Course.Title,
-                    IsAdmin = c.User.Role != null && c.User.Role.RoleName == "Admin",
-                    CourseId = c.Lesson.Chapter.CourseId,
+                    IsPinned = c.IsPinned,
+                    UserName = c.User != null ? c.User.FullName : "Người dùng ẩn danh",
+                    UserAvatar = c.User != null ? c.User.AvatarUrl : "/assets/img/default-avatar.png",
+                    LessonName = c.Lesson != null ? c.Lesson.Title : "Bài học đã bị xóa", // CHECK NULL
+                    LessonId = c.Lesson != null ? c.Lesson.Id : 0,
+                    CourseTitle = (c.Lesson != null && c.Lesson.Chapter != null && c.Lesson.Chapter.Course != null) ? c.Lesson.Chapter.Course.Title : "Khóa học không tồn tại", // CHECK NULL LỒNG
+                    IsAdmin = c.User != null && c.User.Role != null && c.User.Role.RoleName == "Admin",
+                    CourseId = (c.Lesson != null && c.Lesson.Chapter != null) ? c.Lesson.Chapter.CourseId : 0,
                     ParentId = c.ParentId,
                     UserId = c.UserId,
                     ReplyToUserId = c.ReplyToUserId,
                     ReplyToUserName = c.ReplyToUserName,
-                    IsTeacher = c.Lesson.Chapter.Course.TeacherId == c.UserId,
+                    IsTeacher = (c.Lesson != null && c.Lesson.Chapter != null && c.Lesson.Chapter.Course != null) && c.Lesson.Chapter.Course.TeacherId == c.UserId,
                     Replies = c.Replies
                         .Where(r => r.IsDeleted == c.IsDeleted)
                         .OrderByDescending(r => r.CreatedAt)
@@ -312,12 +311,12 @@ namespace LMS.Repositories
                             CreatedAt = r.CreatedAt,
                             IsDeleted = r.IsDeleted,
                             IsActive = r.IsActive,
-                            UserName = r.User.FullName,
-                            UserAvatar = r.User.AvatarUrl,
-                            IsAdmin = r.User.Role != null && r.User.Role.RoleName == "Admin",
+                            UserName = r.User != null ? r.User.FullName : "Người dùng ẩn danh",
+                            UserAvatar = r.User != null ? r.User.AvatarUrl : "/assets/img/default-avatar.png",
+                            IsAdmin = r.User != null && r.User.Role != null && r.User.Role.RoleName == "Admin",
                             ParentId = r.ParentId,
                             UserId = r.UserId,
-                            IsTeacher = c.Lesson.Chapter.Course.TeacherId == r.UserId,
+                            IsTeacher = (c.Lesson != null && c.Lesson.Chapter != null && c.Lesson.Chapter.Course != null) && c.Lesson.Chapter.Course.TeacherId == r.UserId,
                             ReplyToUserId = r.ReplyToUserId,
                             ReplyToUserName = r.ReplyToUserName,
                         }).ToList()
@@ -326,7 +325,6 @@ namespace LMS.Repositories
 
             return (items, totalCount);
         }
-
         // 2. XÓA MỀM (Cascade - Thác nước)
         public async Task<bool> SoftDeleteAsync(int commentId)
         {
