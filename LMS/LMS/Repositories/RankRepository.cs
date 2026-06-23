@@ -53,7 +53,7 @@ namespace LMS.Repositories
                     Email = u.Email,
                     AvatarUrl = u.AvatarUrl,
                     TotalRevenue = _context.Orders
-                        .Where(o => o.teacherId == u.Id && o.Status == OrderStatusEnum.Success)
+                        .Where(o => o.TeacherId == u.Id && o.Status == OrderStatusEnum.Success)
                         .Sum(o => o.Amount)
                 })
                 .ToListAsync();

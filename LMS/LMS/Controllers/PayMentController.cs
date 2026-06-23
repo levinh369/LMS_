@@ -62,7 +62,7 @@ public class PaymentController : ControllerBase
                 Amount = (decimal)course.Price,
                 OrderDescription = $"Thanh toán khóa học: {course.Title}",
                 Status = OrderStatusEnum.Pending,
-                teacherId = request.teacherId,
+                TeacherId = request.teacherId,
                 CreatedAt = nowInVietnam
             };
             _context.Orders.Add(order);
