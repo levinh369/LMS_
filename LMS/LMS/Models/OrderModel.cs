@@ -27,8 +27,13 @@ namespace LMS.Models
 
         [ForeignKey("UserId")]
         public UserModel User { get; set; }
+
         [Column("teacherId")]
         public int? TeacherId { get; set; }
+
+        // BỔ SUNG THÊM DÒNG NÀY VÀO DƯỚI TEACHERID BÁC ƠI:
+        [ForeignKey("TeacherId")]
+        public UserModel? Teacher { get; set; }
 
         [ForeignKey("CourseId")]
         public CourseModel Course { get; set; }
