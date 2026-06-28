@@ -75,7 +75,7 @@ checkLoginStatus: function() {
 
             // Đảm bảo nút Đơn hàng luôn hiện mặc định, trường hợp Admin sẽ ẩn sau
             $('#menu-my-orders').removeClass('d-none');
-
+            const $menuTeacher = $('#menu-teacher');
             if (roleId === 1) { 
                 // TRƯỜNG HỢP: ADMIN (QUẢN TRỊ VIÊN)
                 if ($navRoleText.length) $navRoleText.text("Quản trị viên");
@@ -90,7 +90,7 @@ checkLoginStatus: function() {
                 
                 // 📍 BỎ ĐƠN HÀNG CỦA TÔI ĐỐI VỚI ADMIN 
                 $('#menu-my-orders').addClass('d-none');
-
+                $menuTeacher.addClass('d-none');
                 // Tối ưu hóa Dropdown Menu: Chèn nút vào trang quản trị ngay trong Dropdown
                 $('#menu-dashboard-link').remove(); // Xóa trùng lặp cũ nếu có
                 $(`<li id="menu-dashboard-link">
@@ -110,7 +110,7 @@ checkLoginStatus: function() {
                 // Phân quyền cho phần nội dung học tập
                 $myCoursesZone.removeClass('d-none'); 
                 $menuBecomeTeacher.addClass('d-none'); // Đã là giảng viên thì ẩn nút đăng ký dạy học
-
+                $menuTeacher.addClass('d-none');
                 // Tối ưu hóa Dropdown Menu: Chèn nút vào trang quản trị ngay trong Dropdown
                 $('#menu-dashboard-link').remove(); // Xóa trùng lặp cũ nếu có
                 $(`<li id="menu-dashboard-link">
@@ -126,7 +126,7 @@ checkLoginStatus: function() {
                 // Ẩn hoàn toàn vùng nút quản trị trên Topbar và trong Dropdown
                 $adminManagementZone.addClass('d-none'); 
                 $('#menu-dashboard-link').remove(); 
-                
+                $menuTeacher.removeClass('d-none');
                 // Hiện các nội dung liên quan của học viên
                 $myCoursesZone.removeClass('d-none'); 
                 $menuBecomeTeacher.removeClass('d-none'); 
