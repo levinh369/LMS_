@@ -82,7 +82,7 @@ checkLoginStatus: function() {
                 
                 // Điều khiển nút trên Topbar điều hướng nhanh
                 $adminManagementZone.removeClass('d-none'); 
-                $btnGoToDashboard.attr('href', '/dashboard/Dashboard-admin.html'); 
+                $btnGoToDashboard.attr('href', '/Dashboard/Dashboard-admin.html'); 
                 
                 // Phân quyền cho phần nội dung học tập
                 $myCoursesZone.addClass('d-none'); 
@@ -94,7 +94,7 @@ checkLoginStatus: function() {
                 // Tối ưu hóa Dropdown Menu: Chèn nút vào trang quản trị ngay trong Dropdown
                 $('#menu-dashboard-link').remove(); // Xóa trùng lặp cũ nếu có
                 $(`<li id="menu-dashboard-link">
-                    <a class="dropdown-item py-2 mt-2 fw-bold text-primary" href="/dashboard/index.html">
+                    <a class="dropdown-item py-2 mt-2 fw-bold text-primary" href="/Dashboard/index.html">
                         <i class="bi bi-speedometer2 me-2"></i>Vào trang quản trị
                     </a>
                    </li>`).insertAfter('#user-zone .dropdown-menu li:first-child');
@@ -105,7 +105,7 @@ checkLoginStatus: function() {
                 
                 // Điều khiển nút trên Topbar điều hướng nhanh
                 $adminManagementZone.removeClass('d-none'); 
-                $btnGoToDashboard.attr('href', '/dashboard/Dashboard-teacher.html'); 
+                $btnGoToDashboard.attr('href', '/Dashboard/Dashboard-teacher.html'); 
                 
                 // Phân quyền cho phần nội dung học tập
                 $myCoursesZone.removeClass('d-none'); 
@@ -114,7 +114,7 @@ checkLoginStatus: function() {
                 // Tối ưu hóa Dropdown Menu: Chèn nút vào trang quản trị ngay trong Dropdown
                 $('#menu-dashboard-link').remove(); // Xóa trùng lặp cũ nếu có
                 $(`<li id="menu-dashboard-link">
-                    <a class="dropdown-item py-2 mt-2 fw-bold text-primary" href="/dashboard/Dashboard-teacher.html">
+                    <a class="dropdown-item py-2 mt-2 fw-bold text-primary" href="/Dashboard/Dashboard-teacher.html">
                         <i class="bi bi-speedometer2 me-2"></i>Vào trang quản trị
                     </a>
                    </li>`).insertAfter('#user-zone .dropdown-menu li:first-child');

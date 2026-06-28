@@ -32,52 +32,55 @@
 
     <div class="row">
         <div class="col-lg-3 d-none d-lg-block mb-4">
-            <div class="card border-0 shadow-sm rounded-3">
-                <div class="card-body p-4">
-                    <h5 class="fw-bold mb-4"><i class="bi bi-funnel me-2"></i>Bộ lọc</h5>
-                 <div class="mb-4">
-    <div class="filter-section-title">Trình độ</div>
-    
-    <div class="form-check mb-2">
-        <input class="form-check-input filter-level" type="radio" name="levelGroup" value="" id="level0" checked>
-        <label class="form-check-label" for="level0">Tất cả trình độ</label>
-    </div>
-    
-    <div class="form-check mb-2">
-        <input class="form-check-input filter-level" type="radio" name="levelGroup" value="1" id="level1">
-        <label class="form-check-label" for="level1">Người mới bắt đầu</label>
-    </div>
-    <div class="form-check mb-2">
-        <input class="form-check-input filter-level" type="radio" name="levelGroup" value="2" id="level2">
-        <label class="form-check-label" for="level2">Trung cấp</label>
-    </div>
-    <div class="form-check mb-2">
-        <input class="form-check-input filter-level" type="radio" name="levelGroup" value="3" id="level3">
-        <label class="form-check-label" for="level3">Nâng cao</label>
-    </div>
-</div>
+           <div class="card border-0 shadow-sm rounded-3">
+    <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h5 class="fw-bold mb-0"><i class="bi bi-funnel me-2"></i>Bộ lọc</h5>
+          <button type="button" id="btnResetFilters" 
+        class="btn btn-sm btn-outline-danger border-0 d-flex align-items-center gap-1 shadow-none">
+    <i class="bi bi-arrow-clockwise"></i> Đặt lại
+</button>
+        </div>
 
-<hr class="text-muted">
-
-<div class="mb-2">
-    <div class="filter-section-title">Giá</div>
-    
-    <div class="form-check mb-2">
-        <input class="form-check-input filter-price" type="radio" name="priceGroup" value="" id="price0" checked>
-        <label class="form-check-label" for="price0">Tất cả</label>
-    </div>
-
-    <div class="form-check mb-2">
-        <input class="form-check-input filter-price" type="radio" name="priceGroup" value="paid" id="price1">
-        <label class="form-check-label" for="price1">Có phí</label>
-    </div>
-    <div class="form-check mb-2">
-        <input class="form-check-input filter-price" type="radio" name="priceGroup" value="free" id="price2">
-        <label class="form-check-label" for="price2">Miễn phí</label>
-    </div>
-</div>
-                </div>
+        <div class="mb-4">
+            <div class="filter-section-title">Trình độ</div>
+            <div class="form-check mb-2">
+                <input class="form-check-input filter-level" type="radio" name="levelGroup" value="" id="level0" checked>
+                <label class="form-check-label" for="level0">Tất cả trình độ</label>
             </div>
+            <div class="form-check mb-2">
+                <input class="form-check-input filter-level" type="radio" name="levelGroup" value="1" id="level1">
+                <label class="form-check-label" for="level1">Người mới bắt đầu</label>
+            </div>
+            <div class="form-check mb-2">
+                <input class="form-check-input filter-level" type="radio" name="levelGroup" value="2" id="level2">
+                <label class="form-check-label" for="level2">Trung cấp</label>
+            </div>
+            <div class="form-check mb-2">
+                <input class="form-check-input filter-level" type="radio" name="levelGroup" value="3" id="level3">
+                <label class="form-check-label" for="level3">Nâng cao</label>
+            </div>
+        </div>
+
+        <hr class="text-muted">
+
+        <div class="mb-2">
+            <div class="filter-section-title">Giá</div>
+            <div class="form-check mb-2">
+                <input class="form-check-input filter-price" type="radio" name="priceGroup" value="" id="price0" checked>
+                <label class="form-check-label" for="price0">Tất cả</label>
+            </div>
+            <div class="form-check mb-2">
+                <input class="form-check-input filter-price" type="radio" name="priceGroup" value="paid" id="price1">
+                <label class="form-check-label" for="price1">Có phí</label>
+            </div>
+            <div class="form-check mb-2">
+                <input class="form-check-input filter-price" type="radio" name="priceGroup" value="free" id="price2">
+                <label class="form-check-label" for="price2">Miễn phí</label>
+            </div>
+        </div>
+    </div>
+</div>
         </div>
 
         <div class="col-lg-9">
@@ -135,9 +138,47 @@ $(document).ready(function() {
     if (filterIsFree === 'true') title = "Khóa học Miễn phí";
     if (filterIsFree === 'false') title = "Khóa học Premium";
     $('#displayKeyword').text(title);
+$(document).on('change', '.filter-level, .filter-price, #sortBySelect', function() {
+            currentPage = 1; // Reset về trang 1
+            applyClientFiltersAndRender();
+        });
 
-    // Tải dữ liệu
-    initLoadAllSearchData(filterIsFree);
+        // 2. Lắng nghe sự kiện click phân trang
+        $(document).on('click', '.page-link', function(e) {
+            e.preventDefault();
+            const page = $(this).data('page');
+            if (page) {
+                currentPage = parseInt(page);
+                renderDataWithPagination();
+            }
+        });
+
+        initLoadAllSearchData(filterIsFree);
+});
+// Sự kiện nhấn nút Đặt lại (Reset)
+$('#btnResetFilters').on('click', function() {
+    // 1. Reset các radio về mặc định (Tất cả)
+    $('input[name="levelGroup"]').prop('checked', false);
+    $('#level0').prop('checked', true); // Tick lại 'Tất cả trình độ'
+
+    $('input[name="priceGroup"]').prop('checked', false);
+    $('#price0').prop('checked', true); // Tick lại 'Tất cả giá'
+
+    // 2. Reset select box sắp xếp về mặc định
+    $('#sortBySelect').val('relevant');
+
+    // 3. Reset trang về trang 1
+    currentPage = 1;
+
+    // 4. Xóa các tham số trên URL (giúp URL sạch sẽ sau khi reset)
+    // Thay đổi đường dẫn về trang gốc (search-results.html)
+    window.history.replaceState(null, null, window.location.pathname);
+
+    // 5. Cập nhật lại tiêu đề
+    $('#displayKeyword').text("Danh sách khóa học");
+
+    // 6. Gọi lại hàm render để hiển thị toàn bộ dữ liệu từ cache
+    applyClientFiltersAndRender();
 });
    // 🚩 THÊM tham số isFreeFromUrl vào đây
 async function initLoadAllSearchData(isFreeFromUrl) {

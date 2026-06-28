@@ -218,7 +218,7 @@ public class PaymentController : ControllerBase
                 order.Status = OrderStatusEnum.Cancelled; // Cập nhật Enum đã thêm
                 await _context.SaveChangesAsync();
 
-                return Redirect($"https://lms-azure-mu.vercel.app/course/detail.html?id={order.CourseId}&paymentStatus=cancel");
+                return Redirect($"https://lms-azure-mu.vercel.app/payment/payment-fail.html?id={order.CourseId}&paymentStatus=cancel");
             }
             // TRƯỜNG HỢP 3: CÁC LỖI KHÁC (THẺ SAI, KHÔNG ĐỦ TIỀN, HẾT HẠN...)
             else
@@ -226,7 +226,7 @@ public class PaymentController : ControllerBase
                 order.Status = OrderStatusEnum.Failed;
                 await _context.SaveChangesAsync();
 
-                return Redirect($"https://lms-azure-mu.vercel.app/course/detail.html?id={order.CourseId}&paymentStatus=fail");
+                return Redirect($"https://lms-azure-mu.vercel.app/payment/payment-fail.html?id={order.CourseId}&paymentStatus=fail");
             }
         }
 
