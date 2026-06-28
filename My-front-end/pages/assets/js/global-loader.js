@@ -72,5 +72,6 @@ const TableLoader = {
                 </td>
             </tr>
         `);
-    }
+    },
+  
 };

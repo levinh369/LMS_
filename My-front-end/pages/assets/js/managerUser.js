@@ -495,7 +495,7 @@ openCourseModal: function(userId, fullName) {
                     this.renderManagedCourses(userId, this.tempCourses[userId]);
                     
                     // Load lại bảng chính để mất Badge khóa học
-                    this.loadData(); 
+                    this.loadData(1); 
                 } else {
                     Toast.fire({
                         icon: 'error',

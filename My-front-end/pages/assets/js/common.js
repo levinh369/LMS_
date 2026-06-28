@@ -40,38 +40,109 @@ const AuthHelper = {
         }
     },
 
-    // 📍 4. Tự động kiểm tra trạng thái và chuyển đổi giao diện (Avatar <-> Nút Đăng nhập)
-    checkLoginStatus: function() {
-        const token = localStorage.getItem("jwt_token");
-        const userInfoJson = localStorage.getItem("user_info");
-        const $guestZone = $('#guest-zone');
-        const $userZone = $('#user-zone');
+checkLoginStatus: function() {
+    const token = localStorage.getItem("jwt_token");
+    const userInfoJson = localStorage.getItem("user_info");
+    const $guestZone = $('#guest-zone');
+    const $userZone = $('#user-zone');
 
-        if (token && userInfoJson && !AuthHelper.isTokenExpired(token)) {
-            try {
-                const user = JSON.parse(userInfoJson);
+    if (token && userInfoJson && !AuthHelper.isTokenExpired(token)) {
+        try {
+            const user = JSON.parse(userInfoJson);
+            
+            // 1. Chuyển đổi vùng hiển thị sang User Zone
+            $guestZone.addClass('d-none').removeClass('d-flex');
+            $userZone.removeClass('d-none').addClass('d-flex');
+
+            // 2. Điền tên hiển thị
+            const displayName = user.fullName || user.username || "Học viên";
+            $('#nav-fullname, #nav-user-name, #nav-fullname-mobile').text(displayName);
+
+            // 3. Điền ảnh đại diện (Ưu tiên ảnh gốc, nếu rỗng dùng ảnh mặc định)
+            const avatarUrl = user.avatar || "../assets/img/default-avatar.png";
+            $('#nav-avatar, #nav-avatar-inside').attr('src', avatarUrl);
+
+            // ==========================================================
+            // LOGIC PHÂN QUYỀN VÀ ĐIỀU KHIỂN DROPDOWN MENU
+            // ==========================================================
+            const roleId = parseInt(user.role); // Ép kiểu về số để so sánh chính xác
+            
+            const $adminManagementZone = $('#admin-management-zone');
+            const $btnGoToDashboard = $('#btnGoToDashboard');
+            const $myCoursesZone = $('#my-courses-zone');
+            const $navRoleText = $('#nav-role-text');
+            const $menuBecomeTeacher = $('#menu-become-teacher');
+
+            // Đảm bảo nút Đơn hàng luôn hiện mặc định, trường hợp Admin sẽ ẩn sau
+            $('#menu-my-orders').removeClass('d-none');
+
+            if (roleId === 1) { 
+                // TRƯỜNG HỢP: ADMIN (QUẢN TRỊ VIÊN)
+                if ($navRoleText.length) $navRoleText.text("Quản trị viên");
                 
-                // Chuyển đổi vùng hiển thị sang User Zone
-                $guestZone.addClass('d-none').removeClass('d-flex');
-                $userZone.removeClass('d-none').addClass('d-flex');
+                // Điều khiển nút trên Topbar điều hướng nhanh
+                $adminManagementZone.removeClass('d-none'); 
+                $btnGoToDashboard.attr('href', '/dashboard/Dashboard-admin.html'); 
+                
+                // Phân quyền cho phần nội dung học tập
+                $myCoursesZone.addClass('d-none'); 
+                $menuBecomeTeacher.addClass('d-none'); 
+                
+                // 📍 BỎ ĐƠN HÀNG CỦA TÔI ĐỐI VỚI ADMIN 
+                $('#menu-my-orders').addClass('d-none');
 
-                // Điền tên hiển thị
-                const displayName = user.fullName || user.username || "Học viên";
-                $('#nav-fullname, #nav-user-name, #nav-fullname-mobile').text(displayName);
+                // Tối ưu hóa Dropdown Menu: Chèn nút vào trang quản trị ngay trong Dropdown
+                $('#menu-dashboard-link').remove(); // Xóa trùng lặp cũ nếu có
+                $(`<li id="menu-dashboard-link">
+                    <a class="dropdown-item py-2 mt-2 fw-bold text-primary" href="/dashboard/index.html">
+                        <i class="bi bi-speedometer2 me-2"></i>Vào trang quản trị
+                    </a>
+                   </li>`).insertAfter('#user-zone .dropdown-menu li:first-child');
+            } 
+            else if (roleId === 3) { 
+                // TRƯỜNG HỢP: GIẢNG VIÊN (TEACHER)
+                if ($navRoleText.length) $navRoleText.text("Giảng viên tại LMS");
+                
+                // Điều khiển nút trên Topbar điều hướng nhanh
+                $adminManagementZone.removeClass('d-none'); 
+                $btnGoToDashboard.attr('href', '/dashboard/Dashboard-teacher.html'); 
+                
+                // Phân quyền cho phần nội dung học tập
+                $myCoursesZone.removeClass('d-none'); 
+                $menuBecomeTeacher.addClass('d-none'); // Đã là giảng viên thì ẩn nút đăng ký dạy học
 
-                // Điền ảnh đại diện (Ưu tiên ảnh gốc, nếu rỗng dùng ảnh mặc định)
-                const avatarUrl = user.avatar || "../assets/img/default-avatar.png";
-                $('#nav-avatar, #nav-avatar-inside').attr('src', avatarUrl);
-
-            } catch (e) {
-                AuthHelper.clearAuthSilently();
-                AuthHelper.showGuestUI($guestZone, $userZone);
+                // Tối ưu hóa Dropdown Menu: Chèn nút vào trang quản trị ngay trong Dropdown
+                $('#menu-dashboard-link').remove(); // Xóa trùng lặp cũ nếu có
+                $(`<li id="menu-dashboard-link">
+                    <a class="dropdown-item py-2 mt-2 fw-bold text-primary" href="/dashboard/Dashboard-teacher.html">
+                        <i class="bi bi-speedometer2 me-2"></i>Vào trang quản trị
+                    </a>
+                   </li>`).insertAfter('#user-zone .dropdown-menu li:first-child');
+            } 
+            else { 
+                // TRƯỜNG HỢP: HỌC VIÊN (STUDENT)
+                if ($navRoleText.length) $navRoleText.text("Học viên tại LMS");
+                
+                // Ẩn hoàn toàn vùng nút quản trị trên Topbar và trong Dropdown
+                $adminManagementZone.addClass('d-none'); 
+                $('#menu-dashboard-link').remove(); 
+                
+                // Hiện các nội dung liên quan của học viên
+                $myCoursesZone.removeClass('d-none'); 
+                $menuBecomeTeacher.removeClass('d-none'); 
             }
-        } else {
+            // ==========================================================
+
+        } catch (e) {
+            console.error("❌ Lỗi parse thông tin user:", e);
             AuthHelper.clearAuthSilently();
             AuthHelper.showGuestUI($guestZone, $userZone);
         }
-    },
+    } else {
+        AuthHelper.clearAuthSilently();
+        AuthHelper.showGuestUI($guestZone, $userZone);
+    }
+},
 
     // 📍 5. Xóa sạch dữ liệu đăng nhập ngầm trong bộ nhớ
     clearAuthSilently: function() {

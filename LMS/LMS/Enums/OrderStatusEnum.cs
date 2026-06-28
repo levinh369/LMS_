@@ -6,7 +6,7 @@
             Success = 1,    // Thanh toán thành công
             Failed = 2,     // Lỗi thanh toán
             Cancelled = 3,  // Người dùng chủ động hủy
-            Refunded = 4    // Đã hoàn tiền
-        
+            Refunded = 4,   // Đã hoàn tiền
+            Revoked = 5
     }
 }

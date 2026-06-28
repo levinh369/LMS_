@@ -31,7 +31,8 @@ namespace LMS.Repositories
         public async Task<(List<RoadMapModel> Data, int Total)> GetPagedAsync(int page, int pageSize, string keySearch, int isActive)
         {
             var query = _context.RoadMapModels
-                .Include(c => c.RoadmapCourses) 
+                .Include(c => c.RoadmapCourses)
+                .Include(c => c.CreatedBy)
                 .AsNoTracking()
                 .Where(c => !c.IsDeleted);
           

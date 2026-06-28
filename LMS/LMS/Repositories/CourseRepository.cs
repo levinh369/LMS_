@@ -15,7 +15,7 @@ namespace LMS.Repositories
         private readonly ICloudinaryService _cloudinaryService;
         public CourseRepository(ApplicationDbContext context, ICloudinaryService cloudinaryService) : base(context)
         {
-            _cloudinaryService = cloudinaryService; 
+            _cloudinaryService = cloudinaryService;
         }
         public async Task<CourseModel?> GetByTitleAsync(string title)
         {
@@ -113,23 +113,26 @@ namespace LMS.Repositories
         public async Task<CourseModel?> GetCourseDetail(int id)
         {
             return await _context.Courses.AsNoTracking()
-            .Include(c => c.Category)
-            .Include(c => c.CourseDetails)
-            .Include(c => c.Enrollments)
-            .Include(c => c.Teacher)
-            .Include(c => c.Chapters)
-
-                .ThenInclude(ch => ch.Lessons)
-            .FirstOrDefaultAsync(c => c.Id == id);
-
+                .Include(c => c.Category)
+                .Include(c => c.CourseDetails)
+                .Include(c => c.Enrollments)
+                .Include(c => c.Teacher)
+                .Include(c => c.Chapters)
+                    .ThenInclude(ch => ch.Lessons.Where(l => l.IsActive == true && l.IsDeleted == false))
+                .FirstOrDefaultAsync(c => c.Id == id);
         }
 
         public async Task<CourseModel?> GetCourseDetailForLearning(int courseId, int? userId)
         {
             var course = await _context.Courses
-                .Include(c => c.Chapters.OrderBy(ch => ch.OrderIndex))
-                    .ThenInclude(ch => ch.Lessons.OrderBy(l => l.OrderIndex))
-                        .ThenInclude(l => l.UserProgress.Where(p => p.UserId == userId && !p.IsDeleted))
+                .Include(c => c.Chapters
+                    .Where(ch => ch.IsActive && !ch.IsDeleted)
+                    .OrderBy(ch => ch.OrderIndex))
+                    .ThenInclude(ch => ch.Lessons
+                        .Where(l => l.IsActive && !l.IsDeleted)
+                        .OrderBy(l => l.OrderIndex))
+                        .ThenInclude(l => l.UserProgress
+                            .Where(p => p.UserId == userId && !p.IsDeleted))
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.Id == courseId);
 
@@ -139,9 +142,11 @@ namespace LMS.Repositories
                 int totalLessons = allLessons.Count;
                 int completedLessons = allLessons
                     .Count(l => l.UserProgress.Any(p => p.IsCompleted == true));
+
                 double progressPercent = totalLessons > 0
                     ? Math.Round(((double)completedLessons / totalLessons) * 100, 2)
                     : 0;
+
                 course.TotalLessons = totalLessons;
                 course.CompletedLessons = completedLessons;
                 course.ProgressPercent = progressPercent;
@@ -327,51 +332,74 @@ namespace LMS.Repositories
 
             return entities.Count;
         }
-        public async Task<(List<CourseModel> Data, int Total)> GetPublicCoursesAsync(CourseSearchRequestDTO filter)
+        public async Task<(List<CourseSearchResultItemDto> Data, int Total)> GetPublicCoursesAsync(CourseSearchRequestDTO filter)
         {
-            var query = _context.Courses.AsNoTracking()
-    .AsSplitQuery() // 📍 BÙA HỘ MỆNH CỨU HIỆU NĂNG LÀ ĐÂY!
-    .Include(c => c.Teacher)
-    .Include(c => c.Lessons)
-    .Include(c => c.Enrollments)
-    .Where(c => !c.IsDeleted && c.IsActive);
+            // Bắt đầu với IQueryable
+            var query = _context.Courses
+                .AsNoTracking()
+                .Where(c => !c.IsDeleted && c.IsActive);
 
             // Lọc theo từ khóa
-            if (!string.IsNullOrEmpty(filter.Keyword))
+            if (!string.IsNullOrWhiteSpace(filter.Keyword))
             {
-                query = query.Where(d => d.Title.Contains(filter.Keyword));
+                query = query.Where(c => c.Title.Contains(filter.Keyword));
             }
 
-            // Lọc theo mảng trình độ
-            if (filter.Levels != null && filter.Levels.Any())
+            // Lọc theo trình độ
+            if (filter.Levels?.Any() == true)
             {
                 query = query.Where(c => filter.Levels.Contains((int)c.Level));
             }
+
+            // Lọc theo Free/Premium
             if (filter.IsFree.HasValue)
             {
-                query = filter.IsFree.Value ? query.Where(c => c.Price == 0) : query.Where(c => c.Price > 0);
+                query = filter.IsFree.Value ? query.Where(c => c.Price <= 0) : query.Where(c => c.Price > 0);
             }
 
-            // Đếm tổng số lượng phục vụ phân trang
+            // Đếm tổng bản ghi (Phải đếm trước khi Skip/Take)
             int total = await query.CountAsync();
 
             // Sắp xếp
-            switch (filter.SortBy?.ToLower())
+            query = filter.SortBy?.ToLower() switch
             {
-                case "price_asc": query = query.OrderBy(c => c.Price); break;
-                case "price_desc": query = query.OrderByDescending(c => c.Price); break;
-                case "newest":
-                default: query = query.OrderByDescending(c => c.CreatedAt); break;
-            }
+                "price_asc" => query.OrderBy(c => c.Price),
+                "price_desc" => query.OrderByDescending(c => c.Price),
+                _ => query.OrderByDescending(c => c.CreatedAt)
+            };
 
-            // Cắt trang dữ liệu
+            // Projection: Lấy đúng dữ liệu cần, không dùng Include nặng nề
             var data = await query
                 .Skip((filter.PageIndex - 1) * filter.PageSize)
                 .Take(filter.PageSize)
+                .Select(c => new CourseSearchResultItemDto
+                {
+                    Id = c.Id,
+                    Title = c.Title,
+                    ThumbnailUrl = c.ThumbnailUrl ?? "/img/default-course.png",
+                    Price = c.Price,
+                    IsFree = c.Price <= 0,
+                    Level = (int)c.Level,
+                    InstructorName = c.Teacher != null ? c.Teacher.FullName : "Giảng viên LMS",
+                    // Đếm số bài học và học viên trực tiếp tại DB
+                    LessonCount = c.Lessons.Count(l => !l.IsDeleted && l.IsActive),
+                    StudentCount = c.Enrollments.Count(e => !e.IsDeleted && e.IsActive),
+                    // Lưu giây vào 1 biến tạm để format ở tầng Service
+                    DurationRaw  = c.Lessons.Where(l => !l.IsDeleted && l.IsActive).Sum(l => l.Duration ?? 0)
+                })
                 .ToListAsync();
 
             return (data, total);
         }
-    }
 
+        public async Task<bool> CheckUserEnrollmentAsync(int courseId, int userId)
+        {
+
+            return await _context.Enrollments
+                .AnyAsync(e => e.CourseId == courseId
+                            && e.UserId == userId
+                            && e.IsDeleted == false);
+        }
+
+    }
     }

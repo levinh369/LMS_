@@ -49,6 +49,21 @@ const Dashboard = {
 
     // Hàm gọi API thật từ .NET
     loadData: function() {
+        const userInfoRaw = localStorage.getItem("user_info");
+            if (userInfoRaw) {
+                const user = JSON.parse(userInfoRaw);
+                const roleId = parseInt(user.roleId || user.role);
+                
+                if (roleId !== 1) { 
+                    // Nếu không phải Admin, đá về trang 403 hoặc trang Dashboard của Teacher luôn
+                    window.location.href = "/403.html"; 
+                    return; // Dừng toàn bộ luồng xử lý bên dưới ngay lập tức
+                }
+            } else {
+                // Trường hợp không có cả user_info trong localStorage thì bắt đăng nhập lại
+                window.location.href = "/auth/login.html";
+                return;
+            }
         const fromDate = $("#dateFrom").val();
         const toDate = $("#dateTo").val();
         const token = localStorage.getItem("jwt_token");

@@ -223,11 +223,11 @@
                 </div>
                 <div id="searchResultList" class="search-list"></div>
                <div class="search-footer p-0 border-top">
-    <a href="#" id="seeAllBtn" class="see-all-link d-block text-center py-2.5 text-decoration-none fw-semibold" style="display: none;">
-        <span>Xem tất cả kết quả</span>
-        <i class="bi bi-arrow-right ms-1"></i>
-    </a>
-</div>
+                    <a href="#" id="seeAllBtn" class="see-all-link d-block text-center py-2.5 text-decoration-none fw-semibold" style="display: none;">
+                        <span>Xem tất cả kết quả</span>
+                        <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
             </div>
         </div>
 
@@ -241,7 +241,13 @@
 
             <div id="user-zone" class="d-none align-items-center">
                 
-                <div class="position-relative me-3">
+                <div id="admin-management-zone" class="me-3 d-none">
+                    <a id="btnGoToDashboard" href="/dashboard/Dashboard-teacher.html" class="btn btn-outline-primary btn-sm rounded-pill px-3 fw-bold shadow-sm">
+                        <i class="bi bi-speedometer2 me-1"></i>Trang quản trị
+                    </a>
+                </div>
+                
+                <div class="position-relative me-3" id="my-courses-zone">
                     <button type="button" onclick="AuthHelper.renderMyCourses()" class="btn btn-link text-decoration-none text-dark fw-bold small p-0" id="btnMyCourses">
                         Khóa học của tôi
                     </button>
@@ -249,40 +255,38 @@
                         <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-white">
                             <h6 class="mb-0 fw-bold">Khóa học của tôi</h6>
                              <a href="/my-course/index.html" class="text-primary small text-decoration-none fw-bold">
-                Xem tất cả
-            </a>
+                                Xem tất cả
+                            </a>
                         </div>
                         <div class="popover-content bg-white" id="my-courses-list" style="max-height: 400px; overflow-y: auto;"></div>
                     </div>
                 </div>
 
-<li class="nav-item dropdown list-unstyled">
-    <a class="nav-link" href="#" id="notifDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-        <i class="bi bi-bell fs-4"></i>
-        <span id="notifCount" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none">0</span>
-    </a>
-    <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 p-0" style="width: 380px; max-height: 520px;">
-        <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-light">
-            <h6 class="m-0 fw-bold">Thông báo</h6>
-            <small class="text-primary" onclick="NotificationApp.markAllRead()" style="cursor:pointer">Đánh dấu đã đọc</small>
-        </div>
-        
-        <div id="notifList" style="overflow-y: auto; max-height: 400px;">
-            <div id="notif-empty-placeholder" class="p-4 text-center text-muted">
-                <i class="bi bi-envelope-open d-block fs-1 mb-2"></i>
-                Chưa có thông báo nào
-            </div>
-        </div>
+                <li class="nav-item dropdown list-unstyled me-3">
+                    <a class="nav-link" href="#" id="notifDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-bell fs-4"></i>
+                        <span id="notifCount" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none">0</span>
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 p-0" style="width: 380px; max-height: 520px;">
+                        <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-light">
+                            <h6 class="m-0 fw-bold">Thông báo</h6>
+                            <small class="text-primary" onclick="NotificationApp.markAllRead()" style="cursor:pointer">Đánh dấu đã đọc</small>
+                        </div>
+                        <div id="notifList" style="overflow-y: auto; max-height: 400px;">
+                            <div id="notif-empty-placeholder" class="p-4 text-center text-muted">
+                                <i class="bi bi-envelope-open d-block fs-1 mb-2"></i>
+                                Chưa có thông báo nào
+                            </div>
+                        </div>
+                        <div id="btnLoadMore" class="p-2 border-top text-center" style="display: none;">
+                            <button class="btn btn-sm btn-link text-decoration-none text-primary fw-bold">
+                                Xem thêm thông báo cũ hơn
+                            </button>
+                        </div>
+                    </div>
+                </li>
 
-      <div id="btnLoadMore" class="p-2 border-top text-center" style="display: none;">
-    <button class="btn btn-sm btn-link text-decoration-none text-primary fw-bold" 
-           >
-        Xem thêm thông báo cũ hơn
-    </button>
-</div>
-    </div>
-</li>
-              <div class="dropdown">
+             <div class="dropdown">
     <a class="d-flex align-items-center text-decoration-none dropdown-toggle hide-caret" href="#" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
         <img id="nav-avatar" src="" class="rounded-circle border" style="width:38px; height:38px; object-fit:cover;">
     </a>
@@ -292,30 +296,32 @@
             <div class="d-flex align-items-center">
                 <img id="nav-avatar-inside" src="../assets/img/default-avatar.png" class="rounded-circle border me-2" style="width:45px; height:45px; object-fit:cover;">
                 <div class="overflow-hidden">
-                    <div id="nav-fullname" class="fw-bold text-dark text-truncate" style="font-size: 15px;">Đang tải...</div>
-                    <div class="text-muted small">Học viên tại LMS</div>
-                </div>
+                    <div id="nav-fullname" class="fw-bold text-dark text-truncate" style="font-size: 15px;">Lê Quang Vinh</div>
+                    <div id="nav-role-text" class="text-muted small">Giảng viên tại LMS</div> </div>
             </div>
         </li>
 
+        <li id="menu-dashboard-link">
+            <a class="dropdown-item py-2 mt-2 fw-bold text-primary" href="/dashboard/Dashboard-teacher.html">
+                <i class="bi bi-speedometer2 me-2"></i>Vào trang quản trị
+            </a>
+        </li>
+
         <li>
-            <a class="dropdown-item py-2 mt-2" href="/user/profile.html">
+            <a class="dropdown-item py-2" href="/user/profile.html">
                 <i class="bi bi-person-circle me-2"></i>Trang cá nhân
             </a>
         </li>
-           <li>
-    <a class="dropdown-item py-2 mt-2" href="/my-order/index.html">
-        <i class="bi bi-receipt me-2"></i>Đơn hàng của tôi
-    </a>
-</li>
-<li>
-    <a class="dropdown-item py-2" href="/user/become-instructor.html">
-        <i class="bi bi-mortarboard me-2"></i>Dạy học trên LMS Academy
-    </a>
-</li>
+        
+        <li id="menu-my-orders">
+            <a class="dropdown-item py-2" href="/my-order/index.html">
+                <i class="bi bi-receipt me-2"></i>Đơn hàng của tôi
+            </a>
+        </li>
+
         <li>
             <a class="dropdown-item py-2" href="/user/settings.html">
-                <i class="bi bi-gear me-2"></i>Cài đặt
+                <i class="bi bi-gear me-2"></i>Cài đặt tài khoản
             </a>
         </li>
         
@@ -328,9 +334,6 @@
         </li>
     </ul>
 </div>
-            </div>
-        </div>
-    </div>
 </nav>
 
 <div class="modal fade" id="authChoiceModal" tabindex="-1" aria-hidden="true">

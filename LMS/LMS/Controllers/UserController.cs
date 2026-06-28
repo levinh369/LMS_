@@ -123,7 +123,7 @@ namespace LMS.Controllers
 
 
 
-        [Authorize(Roles = "Admin")] 
+        [Authorize(Roles = "Admin,Teacher")]
         [HttpGet("list-data")]
         public async Task<IActionResult> ListData(
             int page = 1,

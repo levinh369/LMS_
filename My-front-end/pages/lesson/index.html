@@ -108,6 +108,12 @@
 <body>
     <div id="sidebar-placeholder"></div>
 <div class="card shadow-sm mb-4 border-start border-primary border-4" style="border-radius: 15px;">
+<a href="/course/index.html" 
+   id="backLink" 
+   class="btn btn-sm btn-outline-secondary rounded-pill position-absolute" 
+   style="top: 15px; right: 15px; font-size: 12px; z-index: 10;">
+    <i class="bi bi-arrow-left me-1"></i> Quay lại
+</a>
     <div class="card-body p-4">
         <div class="row g-3">
             
@@ -247,9 +253,9 @@
 
             <div class="modal-footer border-0 p-4 pt-0">
                 <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Đóng</button>
-                <button type="submit" class="btn btn-success rounded-pill px-5 fw-bold shadow">
-                    <i class="bi bi-cloud-arrow-up me-1"></i> Lưu tất cả bài học
-                </button>
+                <button type="button" id="btnSaveBulk" onclick="Lesson.saveBulk()" class="btn btn-success rounded-pill px-5 fw-bold shadow">
+    <i class="bi bi-cloud-arrow-up me-1"></i> Lưu tất cả bài học
+</button>
             </div>
         </form>
         
@@ -368,7 +374,6 @@
                                     <label class="form-label fw-bold small text-muted">PROVIDER</label>
                                     <select name="Provider" id="editProvider" class="form-select border-primary-subtle">
                                         <option value="YouTube">YouTube</option>
-                                        <option value="Vimeo">Vimeo</option>
                                         <option value="Bunny">Bunny.net</option>
                                     </select>
                                 </div>
@@ -458,6 +463,7 @@
 <script src="../assets/js/admin-loader.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
 <script src="../assets/js/global-loader.js"></script>
+<script src="../assets/js/common.js"></script>
 </body>
 </html>
 <script>

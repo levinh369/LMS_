@@ -28,6 +28,7 @@
         public int StudentCount { get; set; } // Số người học
         public int LessonCount { get; set; }  // Số bài học
         public string Duration { get; set; }  // Thời lượng (VD: "12h 30p")
+        public int DurationRaw { get; set; }
     }
     public class PagedResultDto<T>
     {

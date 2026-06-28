@@ -60,6 +60,19 @@ var Category = {
     },
 
 loadData: async function(page) {
+    const userInfoRaw = localStorage.getItem("user_info");
+    if (userInfoRaw) {
+        const user = JSON.parse(userInfoRaw);
+        const roleId = parseInt(user.roleId || user.role);
+        
+        if (roleId !== 1) { 
+            window.location.href = "/403.html"; 
+            return; 
+        }
+    } else {
+        window.location.href = "/auth/login.html";
+        return;
+    }
     const pageSize = Category.config.pageSize; 
     const apiUrl = Category.config.apiUrl;
     
@@ -111,9 +124,7 @@ loadData: async function(page) {
         }
     } catch (error) {
         console.error("Lỗi khi lấy dữ liệu:", error);
-    } finally {
-        if (typeof TableLoader !== 'undefined') TableLoader.hide('#category-table-body');
-    }
+    } 
 },
 
     renderTable: function (data) {

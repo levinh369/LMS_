@@ -69,9 +69,19 @@ showLoading: function(isShow) {
     // Xử lý mô tả ngắn (Lead)
     const shortDesc = data.description ? data.description.replace(/<[^>]*>/g, '').substring(0, 160) + "..." : "Khóa học chất lượng cao dành cho bạn.";
     $('#courseLead').text(shortDesc);
+    const userInfoRaw = localStorage.getItem("user_info");
+    const user = userInfoRaw ? JSON.parse(userInfoRaw) : null;
+    const currentUserId = user ? parseInt(user.id || user.userId) : 0;
+    const courseTeacherId = parseInt(data.instructorId); // ID của giảng viên tạo khóa học từ API
+
+    let displayName = data.instructorName || "Giảng viên LMS";
     
-    // Giảng viên (Thêm Avatar nếu có)
-    $('#instructorName').text(data.instructorName || "Giảng viên LMS");
+    // Nếu ID người đăng nhập trùng với ID giảng viên của khóa học
+    if (currentUserId === courseTeacherId && currentUserId !== 0) {
+        displayName += " (Bạn)"; 
+    }
+
+    $('#instructorName').text(displayName);
     if (data.instructorUrl) {
         $('#instructorAvatar').attr('src', data.instructorUrl);
     }
@@ -242,7 +252,7 @@ handlePayment: function (courseId, orderId = 0, teacherId) {
                 
                 // Logic thông minh: Nếu đã mua rồi thì đẩy vào học luôn
                 if (message.includes("đã được đăng ký") || message.includes("đã mua") || message.includes("đã sở hữu")) {
-                    window.location.href = `/learn/index.html?id=${courseId}`;
+                    window.location.href = `/learn/learning.html?id=${courseId}`;
                 } else {
                     Swal.fire('Lỗi thanh toán', message, 'error');
                 }
@@ -397,45 +407,90 @@ renderEnrollButton: async function() {
         }
     },
 
-    // 3. Hàm vẽ giao diện nút (Trạm điều hướng chính)
-    showEnrollButton: function(courseId, isPurchased) {
-        const container = $('#enroll-container');
-        
-        // TRƯỜNG HỢP 1: ĐÃ SỞ HỮU (Mua rồi hoặc Free đã đăng ký)
-        if (isPurchased) {
-            container.html(`
-                <a href="/learn/learning.html?id=${courseId}" 
-                   class="btn btn-success w-100 rounded-pill py-3 fw-bold shadow-sm animate__animated animate__fadeIn">
-                    <i class="bi bi-play-circle-fill me-2"></i> TIẾP TỤC HỌC
+  // 3. Hàm vẽ giao diện nút (Trạm điều hướng chính)
+showEnrollButton: function(courseId, isPurchased) {
+    const container = $('#enroll-container');
+    if (!container.length) return; // Đảm bảo container tồn tại trên DOM
+
+    // 1. Đọc thông tin User đang đăng nhập để phân quyền
+    const userInfoRaw = localStorage.getItem("user_info");
+    const user = userInfoRaw ? JSON.parse(userInfoRaw) : null;
+    const roleId = user ? parseInt(user.roleId || user.role) : 0;
+    const currentUserId = user ? parseInt(user.id || user.userId) : 0;
+
+    // 2. Lấy ID Giảng viên của khóa học
+    const courseTeacherId = parseInt(this.currentTeacherId);
+
+    // Xóa sạch nút sửa Admin cũ (nếu có) trước khi render giao diện mới
+    $('#admin-edit-zone').remove();
+    if (roleId === 1) {
+        container.html(`
+            <a href="/learn/learning.html?id=${courseId}" 
+               class="btn btn-outline-primary w-100 rounded-pill py-3 fw-bold shadow-sm animate__animated animate__fadeIn">
+                <i class="bi bi-eye-fill me-2"></i> XEM NỘI DUNG BÀI HỌC (ADMIN)
+            </a>
+        `);
+
+        container.after(`
+            <div id="admin-edit-zone" class="mt-2">
+                <a href="/course/index.html?id=${courseId}" class="btn btn-warning fw-bold w-100 rounded-pill py-3 shadow-sm animate__animated animate__fadeIn">
+                    <i class="bi bi-pencil-square me-2"></i> SỬA KHÓA HỌC NÀY
                 </a>
-            `);
-            return;
-        }
+            </div>
+        `);
+        return;
+    }
 
-        // TRƯỜNG HỢP 2: CHƯA SỞ HỮU -> Check giá để hiện nút phù hợp
-        const priceText = $('#coursePrice').text().replace(/[^0-9]/g, '');
-        const price = parseInt(priceText) || 0;
+    if (roleId === 3 && currentUserId === courseTeacherId) {
+        container.html(`
+            <a href="/learn/learning.html?id=${courseId}" 
+               class="btn btn-outline-dark w-100 rounded-pill py-3 fw-bold shadow-sm animate__animated animate__fadeIn">
+                <i class="bi bi-person-video3 me-2"></i> XEM DƯỚI TƯ CÁCH HỌC VIÊN
+            </a>
+        `);
+        container.after(`
+            <div id="teacher-edit-zone" class="mt-2">
+                <a href="/course/index.html?id=${courseId}" class="btn btn-info text-white fw-bold w-100 rounded-pill py-3 shadow-sm animate__animated animate__fadeIn">
+                    <i class="bi bi-pencil-square me-2"></i> SỬA KHÓA HỌC NÀY (TEACHER)
+                </a>
+            </div>
+        `);
+        return;
+    }
+    if (isPurchased) {
+        container.html(`
+            <a href="/learn/learning.html?id=${courseId}" 
+               class="btn btn-success w-100 rounded-pill py-3 fw-bold shadow-sm animate__animated animate__fadeIn">
+                <i class="bi bi-play-circle-fill me-2"></i> TIẾP TỤC HỌC
+            </a>
+        `);
+        return;
+    }
 
-        if (price > 0) {
-            // Khóa học mất phí
-            container.html(`
-                <button type="button" 
-                        onclick="Detail.handlePayment(${courseId},0,${this.currentTeacherId})" 
-                        class="btn btn-danger w-100 rounded-pill py-3 fw-bold shadow-sm animate__animated animate__pulse animate__infinite">
-                    <i class="bi bi-cart-check-fill me-2"></i> MUA KHÓA HỌC NGAY
-                </button>
-            `);
-        } else {
-            // Khóa học miễn phí
-            container.html(`
-                <button type="button" 
-                        onclick="Detail.handleEnroll(${this.currentTeacherId})" 
-                        class="btn btn-primary w-100 rounded-pill py-3 fw-bold shadow-sm">
-                    ĐĂNG KÝ HỌC MIỄN PHÍ
-                </button>
-            `);
-        }
-    },
+    // TRƯỜNG HỢP 2: CHƯA SỞ HỮU -> Check giá để hiện nút phù hợp
+    const priceText = $('#coursePrice').text().replace(/[^0-9]/g, '');
+    const price = parseInt(priceText) || 0;
+
+    if (price > 0) {
+        // Khóa học mất phí
+        container.html(`
+            <button type="button" 
+                    onclick="Detail.handlePayment(${courseId},0,${this.currentTeacherId})" 
+                    class="btn btn-danger w-100 rounded-pill py-3 fw-bold shadow-sm animate__animated animate__pulse animate__infinite">
+                <i class="bi bi-cart-check-fill me-2"></i> MUA KHÓA HỌC NGAY
+            </button>
+        `);
+    } else {
+        // Khóa học miễn phí
+        container.html(`
+            <button type="button" 
+                    onclick="Detail.handleEnroll(${this.currentTeacherId})" 
+                    class="btn btn-primary w-100 rounded-pill py-3 fw-bold shadow-sm">
+                ĐĂNG KÝ HỌC MIỄN PHÍ
+            </button>
+        `);
+    }
+},
     checkAndHandleToken: function() {
     const urlParams = new URLSearchParams(window.location.search);
     const tokenFromUrl = urlParams.get('token');

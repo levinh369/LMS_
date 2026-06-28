@@ -135,8 +135,7 @@ namespace LMS.Services
                     if (comment != null && comment.UserId != adminId)
                     {
                         string message = $"📌 <b>{adminName}</b> đã ghim bình luận của bạn lên đầu bài học.";
-                        var courseId = comment.Lesson?.Chapter?.CourseId ?? 0;
-                        string url = $"/learn/learning.html?id={courseId}&lessonId={request.LessonId}#comment-{comment.Id}";
+                        string url = $"/learn/learning.html?id={request.CourseId}&lessonId={request.LessonId}#comment-{comment.Id}";
 
                         await notificationService.SendNotificationAsync(
                             comment.UserId,

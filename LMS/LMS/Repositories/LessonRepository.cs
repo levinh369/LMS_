@@ -223,5 +223,13 @@ namespace LMS.Repositories
             await _context.SaveChangesAsync();
             return true;
         }
+        public string GetBunnyVideoId(int lessonId)
+        {
+            return _context.Lessons
+                .Where(l => l.Id == lessonId && l.Provider == "Bunny")
+                .Select(l => l.VideoId) 
+                .FirstOrDefault();
+        }
+
     }
 }

@@ -43,17 +43,25 @@ namespace LMS.Controllers
             return Ok(result);
         }
         [HttpGet("external-callback")]
-        public async Task<IActionResult> ExternalCallback(string returnUrl = null)
+        public async Task<IActionResult> ExternalCallback()
         {
             var result = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
 
-            // 📍 ĐƯỜNG DẪN CHUẨN: Xóa hoàn toàn chữ /pages cho đúng cấu trúc Frontend Vercel của bác
-            string defaultVercelUrl = "https://lms-azure-mu.vercel.app/auth/login-success.html";
+            // 📍 1. Bốc cái returnUrl từ Properties ra trước để biết Frontend đang gọi từ đâu (Local hay Deploy)
+            string returnUrl = null;
+            if (result != null && result.Properties != null && result.Properties.Items.ContainsKey("TunnedReturnUrl"))
+            {
+                returnUrl = result.Properties.Items["TunnedReturnUrl"];
+            }
 
+            // 📍 SỬA LẠI: Dùng Request.Host.Value cho cả hai vế để tránh lỗi CS1061
+            string defaultFrontendUrl = Request.Host.Value.Contains("localhost") || Request.Host.Value.Contains("127.0.0.1")
+                ? "http://127.0.0.1:5500/pages/auth/login-success.html" // Link Front local của bác
+                : "https://lms-azure-mu.vercel.app/auth/login-success.html"; // Link Front deploy
             if (!result.Succeeded)
             {
-                // Điều hướng về trang login kèm thông báo lỗi nếu xác thực thất bại
-                return Redirect("https://lms-azure-mu.vercel.app/auth/login.html?error=external_auth_failed");
+                string errorUrl = defaultFrontendUrl.Replace("login-success.html", "login.html?error=external_auth_failed");
+                return Redirect(errorUrl);
             }
 
             var provider = result.Properties.Items[".AuthScheme"] ?? "Unknown";
@@ -68,13 +76,13 @@ namespace LMS.Controllers
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
 
             // --- LOGIC ĐIỀU HƯỚNG ---
-            var finalBaseUrl = string.IsNullOrEmpty(returnUrl) ? defaultVercelUrl : returnUrl;
+            var finalBaseUrl = string.IsNullOrEmpty(returnUrl) ? defaultFrontendUrl : returnUrl;
 
             // Tự động dọn sạch chữ /pages nếu phía Frontend truyền lên sót link cũ
-            if (finalBaseUrl.Contains("/pages/auth/"))
-            {
-                finalBaseUrl = finalBaseUrl.Replace("/pages/auth/", "/auth/");
-            }
+            //if (finalBaseUrl.Contains("/pages/auth/"))
+            //{
+            //    finalBaseUrl = finalBaseUrl.Replace("/pages/auth/", "/auth/");
+            //}
 
             string separator = finalBaseUrl.Contains("?") ? "&" : "?";
 
@@ -90,6 +98,7 @@ namespace LMS.Controllers
 
             return Redirect(finalRedirectUrl);
         }
+
         [AllowAnonymous]
         [HttpGet("external-login")]
         public IActionResult ExternalLogin(string provider, string returnUrl = null)
@@ -99,10 +108,16 @@ namespace LMS.Controllers
                 return BadRequest("Provider không được để trống.");
             }
 
-            // Gửi kèm returnUrl vào tham số của ExternalCallback
-            var redirectUrl = Url.Action("ExternalCallback", "Auth", new { returnUrl });
+            // Đường dẫn tĩnh sạch sẽ gửi cho Google
+            var redirectUrl = Url.Action("ExternalCallback", "Auth");
 
             var properties = new AuthenticationProperties { RedirectUri = redirectUrl };
+
+            // Giấu returnUrl vào ví bảo mật Properties
+            if (!string.IsNullOrEmpty(returnUrl))
+            {
+                properties.Items["TunnedReturnUrl"] = returnUrl;
+            }
 
             return Challenge(properties, provider);
         }

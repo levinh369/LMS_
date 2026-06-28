@@ -26,7 +26,7 @@ namespace LMS.Services
         {
             var response = new TeacherDashboardResponseDTO();
 
-            // SỬA LẠI TẠI ĐÂY: Kéo cả Tên và Số dư ví (WalletBalance) trong 1 lần gọi DB
+            // Kéo cả Tên và Số dư ví trong 1 lần gọi DB để tối ưu hệ thống
             var teacherInfo = await _context.Users
                 .Where(u => u.Id == teacherId)
                 .Select(u => new { u.FullName, u.WalletBalance })
@@ -39,83 +39,90 @@ namespace LMS.Services
             DateTime start = startDate ?? end.AddDays(-6);
             var endDateTime = end.AddDays(1).AddTicks(-1);
 
-            // 2. LẤY CÂU LỆNH CHỜ (IQUERYABLE) TỪ REPOSITORY
+            // Khởi tạo các mảng danh sách trống tránh lỗi Client-side đọc thuộc tính null
+            response.ChartLabels = new List<string>();
+            response.WeeklyRevenue = new List<decimal>();
+            response.CoursePerformances = new List<CoursePerformanceDTO>();
+            response.RecentTransactions = new List<RecentTransactionDTO>();
+
+            // 2. LẤY CÂU LỆNH CHỜ TỪ REPOSITORY
             var lifetimeQuery = _repo.GetEnrollmentsQuery()
                 .Where(e => e.Course.TeacherId == teacherId);
 
             var periodQuery = _repo.GetEnrollmentsQueryByDate(start, endDateTime)
                 .Where(e => e.Course.TeacherId == teacherId);
 
+            decimal lifetimeGross = 0;
             bool hasAnyEnrollment = await lifetimeQuery.AnyAsync();
-            if (!hasAnyEnrollment)
+            if (hasAnyEnrollment)
             {
-                response.RevenueChangeText = $"Báo cáo từ {start:dd/MM/yyyy} đến {end:dd/MM/yyyy} (Chưa có dữ liệu)";
-                // Vẫn phải trả về số dư ví kể cả khi chưa có học viên nào mua
-                response.AvailableBalance = teacherInfo?.WalletBalance ?? 0m;
-                return response;
+                lifetimeGross = await lifetimeQuery.SumAsync(e => e.Course.Price);
             }
 
-            // 3. TÍNH TOÁN DOANH THU ĐẨY THẲNG XUỐNG SQL SERVER
-            decimal lifetimeGross = await lifetimeQuery.SumAsync(e => e.Course.Price);
-            decimal totalGrossInPeriod = await periodQuery.SumAsync(e => e.Course.Price);
-
             // ==========================================================
-            // 4. THUẬT TOÁN XỬ LÝ HẠNG THÀNH VIÊN ĐỘNG TỪ DATABASE (MỚI)
+            // 3. THUẬT TOÁN XỬ LÝ HẠNG THÀNH VIÊN ĐỘNG TỪ DB (BỎ FIX CỨNG)
             // ==========================================================
             var activeRanks = await _context.Ranks
                 .Where(r => r.IsActive == true && r.IsDeleted == false)
                 .OrderBy(r => r.RequiredRevenue)
                 .ToListAsync();
 
+            // Nếu giảng viên mới tinh (doanh thu = 0), mặc định lấy phần tử đầu tiên (Hạng Đồng)
             var currentRank = activeRanks.LastOrDefault(r => lifetimeGross >= r.RequiredRevenue)
                               ?? activeRanks.FirstOrDefault();
 
+            // Tìm rank kế tiếp (Hạng Bạc nếu doanh thu hiện tại bằng 0)
             var nextRank = activeRanks.FirstOrDefault(r => r.RequiredRevenue > lifetimeGross);
 
-            decimal commissionRate = currentRank?.DefaultRate ?? 70;
-            string rankName = currentRank?.RankName ?? "HẠNG ĐỒNG";
+            // Lấy tỷ lệ hoa hồng trực tiếp từ cột DefaultRate trong DB của Rank hiện tại
+            decimal commissionRate = currentRank != null ? currentRank.DefaultRate : 0;
+            string rankName = currentRank?.RankName ?? "Đồng";
             string rankTitle = currentRank?.RankName ?? "Bronze Member";
 
-            decimal targetRevenue = nextRank?.RequiredRevenue ?? lifetimeGross;
+            // Lấy mốc doanh thu yêu cầu của rank tiếp theo. Nếu rỗng (đạt max rank) hoặc DB chưa đồng bộ thì fallback 25 triệu
+            decimal targetRevenue = nextRank?.RequiredRevenue
+                                   ?? (activeRanks.Count > 1 ? activeRanks[1].RequiredRevenue : 25000000);
+
             string nextRankName = nextRank != null ? nextRank.RankName : "BẬC THẦY 👑";
 
             response.RankName = rankName;
             response.RankTitle = rankTitle;
             response.CommissionRate = commissionRate;
             response.CurrentRevenueForRank = lifetimeGross;
-            response.TargetRevenueForRank = targetRevenue;
+            response.TargetRevenueForRank = targetRevenue; // Trả về chuẩn mốc 25.000.000đ của Bạc
             response.NextRankName = nextRankName;
+            response.AvailableBalance = teacherInfo?.WalletBalance ?? 0m;
+
+            // CHẶN SỚM AN TOÀN: Nếu chưa có ai đăng ký học, trả về luôn DTO đã có đầy đủ thông tin Rank nền
+            if (!hasAnyEnrollment)
+            {
+                response.RevenueChangeText = $"Báo cáo từ {start:dd/MM/yyyy} đến {end:dd/MM/yyyy} (Chưa có dữ liệu)";
+                return response;
+            }
 
             // ==========================================================
-            // 5. PHÂN BỔ CÁC THỂ SỐ LIỆU TÀI CHÍNH THEO KỲ BÁO CÁO (ĐỘNG)
+            // 4. TIẾP TỤC XỬ LÝ SỐ LIỆU THEO KỲ BÁO CÁO (KHI ĐA CÓ DATA)
             // ==========================================================
+            decimal totalGrossInPeriod = await periodQuery.SumAsync(e => e.Course.Price);
+
             response.TotalGrossRevenue = totalGrossInPeriod;
             response.PlatformFee = totalGrossInPeriod * ((100 - commissionRate) / 100);
             response.NetRevenue = totalGrossInPeriod * (commissionRate / 100);
-
-            // FIX TẠI ĐÂY: Gán cố định bằng số dư ví thực tế lấy từ DB ở đầu hàm
-            response.AvailableBalance = teacherInfo?.WalletBalance ?? 0m;
-
             response.RevenueChangeText = $"Báo cáo từ {start:dd/MM/yyyy} đến {end:dd/MM/yyyy}";
 
-            // 6. XỬ LÝ TRỤC NGÀY ĐỘNG CHO BIỂU ĐỒ CỘT (BAR CHART)
+            // 5. XỬ LÝ BIỂU ĐỒ CỘT (BAR CHART)
             var revenueByDay = await periodQuery
                 .GroupBy(e => e.CreatedAt.Date)
                 .Select(g => new { Day = g.Key, Total = g.Sum(e => e.Course.Price) })
                 .ToDictionaryAsync(x => x.Day, x => x.Total);
 
-            var chartLabels = new List<string>();
-            var chartData = new List<decimal>();
-
             for (var date = start.Date; date <= end.Date; date = date.AddDays(1))
             {
-                chartLabels.Add(date.ToString("dd/MM"));
-                chartData.Add(revenueByDay.TryGetValue(date, out decimal dayTotal) ? dayTotal : 0);
+                response.ChartLabels.Add(date.ToString("dd/MM"));
+                response.WeeklyRevenue.Add(revenueByDay.TryGetValue(date, out decimal dayTotal) ? dayTotal : 0);
             }
-            response.ChartLabels = chartLabels;
-            response.WeeklyRevenue = chartData;
 
-            // 7. THỐNG KÊ TIẾN ĐỘ HỌC TẬP (DONUT CHART)
+            // 6. THỐNG KÊ TIẾN ĐỘ HỌC TẬP (DONUT CHART)
             response.TotalStudentsCount = await lifetimeQuery.CountAsync();
             int completedCount = await lifetimeQuery.CountAsync(e => e.ProgressPercent == 100);
             int learningCount = await lifetimeQuery.CountAsync(e => e.ProgressPercent > 0 && e.ProgressPercent < 100);
@@ -125,7 +132,7 @@ namespace LMS.Services
             response.LearningPercentage = response.TotalStudentsCount > 0 ? (learningCount * 100 / response.TotalStudentsCount) : 0;
             response.NotStartedPercentage = response.TotalStudentsCount > 0 ? (notStartedCount * 100 / response.TotalStudentsCount) : 0;
 
-            // 8. ĐỔ DỮ LIỆU HIỆU SUẤT TỪNG KHÓA HỌC (ĂN THEO HOA HỒNG ĐỘNG)
+            // 7. ĐỔ DỮ LIỆU HIỆU SUẤT TỪNG KHÓA HỌC
             response.CoursePerformances = await periodQuery
                 .GroupBy(e => e.CourseId)
                 .Select(g => new CoursePerformanceDTO
@@ -138,7 +145,7 @@ namespace LMS.Services
                 })
                 .ToListAsync();
 
-            // 9. DANH SÁCH GIAO DỊCH GẦN NHẤT (ĂN THEO HOA HỒNG ĐỘNG)
+            // 8. DANH SÁCH GIAO DỊCH GẦN NHẤT
             response.RecentTransactions = await periodQuery
                 .OrderByDescending(e => e.CreatedAt)
                 .Take(3)
@@ -152,6 +159,7 @@ namespace LMS.Services
 
             return response;
         }
+
         public async Task<List<object>> GetOnlineStudentsAsync(int teacherId, List<string> onlineUserIds, string? keySearch = null)
         {
             // 1. Gọi Repo lấy câu lệnh Query chờ dưới dạng IQueryable (Giữ nguyên)

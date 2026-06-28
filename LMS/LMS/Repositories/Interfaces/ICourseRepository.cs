@@ -25,7 +25,8 @@ namespace LMS.Repositories.Interfaces
         Task<CourseModel?> GetByLessonId(int lessonId);
         Task<int> UpdateDeleteStatusBulkAsync(List<int> ids, bool isDeleted, string role, int userId);
         Task<int> HardDeleteBulkAsync(List<int> ids, string role, int userId);
-        Task<(List<CourseModel> Data, int Total)> GetPublicCoursesAsync(CourseSearchRequestDTO filter);
+        Task<(List<CourseSearchResultItemDto> Data, int Total)> GetPublicCoursesAsync(CourseSearchRequestDTO filter);
+        Task<bool> CheckUserEnrollmentAsync(int courseId, int userId);
     }
 
 }

@@ -5,10 +5,16 @@ let currentLessonId = 0;
 let currentTeacherId = null;
 let currentCommentReactions=[];
 var bunnyPlayer = null;
-isCommentLoaded: false,
+let isCommentLoaded = false;
 function onYouTubeIframeAPIReady() {
     console.log("YouTube API: Đã sẵn sàng");
     isApiReady = true;
+    player = new YT.Player('youtube-iframe-id', {
+        events: {
+            
+            'onStateChange': onPlayerStateChange // 🚩 MÓC SỰ KIỆN Ở ĐÂY NÀY
+        }
+    });
 }
 const Toast = Swal.mixin({
     toast: true,
@@ -26,11 +32,25 @@ function onPlayerStateChange(event) {
     const activeId = Learn.currentLessonId; 
 
     if (event.data == YT.PlayerState.ENDED) {
-        console.log("Video kết thúc!");
+        console.log("Video YouTube kết thúc! Tiến hành chuyển bài...");
         Learn.stopHeartbeat(); 
         if (activeId) {
             Learn.sendProgressToBackend(activeId, 0); 
             Learn.markAsCompleted(activeId);
+            
+            // 🚩 THÊM TỰ ĐỘNG CHUYỂN BÀI CHO YOUTUBE Ở ĐÂY
+            // Gọi hàm nhảy bài đồng bộ với bên Bunny
+            if (typeof Learn.nextLesson === 'function') {
+                Learn.nextLesson();
+            } else if (typeof Learn.playNext === 'function') {
+                Learn.playNext();
+            } else {
+                // Nếu chưa có hàm, click giả lập vào nút "Bài tiếp theo" trên UI
+                const nextBtn = $('.btn-next-lesson, #nextLessonBtn');
+                if (nextBtn.length > 0) {
+                    nextBtn.click();
+                }
+            }
         }
     }
     else if (event.data == YT.PlayerState.PLAYING) {
@@ -40,10 +60,10 @@ function onPlayerStateChange(event) {
         }
     }
     else {
+        // Tạm dừng (PAUSED) hoặc Buffering thì dừng heartbeat
         Learn.stopHeartbeat();
     }
 }
-
 
 var Learn = {
     commentState: {
@@ -67,31 +87,47 @@ var Learn = {
     }
     
     $(document).on('shown.bs.tab', '#comment-tab', async function (e) {
-        const activeLessonId = $('.lesson-item.active').attr('data-id') || lessonIdFromUrl;
+    const activeLessonId = Learn.currentLessonId;
+
+    if (!activeLessonId) return; // Phòng hờ khóa học trống, không có bài nào
+
+    // Thêm điều kiện kiểm tra xem ID bình luận hiện tại có khớp với bài đang học không
+    // (Tránh lỗi user chuyển bài liên tục nhưng comment chưa kịp update)
+    if (!Learn.isCommentLoaded || Learn.commentState.lessonId !== activeLessonId) {
+        Learn.commentState.lessonId = activeLessonId;
+        Learn.commentState.page = 1;
+        Learn.commentState.hasMore = true;
+        Learn.commentState.isLoading = false;
         
-        // SỬA HẾT 'self' THÀNH 'Learn' Ở ĐÂY ĐỂ TRÁNH LỖI UNDEFINED
-        if (activeLessonId && !Learn.isCommentLoaded) {
-            Learn.commentState.lessonId = activeLessonId;
-            Learn.commentState.page = 1;
-            Learn.commentState.hasMore = true;
-            Learn.commentState.isLoading = false;
-            
-            Learn.initCommentEvents();
-            
-            // Đợi API tải xong data
-            await Learn.loadParentComments(false);
-            Learn.isCommentLoaded = true;
+        Learn.initCommentEvents();
+        
+        // Đợi API tải xong data
+        await Learn.loadParentComments(false);
+        Learn.isCommentLoaded = true;
 
-            // Tải xong rồi thì gọi hàm cuộn
-            Learn.scrollToHashComment();
-        } else {
-            // Nếu data đã load từ trước rồi (user chỉ bấm chuyển tab qua lại)
-            Learn.scrollToHashComment();
+        // Tải xong rồi thì gọi hàm cuộn
+        Learn.scrollToHashComment();
+    } else {
+        // Nếu data đã load từ trước và đúng bài đó rồi
+        Learn.scrollToHashComment();
+    }
+});
+    const userInfoRaw = localStorage.getItem("user_info");
+    let avatarUrl = '../assets/img/default-avatar.png'; // Mặc định nếu chưa đăng nhập hoặc không có ảnh
+
+    if (userInfoRaw) {
+        try {
+            const user = JSON.parse(userInfoRaw);
+            // 2. Lấy thuộc tính avatar (phòng hờ chuỗi 'null' hoặc rỗng)
+            if (user.avatar && user.avatar !== 'null') {
+                avatarUrl = user.avatar;
+            }
+        } catch (e) {
+            console.error("Lỗi parse user_info để lấy avatar:", e);
         }
-    });
+    }
 
-    // Load Avatar
-    const avatarUrl = localStorage.getItem("user_avatar") || '../assets/img/default-avatar.png';
+    // 3. Đổ ảnh lên UI
     $('#imgUser').attr('src', avatarUrl);
 
     // --- TRƯỜNG HỢP: ĐIỀU HƯỚNG TỪ THÔNG BÁO ---
@@ -168,6 +204,7 @@ loadCourseContent: async function(courseId) {
             const completed = data.completedLessons || 0;
             const total = data.totalLessons || 0;
             $('#completionStatus').text(`${completed}/${total} bài học`);
+            Learn.lessonsCache = {};
             
             data.chapters.forEach(chapter => {
                 chapter.lessons.forEach(lesson => {
@@ -182,20 +219,60 @@ loadCourseContent: async function(courseId) {
             const urlParams = new URLSearchParams(window.location.search);
             const lessonIdFromUrl = urlParams.get('lessonId');
 
-            // Nếu có lessonId trên thanh địa chỉ, bắt buộc mở bài đó (Trường hợp từ thông báo)
             if (lessonIdFromUrl && Learn.lessonsCache[lessonIdFromUrl]) {
                 console.log("Hệ thống: Phát hiện link chia sẻ/thông báo, mở bài ID:", lessonIdFromUrl);
                 this.changeVideo(parseInt(lessonIdFromUrl));
             } 
-            // Nếu vào trang bình thường (không có tham số lessonId), thì mới check tiến độ cũ
             else {
                 console.log("Đang kiểm tra tiến độ để học tiếp...");
                 this.checkResumeProgress(courseId); 
             }
-            
         }
     } catch (error) { 
         console.error("Lỗi khi tải nội dung khóa học:", error); 
+        
+        // 📍 BẮT TRẠNG THÁI HTTP STATUS CODE TỪ SERVER TRẢ VỀ
+        const status = error.status;
+
+        if (status === 403) {
+            Swal.fire({
+                icon: 'badge-check', // Hoặc dùng 'error', 'warning'
+                title: 'Truy cập bị từ chối!',
+                text: 'Bạn chưa mua hoặc không có quyền sở hữu khóa học này bác ơi.',
+                confirmButtonText: 'Quay lại trang chi tiết',
+                confirmButtonColor: '#dc3545',
+                allowOutsideClick: false // Ép người dùng không được bấm ra ngoài tắt thông báo
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = `/course-detail.html?id=${courseId}`;
+                }
+            });
+            return;
+        }
+
+        if (status === 401) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Phiên làm việc hết hạn',
+                text: 'Vui lòng đăng nhập lại để tiếp tục học tập nhé.',
+                confirmButtonText: 'Đăng nhập ngay',
+                confirmButtonColor: '#0d6efd',
+                allowOutsideClick: false
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = "/auth/login.html";
+                }
+            });
+            return;
+        }
+
+        // Trường hợp lỗi server/mạng thông thường khác
+        Swal.fire({
+            icon: 'error',
+            title: 'Có lỗi xảy ra',
+            text: 'Hệ thống gặp sự cố khi tải bài học. Vui lòng thử lại sau!',
+            confirmButtonColor: '#6c757d'
+        });
     }
 },
 updateHeaderProgress: function(completed, total) {
@@ -209,110 +286,181 @@ updateHeaderProgress: function(completed, total) {
     $('#completionStatus').text(`${completed}/${total} bài học`);
 },
 changeVideo: async function(newLessonId) {
-    console.log("Đang chuyển sang bài học:", newLessonId);
-    this.isCommentLoaded = false;
-    
-    // 1. CHỐT HẠ BÀI CŨ (Bọc trong try catch để tránh treo hàm)
-    if (currentLessonId !== 0 && currentLessonId !== newLessonId) {
-        try {
-            let lastTime = 0;
-            const oldLesson = Learn.lessonsCache[currentLessonId];
+        console.log("Đang chuyển sang bài học:", newLessonId);
+        isCommentLoaded = false;
+        
+        // BƯỚC 1: CHỐT HẠ BÀI CŨ TRƯỚC KHI CHUYỂN
+        if (currentLessonId !== 0 && currentLessonId !== newLessonId) {
+            try {
+                let lastTime = 0;
+                const oldLesson = Learn.lessonsCache[currentLessonId] || {};
 
-            if (oldLesson.provider === "Bunny") {
-                // Nếu Bunny dùng cách "Tự đếm" của anh em mình thì lấy biến global
-                lastTime = window.currentBunnySeconds || 0; 
-            } 
-            else if (player && typeof player.getCurrentTime === 'function') {
-                lastTime = Math.floor(player.getCurrentTime() || 0);
-            }
+                if (oldLesson.provider === "Bunny") {
+                    lastTime = window.currentBunnySeconds || 0; 
+                } else if (window.player && typeof window.player.getCurrentTime === 'function') {
+                    // Dùng window.player để đồng bộ biến
+                    lastTime = Math.floor(window.player.getCurrentTime() || 0);
+                }
 
-            // Lưu nhanh vào Backend
-            if (lastTime >= 20) {
-                Learn.sendProgressToBackend(currentLessonId, lastTime);
+                if (lastTime >= 20) {
+                    Learn.sendProgressToBackend(currentLessonId, lastTime);
+                }
+            } catch (err) {
+                console.error("Lỗi khi chốt bài cũ, vẫn tiếp tục mở bài mới:", err);
             }
-        } catch (err) {
-            console.error("Lỗi khi chốt bài cũ, vẫn tiếp tục mở bài mới:", err);
         }
-    }
 
-    // 2. CẬP NHẬT ID MỚI NGAY LẬP TỨC
-    this.currentLessonId = newLessonId; // Gán luôn ở đây cho chắc ăn!
+        // BƯỚC 2: CẬP NHẬT ID MỚI XUYÊN SUỐT
+        currentLessonId = newLessonId;
+        this.currentLessonId = newLessonId; 
 
-    // 3. CHUẨN BỊ MỞ BÀI MỚI
-    const newLesson = Learn.lessonsCache[newLessonId];
-    if (!newLesson) return;
+        const newLesson = Learn.lessonsCache[newLessonId];
+        if (!newLesson) return;
 
-    Learn.stopHeartbeat();
-    const startTime = newLesson.watchedLastTime || 0;
+        Learn.stopHeartbeat();
+        const startTime = newLesson.watchedLastTime || 0;
 
-    // 4. LOAD VIDEO
-    if (newLesson.provider === "Bunny") {
-        this.renderBunny(newLesson.videoId.trim(), startTime);
-    } else {
-        this.renderYouTube(newLesson.videoId.trim(), startTime);
-    }
-
-    // 5. CẬP NHẬT UI
-    $('#currentLessonTitle').text(newLesson.title);
-    $('.lesson-item').removeClass('active');
-    $(`#lesson-${newLessonId}`).addClass('active');
-    if ($('#comment-tab').hasClass('active')) {
-        $('#comment-tab').trigger('shown.bs.tab');
-    } else {
-        // Nếu đang ở Tab Tổng quan, thì xóa data cũ đi cho sạch UI chờ lần bấm mở tab tiếp theo
-        $('#commentList').empty(); 
-    }
-},
-renderYouTube: function(videoId, startTime) {
-    
-    // Ẩn/Hiện Iframe hoặc xử lý logic switch player nếu cần
-    if (player && typeof player.loadVideoById === 'function') {
-        player.loadVideoById({ videoId: videoId, startSeconds: startTime });
-    } else {
-        player = new YT.Player('mainVideoFrame', {
-            videoId: videoId,
-            playerVars: { 'autoplay': 1, 'start': startTime, 'enablejsapi': 1 },
-            events: { 'onStateChange': onPlayerStateChange }
-        });
-    }
-},
-renderBunny: function(videoId, startTime) {
-    const LIBRARY_ID = '635360'; 
-    const bunnyUrl = `https://iframe.mediadelivery.net/embed/${LIBRARY_ID}/${videoId}?autoplay=true&start=${startTime}`;
-    
-    // 1. Render Iframe
-    const container = document.getElementById('mainVideoFrame').parentElement;
-    container.style.position = "relative"; // Đảm bảo container có relative để overlay đè đúng chỗ
-    container.innerHTML = `<iframe id="bunnyVideoPlayer" src="${bunnyUrl}" style="border: none; position: absolute; top: 0; height: 100%; width: 100%;" allow="autoplay; fullscreen"></iframe>`;
-
-    // 2. Tạo biến đếm và trạng thái
-    window.currentBunnySeconds = parseInt(startTime) || 0;
-    window.isWatching = true; 
-
-    // 3. Tạo Overlay "thông minh"
-    const overlay = document.createElement('div');
-    overlay.style = "position:absolute; top:0; left:0; width:100%; height:85%; z-index:10; cursor:pointer; background: rgba(0,0,0,0);";
-    container.appendChild(overlay);
-
-    overlay.onclick = function() {
-        const iframe = document.getElementById('bunnyVideoPlayer');
-        window.isWatching = !window.isWatching;
-
-        if (window.isWatching) {
-            console.log("🔥 Play -> Chạy lưu 20s");
-            // Gửi lệnh Play vào video
-            iframe.contentWindow.postMessage({ method: 'play' }, "*");
-            Learn.startHeartbeat(currentLessonId, 'bunny');
+        // BƯỚC 3: LOAD VIDEO TƯƠNG ỨNG
+        if (newLesson.provider === "Bunny") {
+            this.renderBunny(newLesson.videoId.trim(), startTime);
         } else {
-            console.log("🛑 Pause -> Dừng lưu");
-            // Gửi lệnh Pause vào video
-            iframe.contentWindow.postMessage({ method: 'pause' }, "*");
-            Learn.stopHeartbeat();
+            this.renderYouTube(newLesson.videoId.trim(), startTime);
         }
-    };
 
-    // Tự động chạy heartbeat lần đầu vì có autoplay=true
-    Learn.startHeartbeat(currentLessonId, 'bunny');
+        // BƯỚC 4: RENDER GIAO DIỆN UI
+        $('#currentLessonTitle').text(newLesson.title);
+        $('.lesson-item').removeClass('active');
+        $(`#lesson-${newLessonId}`).addClass('active');
+        
+        if ($('#comment-tab').hasClass('active')) {
+            $('#comment-tab').trigger('shown.bs.tab');
+        } else {
+            $('#commentList').empty(); 
+        }
+    },
+
+    // --- HÀM 3: RENDER YOUTUBE ---
+    renderYouTube: function(videoId, startTime) {
+        let container = document.getElementById('bunnyVideoPlayer')?.parentElement 
+                     || document.getElementById('mainVideoFrame')?.parentElement
+                     || document.querySelector('.video-container') 
+                     || document.querySelector('.video-player-box');
+
+        if (!container) return console.error("❌ Không tìm thấy khung chứa video!");
+
+        // Dọn dẹp tàn dư cũ để tránh kẹt iframe
+        if (window.player && typeof window.player.destroy === 'function') {
+            try { window.player.destroy(); } catch(e){}
+        }
+
+        // Đổ thẻ HTML sạch vào
+        container.innerHTML = `<div id="mainVideoFrame" style="width: 100%; height: 100%;"></div>`;
+
+        // Khởi tạo YT API gắn vào thẻ div vừa tạo
+        window.player = new YT.Player('mainVideoFrame', {
+            width: '100%',
+            height: '100%',
+            videoId: videoId,
+            playerVars: { 
+                'autoplay': 1, 
+                'start': startTime, 
+                'enablejsapi': 1, // <== Chìa khóa vàng
+                'origin': window.location.origin,
+                'rel': 0
+            },
+            events: { 
+                'onStateChange': typeof onPlayerStateChange !== 'undefined' ? onPlayerStateChange : null 
+            }
+        });
+    },
+
+renderBunny: function(videoId, startTime) {
+    // 1. TÌM HOẶC KHÔI PHỤC CONTAINER AN TOÀN
+    let container = document.getElementById('bunnyVideoPlayer')?.parentElement 
+                 || document.getElementById('mainVideoFrame')?.parentElement
+                 || document.querySelector('.video-container') 
+                 || document.querySelector('.video-player-box');
+
+    if (!container) {
+        console.error("❌ Không tìm thấy khung chứa video!");
+        return;
+    }
+
+    const activeLessonId = Learn.currentLessonId;
+
+    // 2. GỌI API BACKEND LẤY LINK TOKEN
+    fetch(`https://lms-u2jn.onrender.com/api/Lesson/${activeLessonId}/secure-video-url`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
+        }
+    })
+    .then(response => {
+        if (!response.ok) throw new Error(`Lỗi API Backend: Status ${response.status}`);
+        return response.json();
+    })
+    .then(data => {
+        if (!data.secureUrl) {
+            console.error("❌ Không lấy được secureUrl từ Backend!");
+            return;
+        }
+
+        const finalSecureUrl = `${data.secureUrl}&autoplay=true&start=${startTime}`;
+
+        // 3. RENDER IFRAME (Dùng CSS chuẩn chỉnh để co giãn theo khung cha)
+        container.style.position = "relative"; 
+        container.innerHTML = `<iframe id="bunnyVideoPlayer" src="${finalSecureUrl}" style="border: none; width: 100%; height: 100%; min-height: 450px;" allow="autoplay; fullscreen" referrerpolicy="origin"></iframe>`;
+
+        // 4. BẬT TRẠNG THÁI & LẮNG NGHE SỰ KIỆN
+        window.currentBunnySeconds = parseInt(startTime) || 0;
+        window.isWatching = true; 
+
+        if (!window.hasBunnyListener) {
+            window.addEventListener("message", function(event) {
+                // 🎯 FIX CHÍ MẠNG: Bỏ qua check cứng "iframe.mediadelivery.net" 
+                // Vì khi chạy link Secure Token, origin sẽ là tên miền mã hóa riêng của video.
+                // Chỉ cần kiểm tra dữ liệu có chứa thuộc tính của Bunny Player là được.
+                
+                try {
+                    const bunnyData = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+                    
+                    // Kiểm tra xem có đúng cấu trúc event của Bunny không
+                    if (!bunnyData || (!bunnyData.event && !bunnyData.eventName)) return;
+                    const eventName = bunnyData.event || bunnyData.eventName;
+
+                    if (eventName === "play") {
+                        window.isWatching = true;
+                        Learn.startHeartbeat(activeLessonId, 'bunny');
+                    } 
+                    else if (eventName === "pause") {
+                        window.isWatching = false;
+                        Learn.stopHeartbeat();
+                    }
+                    else if (eventName === "ended") {
+                        window.isWatching = false;
+                        Learn.stopHeartbeat();
+                        // 🔥 TỰ ĐỘNG CHUYỂN BÀI KHI HẾT VIDEO:
+                        // Bác gọi hàm chuyển bài tiếp theo của bác ở đây, ví dụ:
+                        if (typeof Learn.nextLesson === 'function') {
+                            Learn.nextLesson();
+                        } else {
+                            console.log("Video Bunny đã hết! Bác hãy gọi hàm chuyển bài tiếp theo ở đây.");
+                        }
+                    }
+                } catch (e) {}
+            });
+            window.hasBunnyListener = true;
+        }
+
+        // Chạy heartbeat phát đầu
+        Learn.startHeartbeat(activeLessonId, 'bunny');
+    })
+    .catch(err => {
+        console.error("❌ Lỗi luồng bảo mật Token:", err);
+        if (typeof Toast !== 'undefined') {
+            Toast.fire({ icon: 'error', title: 'Không thể tải link video bảo mật!' });
+        }
+    });
 },
     renderChapters: function(chapters) {
         let html = "";
@@ -357,17 +505,26 @@ renderBunny: function(videoId, startTime) {
         $('#chapterAccordion').html(html);
     },
 markAsCompleted: async function(lessonId) {
-    const token = localStorage.getItem("jwt_token");
+   const token = localStorage.getItem("jwt_token");
     try {
-        // 1. TÌM BÀI TIẾP THEO (Giữ nguyên logic của bác)
+        // 1. TÌM BÀI TIẾP THEO HỢP LỆ (Tự động nhảy cóc qua các bài bị khóa)
         const allLessons = $('.lesson-item'); 
         const currentIndex = allLessons.index($(`#lesson-${lessonId}`));
         let nextLessonId = null;
-        if (currentIndex !== -1 && currentIndex < allLessons.length - 1) {
-            const nextElement = allLessons.eq(currentIndex + 1);
-            nextLessonId = parseInt(nextElement.attr('id').replace('lesson-', ''));
-        }
 
+        if (currentIndex !== -1) {
+            // Quét từ vị trí kế tiếp cho đến hết danh sách
+            for (let i = currentIndex + 1; i < allLessons.length; i++) {
+                const tempElement = allLessons.eq(i);
+                const tempId = parseInt(tempElement.attr('id').replace('lesson-', ''));
+                
+                // 🎯 ĐIỀU KIỆN CHỐT: Bài học phải tồn tại trong cache (không bị khóa/xóa)
+                if (Learn.lessonsCache[tempId]) {
+                    nextLessonId = tempId;
+                    break; // Tìm thấy bài ngon rồi thì dừng vòng lặp luôn!
+                }
+            }
+        }
         // 2. GỌI API BÁO HOÀN THÀNH
         const response = await $.ajax({
             url: `${Learn.config.apiUrl}/complete-lesson/${lessonId}`,
@@ -443,11 +600,8 @@ startHeartbeat: function(lessonId, type = 'youtube') {
         } 
         else if (type === 'bunny') {
     window.currentBunnySeconds += 20; 
-    
+    debugger
     let currentTime = window.currentBunnySeconds;
-    console.log(`[Lưu Bunny - Manual] Đang lưu: ${currentTime}s`);
-    
-    // Gọi API lưu của bác
     Learn.sendProgressToBackend(lessonId, currentTime);
 }
     }, 20000); 
@@ -1143,7 +1297,6 @@ deleteComment: async function(id) {
             type: 'GET',
             headers: { 'Authorization': `Bearer ${token}` }
         });
-
         if (res.success && res.resumeLessonId) {
             console.log("Hệ thống: Tự động đưa bác về bài học ID:", res.resumeLessonId);
             
@@ -1491,31 +1644,73 @@ $(document).ready(function() {
 });
 let lastTimeReceived = 0;
 let checkDeadlyInterval = null;
-
 window.addEventListener("message", function(event) {
     if (event.origin !== "https://iframe.mediadelivery.net") return;
 
-    let data;
-    try {
-        data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
-    } catch (e) { return; }
+    let data = event.data;
+    if (typeof data === 'string') {
+        try { data = JSON.parse(data); } catch (e) {}
+    }
 
-    // Bunny luôn bắn timeupdate khi ĐANG CHẠY
-    if (data.event === 'player:timeupdate' || data.event === 'timeupdate') {
-        window.lastBunnyTime = Math.floor(data.currentTime || data.value.currentTime);
-        lastTimeReceived = Date.now(); // Cập nhật mốc thời gian cuối cùng nhận được tin nhắn
+    const eventName = data.event || data.eventName || data; 
+
+    // 1. KHI VIDEO TẢI XONG (READY) -> BẮT BUỘC ĐĂNG KÝ SỰ KIỆN
+    if (eventName === 'ready') {
+        console.log("✅ Video Bunny đã sẵn sàng. Tiến hành đăng ký sự kiện...");
         
-        // Nếu đang có heartbeat mà video chạy lại, đảm bảo nó bật
-        if (!heartbeatInterval) {
-            console.log("🔥 Nhận tín hiệu thời gian -> Bật Heartbeat");
-            Learn.startHeartbeat(currentLessonId, 'bunny');
+        // Tìm thẻ iframe của Bunny trên trang (bạn kiểm tra xem selector này đã đúng với dự án chưa nhé)
+        const iframe = document.querySelector('iframe[src*="iframe.mediadelivery.net"]');
+        
+        if (iframe) {
+            // Yêu cầu Bunny thông báo tiến độ (timeupdate)
+            iframe.contentWindow.postMessage(JSON.stringify({
+                context: "player.js",
+                method: "addEventListener",
+                value: "timeupdate"
+            }), "*");
+
+            // Yêu cầu Bunny thông báo kết thúc (ended)
+            iframe.contentWindow.postMessage(JSON.stringify({
+                context: "player.js",
+                method: "addEventListener",
+                value: "ended"
+            }), "*");
+            
+            console.log("✅ Đã gửi yêu cầu lắng nghe 'timeupdate' và 'ended' thành công!");
+        } else {
+            console.warn("⚠️ Không tìm thấy thẻ iframe của Bunny để đăng ký sự kiện!");
         }
     }
 
-    // Sự kiện kết thúc
-    if (data.event === 'player:ended' || data.event === 'ended') {
+    // 2. SỰ KIỆN CẬP NHẬT THỜI GIAN (LƯU TIẾN ĐỘ)
+    if (eventName === 'timeupdate' || eventName === 'player:timeupdate') {
+        const currentTime = data.data && data.data.seconds ? data.data.seconds : (data.currentTime || (data.value && data.value.currentTime));
+        
+        if (currentTime !== undefined) {
+            window.lastBunnyTime = Math.floor(currentTime);
+            // Bật heartbeat nếu chưa chạy
+            if (!Learn.isHeartbeatRunning) { 
+                Learn.startHeartbeat(currentLessonId, 'bunny');
+            }
+        }
+    }
+
+    // 3. SỰ KIỆN KẾT THÚC VIDEO (CHUYỂN BÀI)
+    if (eventName === 'ended' || eventName === 'player:ended') {
+        console.log("🎉 Đã bắt được sự kiện kết thúc Bunny!");
+        
         Learn.stopHeartbeat();
-        Learn.sendProgressToBackend(currentLessonId, 0); 
+        Learn.sendProgressToBackend(currentLessonId, 100); 
         Learn.markAsCompleted(currentLessonId);
+
+        // Chuyển bài
+        if (typeof Learn.nextLesson === 'function') {
+            Learn.nextLesson();
+        } else if (typeof Learn.playNext === 'function') {
+            Learn.playNext();
+        } else {
+            const nextBtn = $('.btn-next-lesson, #nextLessonBtn');
+            if (nextBtn.length > 0) nextBtn.click();
+        }
     }
 });

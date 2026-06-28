@@ -1,5 +1,6 @@
 ﻿
 using LMS.Data;
+using LMS.Enums;
 using LMS.Models;
 using LMS.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -40,8 +41,17 @@ namespace LMS.Repositories
             {
                 return false;
             }
-
             _context.Enrollments.Remove(enrollment);
+            var order = await _context.Orders
+                .FirstOrDefaultAsync(o => o.UserId == studentId
+                                       && o.CourseId == courseId
+                                       && o.Status == OrderStatusEnum.Success);
+
+            if (order != null)
+            {
+                order.Status = OrderStatusEnum.Revoked;
+            }
+
             await _context.SaveChangesAsync();
             return true;
         }

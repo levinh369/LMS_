@@ -106,7 +106,6 @@ namespace LMS.Services
             };
             var accessToken = tokenHandler.WriteToken(tokenHandler.CreateToken(accessDescriptor));
 
-            // 5. Cấu hình và tạo REFRESH TOKEN (Sống 7 ngày)
             var refreshDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(refreshClaims),
@@ -116,8 +115,6 @@ namespace LMS.Services
                 Audience = jwtSettings["Audience"]
             };
             var refreshToken = tokenHandler.WriteToken(tokenHandler.CreateToken(refreshDescriptor));
-
-            // 6. Trả về cả cặp
             return (accessToken, refreshToken);
         }
         public async Task<AuthResponseDTO> RegisterAsync(RegisterRequestDTO dto)
@@ -128,16 +125,17 @@ namespace LMS.Services
             {
                 var isExists = await userRepository.ExistsByEmailAsync(dto.Email);
                 if (isExists) throw new Exception("Email đã tồn tại!");
-
-                // 2. Tạo User
                 var newUser = new UserModel
                 {
                     FullName = dto.FullName,
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
                     Email = dto.Email,
-                    RoleId = 2,
+                    RoleId = 2, 
+                    IsActive = true 
                 };
+
                 await userRepository.AddAsync(newUser);
+                await _context.SaveChangesAsync();
                 newUser.Role = new RoleModel { RoleName = "Student" };
                 if (dto.CourseId.HasValue && dto.CourseId.Value > 0)
                 {
@@ -146,33 +144,35 @@ namespace LMS.Services
                     {
                         var newEnroll = new EnrollmentModel
                         {
-                            UserId = newUser.Id,
+                            UserId = newUser.Id, // Id chuẩn
                             CourseId = dto.CourseId.Value,
                             CreatedAt = DateTime.UtcNow.AddHours(7),
-                            IsActive = true,
-
+                            IsActive = true
                         };
                         await enrollRepository.AddAsync(newEnroll);
+                        await _context.SaveChangesAsync();
                     }
                 }
                 await transaction.CommitAsync();
                 var tokens = GenerateTokens(newUser);
+
                 return new AuthResponseDTO
                 {
-                    AccessToken = tokens.AccessToken,   
-                    RefreshToken = tokens.RefreshToken, 
+                    AccessToken = tokens.AccessToken,
+                    RefreshToken = tokens.RefreshToken,
                     Username = newUser.FullName,
                     Email = newUser.Email,
                     Role = (RoleEnum)newUser.RoleId,
                     UserId = newUser.Id,
                     AvatarUrl = string.IsNullOrEmpty(newUser.AvatarUrl)
-                  ? "/assets/images/default-avatar.png"
-                  : newUser.AvatarUrl,
+                        ? "/assets/images/default-avatar.png"
+                        : newUser.AvatarUrl,
                 };
             }
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
+                Console.WriteLine($"[Register Error]: {ex.Message}");
                 throw new Exception("Lỗi đăng ký: " + ex.Message);
             }
         }

@@ -4,6 +4,7 @@ using LMS.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LMS.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260627141536_UpdateTeacherForeignKeyAndIndex")]
+    partial class UpdateTeacherForeignKeyAndIndex
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -284,8 +287,7 @@ namespace LMS.Migrations
 
                     b.HasIndex("CategoryId");
 
-                    b.HasIndex("TeacherId")
-                        .HasDatabaseName("IX_Courses_teacherId");
+                    b.HasIndex("TeacherId");
 
                     b.ToTable("Courses");
                 });
@@ -958,6 +960,7 @@ namespace LMS.Migrations
                     b.HasOne("LMS.Models.UserModel", "Teacher")
                         .WithMany()
                         .HasForeignKey("TeacherId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("FK_Courses_Users_TeacherId");
 
                     b.Navigation("Category");

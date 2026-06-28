@@ -14,25 +14,35 @@ namespace LMS.Services
             _apiKey = config["YouTubeSettings:ApiKey"];
             _httpClient = httpClient;
         }
-        public async Task<int> GetVideoDurationAsync(string videoId)
+        public async Task<(int Duration, string Title)> GetVideoInfoAsync(string videoId)
         {
             try
             {
-                var url = $"https://www.googleapis.com/youtube/v3/videos?id={videoId}&key={_apiKey}&part=contentDetails";
+                var url = $"https://www.googleapis.com/youtube/v3/videos?id={videoId}&key={_apiKey}&part=contentDetails,snippet";
+
                 var response = await _httpClient.GetFromJsonAsync<YouTubeApiResponse>(url);
 
                 if (response?.Items != null && response.Items.Count > 0)
                 {
-                    var isoDuration = response.Items[0].ContentDetails.Duration;
-                    // Dùng XmlConvert để đổi PT5M20S sang TimeSpan cực nhanh
-                    return (int)XmlConvert.ToTimeSpan(isoDuration).TotalSeconds;
+                    var item = response.Items[0];
+
+                    // Lấy số giây
+                    var isoDuration = item.ContentDetails.Duration;
+                    int seconds = (int)System.Xml.XmlConvert.ToTimeSpan(isoDuration).TotalSeconds;
+
+                    // Lấy Tiêu đề
+                    string title = item.Snippet?.Title ?? string.Empty;
+
+                    return (seconds, title);
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Lỗi lấy thời lượng: {ex.Message}");
+                Console.WriteLine($"Lỗi lấy thông tin video: {ex.Message}");
             }
-            return 0;
+
+            // Nếu lỗi thì trả về 0 giây và chuỗi rỗng
+            return (0, string.Empty);
         }
     }
 }

@@ -19,10 +19,11 @@ namespace LMS.Repositories
         {
             var allLessonsInCourse = await _context.Lessons
                 .Include(l => l.Chapter)
-                .Where(l => l.Chapter.CourseId == courseId && !l.IsDeleted)
-                // SỬA Ở ĐÂY: Sắp xếp theo "số thứ tự" bác đặt, không dùng ID tự tăng
-                .OrderBy(l => l.Chapter.OrderIndex) // Thằng nào OrderIndex = 1 (Cài đặt) sẽ lên đầu
-                .ThenBy(l => l.OrderIndex)          // Sắp xếp bài học trong chương đó
+                .Where(l => l.Chapter.CourseId == courseId
+                         && l.IsActive == true && !l.IsDeleted 
+                         && l.Chapter.IsActive == true && !l.Chapter.IsDeleted)
+                .OrderBy(l => l.Chapter.OrderIndex)
+                .ThenBy(l => l.OrderIndex)
                 .Select(l => l.Id)
                 .ToListAsync();
 
@@ -30,9 +31,7 @@ namespace LMS.Repositories
                 .Where(p => p.UserId == userId && p.CourseId == courseId && p.IsCompleted && !p.IsDeleted)
                 .Select(p => p.LessonId)
                 .ToListAsync();
-
             var resumeId = allLessonsInCourse.FirstOrDefault(id => !completedLessonIds.Contains(id));
-
             return resumeId != 0 ? resumeId : allLessonsInCourse.LastOrDefault();
         }
         public async Task<(int completedCount, int totalCount, bool isCourseFinished)> MarkLessonAsCompletedAsync(int userId, int lessonId)

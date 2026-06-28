@@ -88,20 +88,28 @@ namespace LMS.Repositories
 
         public async Task<(List<UserModel> Data, int Total)> GetPagedAsync(int page, int pageSize, string keySearch, DateTime? fromDate, DateTime? toDate, int isActive, int teacherId, int roleId, int courseId)
         {
+            // Bỏ Include ở đây, ta sẽ cấu hình Include linh hoạt ở bên dưới
             var query = _context.Users
-             .Include(u => u.Enrollments)
-                 .ThenInclude(e => e.Course)
-             .AsNoTracking()
-             .Where(u => !u.IsDeleted && u.RoleId!=1);
+                .AsNoTracking()
+                .Where(u => !u.IsDeleted && u.RoleId != 1);
 
             if (teacherId > 0)
             {
+                // 1. Lọc ra những học viên có đăng ký khóa của Giảng viên này
                 query = query.Where(u => u.Enrollments
-                    .Any(e => e.Course.TeacherId == teacherId &&
-                              (courseId == -1 || e.CourseId == courseId)));
+                    .Any(e => e.Course.TeacherId == teacherId && (courseId <= 0 || e.CourseId == courseId)));
+
+                // 2. FILTERED INCLUDE: Chỉ lấy các đăng ký khóa học (Enrollments) thuộc về đúng Giảng viên này
+                query = query.Include(u => u.Enrollments
+                                .Where(e => e.Course.TeacherId == teacherId && (courseId <= 0 || e.CourseId == courseId)))
+                             .ThenInclude(e => e.Course);
             }
             else
             {
+                // Nếu là Admin (teacherId == 0) -> Lấy toàn bộ Enrollments bình thường
+                query = query.Include(u => u.Enrollments)
+                             .ThenInclude(e => e.Course);
+
                 if (roleId != -1)
                 {
                     query = query.Where(u => u.RoleId == roleId);
@@ -122,7 +130,6 @@ namespace LMS.Repositories
 
             if (isActive != -1)
                 query = query.Where(u => u.IsActive == (isActive == 1));
-
 
             int total = await query.CountAsync();
 

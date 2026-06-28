@@ -24,5 +24,6 @@ namespace LMS.Repositories.Interfaces
         Task HardDeleteAsync(LessonModel entity);
         Task<bool> UpdateDeleteStatusBulkAsync(List<int> ids, bool isDeleted, string deletedByRole);
         Task<bool> HardDeleteBulkAsync(List<int> ids);
+        string GetBunnyVideoId(int lessonId);
     }
 }

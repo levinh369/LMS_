@@ -123,64 +123,58 @@
     let currentKeyword = "";
     let currentPage = 1;
     const pageSize = 6;        // Số lượng bản ghi hiển thị trên một trang giao diện
+$(document).ready(function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    // Lấy từ khóa và tham số loại khóa học
+    currentKeyword = urlParams.get('keyword') || "";
+    const filterIsFree = urlParams.get('isFree'); // Sẽ nhận về "true" (miễn phí) hoặc "false" (premium)
 
-    $(document).ready(function() {
-        // 1. Đọc từ khóa tìm kiếm từ URL thanh địa chỉ
-        const urlParams = new URLSearchParams(window.location.search);
-        currentKeyword = urlParams.get('keyword') || "";
+    // Hiển thị tiêu đề cho đẹp
+    let title = currentKeyword ? `kết quả cho "${currentKeyword}"` : "Danh sách khóa học";
+    if (filterIsFree === 'true') title = "Khóa học Miễn phí";
+    if (filterIsFree === 'false') title = "Khóa học Premium";
+    $('#displayKeyword').text(title);
+
+    // Tải dữ liệu
+    initLoadAllSearchData(filterIsFree);
+});
+   // 🚩 THÊM tham số isFreeFromUrl vào đây
+async function initLoadAllSearchData(isFreeFromUrl) {
+    const $grid = $('#courseResultGrid');
+    $grid.html('<div class="col-12 text-center my-5"><div class="spinner-border text-primary"></div></div>');
+
+    // 🚩 Đảm bảo biến requestData dùng đúng tham số truyền vào
+    const requestData = {
+        keyword: currentKeyword,
+        // Dùng đúng biến isFreeFromUrl ở đây
+        isFree: isFreeFromUrl !== null && isFreeFromUrl !== undefined ? (isFreeFromUrl === 'true') : null,
+        pageSize: 500 
+    };
+
+    try {
+        console.log("Đang gọi API với params:", requestData); // 🚩 Bật cái này lên F12 xem có gọi thật không
+        const response = await $.get('https://lms-u2jn.onrender.com/api/course/search-result', requestData);
         
-        $('#displayKeyword').text(currentKeyword || "Tất cả khóa học");
+        $grid.empty(); // Xóa loading
 
-        // 2. Tải toàn bộ dữ liệu từ Server về bộ nhớ đệm (Chỉ gọi DUY NHẤT 1 LẦN khi vừa load trang)
-        initLoadAllSearchData();
-
-        // 3. 📍 ĐỘT PHÁ SIÊU TỐC: Bấm bộ lọc xử lý trực tiếp dữ liệu trên RAM, vẽ lại DOM 0ms không khựng!
-        $('.filter-level, .filter-price, #sortBySelect').on('change', function() {
-            currentPage = 1; // Mỗi lần đổi bộ lọc thì reset bắt buộc về trang 1
-            applyClientFiltersAndRender(); 
-        });
-
-        // 4. Bắt sự kiện khi click chuyển trang trên thanh Phân Trang (Phân trang tại chỗ)
-        $(document).on('click', '#paginationGrid .page-link', function(e) {
-            e.preventDefault();
-            const targetPage = $(this).data('page');
-            if (targetPage && targetPage !== currentPage) {
-                currentPage = targetPage;
-                renderDataWithPagination(); // Cắt mảng vẽ lại trang mới
-                window.scrollTo({ top: 0, behavior: 'smooth' }); // Cuộn mượt lên đầu trang
-            }
-        });
-    });
-
-    // HÀM 1: Gọi Server bốc trọn gói cục dữ liệu theo từ khóa về RAM (Chỉ chạy 1 lần)
-    async function initLoadAllSearchData() {
-        const $grid = $('#courseResultGrid');
-        $grid.html('<div class="col-12 text-center my-5"><div class="spinner-border text-primary"></div></div>');
-
-        // Gửi thông số lấy sỉ dữ liệu về Client quản lý
-        const requestData = {
-            keyword: currentKeyword,
-            pageIndex: 1,
-            pageSize: 500 // Bốc max 500 khóa học liên quan về luôn cho nhàn đầu
-        };
-
-        try {
-            const response = await $.get('https://lms-u2jn.onrender.com/api/course/search-result', requestData);
+        if (response.success && response.data) {
+            allCoursesCache = response.data.data || [];
             
-            if (response.success && response.data) {
-                // Lưu mảng gốc vào bộ nhớ đệm ẩn
-                allCoursesCache = response.data.data || [];
-                
-                // Chạy bộ lọc lần đầu để hiển thị kết quả ban đầu
-                applyClientFiltersAndRender();
-            } else {
-                showErrorUi("Không thể tải danh sách khóa học từ máy chủ.");
-            }
-        } catch (error) {
-            console.error("Lỗi gọi API Search:", error);
-            showErrorUi("Lỗi kết nối hệ thống server hoặc CORS!");
+            // Tự động tick vào bộ lọc
+            if (isFreeFromUrl === 'true') $('#price2').prop('checked', true);
+            if (isFreeFromUrl === 'false') $('#price1').prop('checked', true);
+
+            applyClientFiltersAndRender();
+        } else {
+            showErrorUi("Không tìm thấy dữ liệu khóa học.");
         }
+    } catch (error) {
+        $grid.empty();
+        console.error("API Error:", error);
+        showErrorUi("Lỗi kết nối server! Kiểm tra Console để biết chi tiết.");
     }
+}
 
     // HÀM 2: Thuật toán lọc dữ liệu cực nhanh trên RAM trình duyệt
     function applyClientFiltersAndRender() {

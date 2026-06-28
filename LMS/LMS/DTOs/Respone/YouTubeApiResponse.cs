@@ -4,16 +4,17 @@
     {
         public List<YouTubeVideoItem> Items { get; set; }
     }
-
-    // 2. Lớp đại diện cho từng Video trong danh sách
     public class YouTubeVideoItem
     {
         public ContentDetails ContentDetails { get; set; }
+        public Snippet Snippet { get; set; }
     }
-
-    // 3. Lớp chứa thông tin chi tiết nhất (Thời lượng)
     public class ContentDetails
     {
         public string Duration { get; set; }
+    }
+    public class Snippet
+    {
+        public string Title { get; set; }
     }
 }

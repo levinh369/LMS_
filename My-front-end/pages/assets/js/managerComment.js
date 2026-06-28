@@ -202,7 +202,7 @@ renderFeed: function (data) {
                                 <button class="btn-tool text-success" onclick="AdminComment.restore(${c.id})"><i class="bi bi-arrow-counterclockwise"></i></button>
                                 <button class="btn-tool text-danger" onclick="AdminComment.hardDelete(${c.id})"><i class="bi bi-x-circle-fill"></i></button>
                             ` : `
-                                <button class="btn-tool ${c.isPinned ? 'text-warning' : 'text-muted'}" onclick="AdminComment.togglePin(${c.id})">
+                                <button class="btn-tool ${c.isPinned ? 'text-warning' : 'text-muted'}" onclick="AdminComment.togglePin(${c.id}, ${c.courseId})">
                                     <i class="bi ${c.isPinned ? 'bi-pin-angle-fill' : 'bi-pin-angle'}"></i>
                                 </button>
                                 <button class="btn-tool" onclick="AdminComment.showReplyForm(${c.id}, ${c.userId}, '${c.userName}')"><i class="bi bi-chat-dots"></i></button>
@@ -681,7 +681,7 @@ loadLessons: async function(courseId) {
             }
         });
     },
-    togglePin: async function (commentId = null) {
+    togglePin: async function (commentId = null, courseId = 0) {
     let lessonId;
 
     // 1. Xác định LessonId
@@ -716,7 +716,7 @@ loadLessons: async function(courseId) {
 
         if (text) {
             // Gọi hàm API bọc kèm loader ngầm bên dưới
-            await this.callPinApi({ content: text, lessonId: lessonId }, true);
+            await this.callPinApi({ content: text, lessonId: lessonId, courseId: courseId }, true);
         }
     } 
     // KỊCH BẢN B: Ghim hoặc Gỡ ghim một bình luận có sẵn
@@ -745,7 +745,7 @@ loadLessons: async function(courseId) {
             cancelButtonColor: '#64748b'
         }).then(async (result) => {
             if (result.isConfirmed) {
-                await this.callPinApi({ commentId: commentId, lessonId: lessonId }, false);
+                await this.callPinApi({ commentId: commentId, lessonId: lessonId, courseId: courseId }, false);
             }
         });
     }
@@ -801,6 +801,7 @@ callPinApi: async function(payload, isNewNotification) {
 },
 callPinApi: async function (data, isNew) {
     try {
+        debugger
         // 1. KHÓA MÀN HÌNH CHỐNG SPAM CLICK KHI ĐANG GHIM
         GlobalLoader.show();
 

@@ -117,9 +117,13 @@ namespace LMS.Controllers
         [AllowAnonymous]
         [HttpGet("get-duration/{videoId}")]
         public async Task<IActionResult> GetDuration(string videoId)
-        {
-            var duration = await youtubeService.GetVideoDurationAsync(videoId);
-            return Ok(new { seconds = duration });
+        { 
+            var (duration, title) = await youtubeService.GetVideoInfoAsync(videoId);
+            return Ok(new
+            {
+                seconds = duration,
+                title = title
+            });
         }
         [AllowAnonymous]
         [HttpGet("get-duration-bunny/{videoId}")]
@@ -356,6 +360,18 @@ namespace LMS.Controllers
             {
                 return BadRequest(new { Success = false, Message = ex.Message });
             }
+        }
+        [AllowAnonymous]
+        [HttpGet("{id}/secure-video-url")]
+        public IActionResult GetSecureVideoUrl(int id)
+        {
+            string secureUrl = lessonService.GenerateSecureUrl(id);
+            if (string.IsNullOrEmpty(secureUrl))
+            {
+                return NotFound(new { message = "Không tìm thấy video bài học hoặc video không hợp lệ!" });
+            }
+
+            return Ok(new { secureUrl = secureUrl });
         }
     }
 }

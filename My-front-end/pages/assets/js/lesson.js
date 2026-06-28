@@ -9,6 +9,23 @@ const Toast1 = Swal.mixin({
         toast.addEventListener('mouseleave', Swal.resumeTimer)
     }
 });
+const getVideoDuration = (file) => {
+    return new Promise((resolve) => {
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        
+        video.onloadedmetadata = function () {
+            window.URL.revokeObjectURL(video.src);
+            resolve(Math.round(video.duration)); // Trả về số giây làm tròn
+        };
+        
+        video.onerror = function () {
+            resolve(0); // Lỗi thì trả về 0
+        };
+        
+        video.src = URL.createObjectURL(file);
+    });
+};
 var Lesson = {
     categories: [],
     sortableInstance: null,
@@ -17,7 +34,8 @@ var Lesson = {
     currentCourseId : 0,
     isChapterNameLoaded: false,
     config: {
-        apiUrl: "https://lms-u2jn.onrender.com/api/Lesson"
+        apiUrl: "https://lms-u2jn.onrender.com/api/Lesson",
+        apiUrlBunny: "https://lms-u2jn.onrender.com/api/Bunny"
     },
     
     // Hàm khởi tạo - Gọi khi trang load xong
@@ -86,18 +104,52 @@ registerCheckboxEvents: function () {
             parent.find('.lblVideoId').text(id);
         });
 
-        // Tab Hàng loạt: Dán link tự bóc ID ngay trong dòng
-        $(document).on('input', '.lesson-video', function() {
-            // 1. Lấy ID
-            const id = Lesson.extractVideoId($(this).val());
+ // Bắt sự kiện khi dán link YouTube
+$(document).on('input', '.lesson-video-link', async function () {
+    const row = $(this).closest('.bulk-row'); 
+    const inputVal = $(this).val().trim();
+    const previewSpan = row.find('.youtube-input-group .video-id-preview span');
+    if (!inputVal) {
+        previewSpan.html('---');
+        row.removeData('video-id');
+        row.removeData('duration');
+        row.find('.lesson-duration').val(''); 
+        return;
+    }
+
+    // Dùng Regex bóc ID YouTube
+    const match = inputVal.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&]{11})/);
+    const videoId = (match && match[1]) ? match[1] : null;
+
+    if (videoId) {
+        row.data('video-id', videoId);
+        row.data('provider', 'YouTube');
+        
+        // 2. Hiển thị UI
+        previewSpan.html(`<small class="badge bg-danger">YouTube</small> <code>${videoId}</code>`);
+    
+        try {
+            // Hiển thị trạng thái đang tải
+            row.find('.lesson-duration').attr('placeholder', 'Đang lấy...');
             
-            // 2. Tìm thằng preview nằm cùng trong "video-group" và đổ text vào
-            // Cấu trúc: Lên cha (video-group) -> Tìm con (video-preview)
-            $(this).closest('.video-group').find('.video-preview').text(id || "---");
-        });
-        $('#frmLessonBulk').on('submit', function(e) {
-        e.preventDefault(); // CHẶN load lại trang
-        Lesson.saveBulk();  // GỌI hàm này để xử lý API
+            const res = await fetch(`${Lesson.config.apiUrl}/get-duration/${videoId}`);
+            if (res.ok) {
+                const data = await res.json();
+                row.find('.lesson-duration').val(data.seconds); 
+                row.data('duration', data.seconds); 
+                let titleInput = row.find('.lesson-title');
+                if (data.title && !titleInput.val()) {
+                    titleInput.val(data.title);
+                }
+            }
+        } catch (e) { 
+            console.error("Lỗi lấy thông tin YTB:", e); 
+        }
+    } else {
+        // Báo lỗi nếu dán sai link
+        previewSpan.html('<span class="text-danger">Link không hợp lệ</span>');
+        row.removeData('video-id');
+    }
 });
     $(document).on('change', '#editIsActive', function() {
         let isActive = $(this).is(':checked'); // Kiểm tra xem đang bật hay tắt
@@ -112,56 +164,123 @@ registerCheckboxEvents: function () {
     $('#previewModal').on('hidden.bs.modal', function () {
         $('#videoIframe').attr('src', '');
     });
-$(document).on('input', '.lesson-video', async function () {
-    const row = $(this).closest('tr'); // Hoặc .closest('.bulk-row') tùy class của Vinh
-    const inputVal = $(this).val().trim();
-    
-    // 1. Phân tích link để lấy ID và Provider
-    const videoData = Lesson.extractVideoInfo(inputVal);
-    const videoId = videoData.id;
-    const provider = videoData.provider;
 
-    if (videoId) {
-        // 2. Lưu thông tin vào "data" của dòng để hàm saveBulk bốc ra
-        row.data('video-id', videoId);
-        row.data('provider', provider);
+// Bắt sự kiện khi teacher thay đổi nguồn (Provider)
+$(document).on('change', '.lesson-provider', function () {
+    const row = $(this).closest('.bulk-row');
+    const selectedProvider = $(this).val(); 
+    
+    // Lưu thẳng provider vào DOM để lát saveBulk lấy ra dùng
+    row.data('provider', selectedProvider);
+
+    if (selectedProvider === 'YouTube') {
+        // Hiện input YouTube, Ẩn input Bunny
+        row.find('.bunny-input-group').addClass('d-none');
+        row.find('.youtube-input-group').removeClass('d-none');
         
-        // 3. Hiển thị Preview cho Vinh dễ nhìn
-        const badgeClass = provider === 'YouTube' ? 'bg-danger' : 'bg-primary';
-        row.find('.video-id-preview span').html(
-            `<small class="badge ${badgeClass}">${provider}</small> <code>${videoId}</code>`
-        );
-        
-        // 4. Gọi API Backend để lấy thời lượng tự động
-        try {
-            // Xác định đúng "cửa" API dựa trên Provider
-            const endpoint = (provider === "YouTube") ? "get-duration" : "get-duration-bunny";
+        // Nếu trước đó đã lỡ chọn file tạo rác Bunny thì gọi API xóa rác
+        const videoId = row.data('video-id');
+        const token = localStorage.getItem("jwt_token") || localStorage.getItem("token");
+        if (videoId && row.data('raw-file')) {
+            $.ajax({
+                url: `${Lesson.config.apiUrl}/bunny/${videoId}`,
+                type: 'DELETE',
+                headers: { "Authorization": "Bearer " + token }
+            }).catch(e => console.log("Lỗi xóa rác:", e));
             
-            const res = await fetch(`${Lesson.config.apiUrl}/${endpoint}/${videoId}`);
-            
-            if (res.ok) {
-                const data = await res.json();
-                
-                // Cập nhật số giây vào ô Input thời lượng của dòng đó
-                // Lưu ý: Vinh nên tìm theo class trong row để không bị nhảy lung tung
-                row.find('.lesson-duration').val(data.seconds); 
-                
-                // Cập nhật luôn vào bộ nhớ data của dòng
-                row.data('duration', data.seconds); 
-                
-              
-            } else {
-                console.error(`❌ API trả lỗi khi lấy thời lượng ${provider}`);
-            }
-        } catch (e) { 
-            console.error("❌ Lỗi kết nối API:", e); 
+            // Xóa dữ liệu cũ của Bunny đi
+            row.removeData('video-id');
+            row.removeData('raw-file');
+            row.find('.upload-status').html('<i class="bi bi-info-circle"></i> Chưa chọn file').attr('class', 'upload-status text-muted fw-bold');
         }
     } else {
-        // Nếu xóa trắng ô input thì reset luôn thông tin
-        row.find('.video-id-preview span').text('Chưa có ID');
-        row.data('video-id', null);
-        row.data('provider', null);
+        // Hiện input Bunny, Ẩn input YouTube
+        row.find('.youtube-input-group').addClass('d-none');
+        row.find('.bunny-input-group').removeClass('d-none');
     }
+});
+// 📍 BẮT SỰ KIỆN: Khi teacher tải file lên (Gọi API Init lấy VideoId)
+$(document).on('change', '.lesson-file-input', async function (e) {
+    const file = e.target.files[0];
+    const row = $(this).closest('.bulk-row');
+    const statusText = row.find('.upload-status');
+    const token = localStorage.getItem("jwt_token") || localStorage.getItem("token");
+
+    // Nếu teacher ấn nút chọn file nhưng lại Cancel (hủy)
+    if (!file) {
+        statusText.html('<i class="bi bi-info-circle"></i> Chưa chọn file').attr('class', 'upload-status text-muted fw-bold');
+        row.removeData('raw-file');
+        row.removeData('video-id');
+        row.find('.video-id-preview').hide();
+        return;
+    }
+
+    // Tiện ích UX: Tự điền tên file vào ô Tiêu đề bài học nếu đang trống
+    let titleInput = row.find('.lesson-title');
+    if (!titleInput.val()) {
+        titleInput.val(file.name.replace(/\.[^/.]+$/, "")); 
+    }
+
+    // Hiển thị trạng thái Loading
+    statusText.html('<div class="spinner-border spinner-border-sm text-primary" role="status"></div> Đang khởi tạo...')
+              .removeClass('text-muted').addClass('text-primary');
+
+    try {
+        // Gọi Backend C# để sang Bunny xin cái thùng rỗng (VideoId)
+        const res = await $.ajax({
+            url: `${Lesson.config.apiUrlBunny}/init`,
+            type: 'POST',
+            contentType: 'application/json',
+            headers: { "Authorization": "Bearer " + token },
+            data: JSON.stringify({ title: titleInput.val() })
+        });
+
+        // Cất ID và file vật lý vào thẻ <tr> để lát saveBulk lôi ra dùng
+        row.data('video-id', res.videoId);
+        row.data('raw-file', file);
+        
+        // Cập nhật giao diện báo thành công
+        row.find('.video-id-preview').show().find('span').text(res.videoId);
+        statusText.html('<i class="bi bi-check-circle-fill"></i> Đã sẵn sàng tải lên')
+                  .removeClass('text-primary').addClass('text-success');
+
+    } catch (err) {
+        console.error(err);
+        statusText.html('<i class="bi bi-exclamation-triangle-fill"></i> Lỗi khởi tạo trên hệ thống')
+                  .removeClass('text-primary').addClass('text-danger');
+    }
+});
+// 📍 BẮT SỰ KIỆN: Khi teacher xóa dòng (Gọi API Delete dọn rác Bunny)
+$(document).on('click', '.btn-remove-row', async function () {
+    debugger
+    const btn = $(this);
+    const row = btn.closest('.bulk-row');
+    const videoId = row.data('video-id');
+    const provider = row.data('provider') || "YouTube"; // Mặc định là YouTube
+    const token = localStorage.getItem("jwt_token") || localStorage.getItem("token");
+
+    // Chỉ gọi dọn rác nếu dòng này đang chọn Bunny VÀ đã lỡ sinh VideoId
+    if (provider === 'Bunny' && videoId) {
+        // Đổi icon thùng rác thành xoay xoay cho chuyên nghiệp
+        btn.html('<div class="spinner-border spinner-border-sm text-danger" role="status"></div>');
+        
+        try {
+            await $.ajax({
+                url: `${Lesson.config.apiUrlBunny}/${videoId}`,
+                type: 'DELETE',
+                headers: { "Authorization": "Bearer " + token }
+            });
+            console.log(`Đã dọn dẹp rác VideoId: ${videoId} thành công`);
+        } catch (e) {
+            console.warn("Lỗi dọn rác, file sẽ tự bị xóa theo lịch trình:", e);
+        }
+    }
+
+    // Xóa thẻ HTML của dòng đó
+    row.remove();
+    
+    // Đánh lại số Thứ tự (STT) cho các dòng còn lại (Nếu hệ thống bác có)
+    // Lesson.updateAllBulkOrders(); 
 });
 $(document).on('input', '#editVideoId', function () {
     const videoValue = $(this).val();
@@ -233,22 +352,49 @@ addBulkRow: function() {
     const nextOrder = (this.existingCount || 0) + currentRowsInModal + 1;
 
     const rowHtml = `
-        <tr class="bulk-row">
-            <td><input type="text" class="form-control lesson-title" required placeholder="Tên bài học..."></td>
-            <td class="video-group">
-                <input type="text" class="form-control lesson-video" placeholder="Link Youtube...">
-                <span class="video-id-preview small text-muted">ID: <span>---</span></span>
+        <tr class="bulk-row" data-provider="YouTube"> <td>
+                <input type="text" class="form-control lesson-title" required placeholder="Tên bài học...">
             </td>
-            <td><input type="number" class="form-control lesson-order" value="${nextOrder}"></td>
             
-            <td class="text-center">
+            <td class="video-group position-relative" style="width: 45%;">
+                <select class="form-select form-select-sm lesson-provider fw-bold text-primary mb-1">
+                    <option value="YouTube" selected>Nguồn: YouTube (Link)</option>
+                    <option value="Bunny">Nguồn: Bunny (Tải lên)</option>
+                </select>
+
+                <div class="youtube-input-group">
+    <input type="text" class="form-control lesson-video-link" placeholder="Dán link YouTube vào đây...">
+    
+    <div class="mt-1">
+        <span class="video-id-preview small text-muted">ID: <span>---</span></span>
+    </div>
+</div>
+                <div class="bunny-input-group d-none">
+                    <input type="file" class="form-control lesson-file-input" accept="video/mp4,video/webm,video/*">
+                    
+                    <div class="d-flex justify-content-between align-items-center mt-1">
+                        <small class="upload-status text-muted fw-bold"><i class="bi bi-info-circle"></i> Chưa chọn file</small>
+                        <span class="video-id-preview small text-muted" style="display: none;">ID: <span>---</span></span>
+                    </div>
+                    
+                    <div class="progress mt-1 d-none upload-progress-bar" style="height: 6px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" style="width: 0%"></div>
+                    </div>
+                </div>
+            </td>
+            
+            <td style="width: 100px;">
+                <input type="number" class="form-control lesson-order text-center" value="${nextOrder}">
+            </td>
+            
+            <td class="text-center" style="width: 80px;">
                 <div class="form-check form-switch d-inline-block mt-1">
                     <input class="form-check-input lesson-preview" type="checkbox" role="switch">
                 </div>
             </td>
 
-            <td class="text-center">
-                <button type="button" class="btn btn-link text-danger p-0" onclick="$(this).closest('tr').remove(); Lesson.updateAllBulkOrders();">
+            <td class="text-center" style="width: 60px;">
+                <button type="button" class="btn btn-link text-danger p-0 btn-remove-row">
                     <i class="bi bi-x-circle-fill fs-5"></i>
                 </button>
             </td>
@@ -256,15 +402,15 @@ addBulkRow: function() {
 
     tbody.append(rowHtml);
 },
-MapsToLesson: async function(chapterId){
-    ;
-    if (!chapterId) {
-        toastr.error("Không tìm thấy mã chương!");
-        return;
-    }
-    window.location.href = `/lesson/index.html?chapterId=${chapterId}`;
-    
-},
+MapsToLesson: async function(chapterId, courseId) {
+        if (!chapterId) {
+            toastr.error("Không tìm thấy mã chương!");
+            return;
+        }
+        
+        // Gửi cả 2 lên URL
+        window.location.href = `/lesson/index.html?chapterId=${chapterId}&courseId=${courseId}`;
+    },
 renderLessonTable: function(lessons) {
         const tbody = $('#bulkInputBody');
         tbody.empty();
@@ -287,23 +433,99 @@ updateAllBulkOrders: function() {
         $(this).find('.lesson-order').val(startNum + index);
     });
 },
-   saveBulk: async function () {
-        const lessons = [];
-        
-        $('.bulk-row').each(function () {
-            const row = $(this); 
-            const title = row.find('.lesson-title').val();
-            const vId = row.data('video-id'); 
+saveBulk: async function () {
+    const token = localStorage.getItem("jwt_token") || localStorage.getItem("token");
+    const rows = $('.bulk-row').toArray();
+    const lessons = [];
+
+    if (rows.length === 0) {
+        Toast1.fire({ icon: 'warning', title: 'Bác chưa nhập bài học nào vào bảng cả' });
+        return;
+    }
+
+    const hasPending = $('.bulk-row').toArray().some(row => $(row).data('provider') === 'Bunny' && $(row).data('raw-file') && !$(row).data('video-id'));
+    if (hasPending) {
+        Toast1.fire({ icon: 'warning', title: 'Có video đang khởi tạo ID, bác đợi 1-2 giây rồi bấm lưu nhé!' });
+        return;
+    }
+
+    try {
+        const saveBtn = $('#btnSaveBulk'); 
+        saveBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Đang xử lý...');
+
+        // 🚩 THÊM DÒNG NÀY ĐỂ KHÓA TẤT CẢ INPUT TRONG FORM
+        // Lấy tất cả input, select, button trong modal (ngoại trừ nút đóng modal) và disable chúng
+        $('#tblBulkLessons').find('input, select, button').prop('disabled', true);
+$('.btn-close, [data-bs-dismiss="modal"]').prop('disabled', true);
+        // ==========================================
+        // 📍 GIAI ĐOẠN 1: DUYỆT VÀ UPLOAD FILE (NẾU CÓ)
+        // ==========================================
+        for (const rowElement of rows) {
+            const row = $(rowElement);
             const provider = row.data('provider') || "YouTube"; 
+            let finalVideoId = ""; 
+
+            if (provider === 'YouTube') {
+                finalVideoId = row.data('video-id') || row.find('.lesson-video-link').val();
+            } 
+            else if (provider === 'Bunny') {
+                finalVideoId = row.data('video-id');
+                const file = row.data('raw-file');
+                
+                if (file && finalVideoId) {
+                    const statusText = row.find('.upload-status');
+                    const progressBarContainer = row.find('.upload-progress-bar');
+                    const progressBar = progressBarContainer.find('.progress-bar');
+                    
+                    const libraryId = "691685"; 
+                    const accessKey = "b1f53d02-5dbc-4ea7-a24a5ef1dc34-b4ef-45d9"; 
+                    const durationInSeconds = await getVideoDuration(file);
+                    row.data('duration', durationInSeconds);
+                    
+                    progressBarContainer.removeClass('d-none');
+                    statusText.html('<div class="spinner-grow spinner-grow-sm text-primary"></div> Đang tải lên...')
+                              .removeClass('text-success').addClass('text-primary');
+
+                    await $.ajax({
+                        url: `https://video.bunnycdn.com/library/${libraryId}/videos/${finalVideoId}`,
+                        type: 'PUT',
+                        headers: { "AccessKey": accessKey },
+                        data: file,
+                        processData: false,
+                        contentType: "application/octet-stream",
+                        xhr: function () {
+                            const xhr = new window.XMLHttpRequest();
+                            xhr.upload.addEventListener("progress", function (evt) {
+                                if (evt.lengthComputable) {
+                                    let percentComplete = Math.round((evt.loaded / evt.total) * 100);
+                                    progressBar.css('width', percentComplete + '%');
+                                    progressBar.text(percentComplete + '%');
+                                }
+                            }, false);
+                            return xhr;
+                        }
+                    });
+
+                    statusText.html('<i class="bi bi-check-all"></i> Hoàn tất').removeClass('text-primary').addClass('text-success');
+                    progressBar.removeClass('progress-bar-animated progress-bar-striped');
+                    row.removeData('raw-file'); 
+                }
+            }
+
+            // ==========================================
+            // 📍 GIAI ĐOẠN 2: CHUẨN BỊ MẢNG JSON ĐỂ LƯU
+            // ==========================================
+            const title = row.find('.lesson-title').val();
             const order = row.find('.lesson-order').val();
+            debugger
             const durationSeconds = row.find('.lesson-duration').val() || row.data('duration') || 0;
             const isPreview = row.find('.lesson-preview').is(':checked');
             
-            if (title && vId) {
+            if (title && finalVideoId) {
                 lessons.push({
                     chapterId: parseInt(Lesson.currentChapterId),
                     title: title,
-                    videoId: vId,
+                    videoId: finalVideoId,
                     provider: provider,
                     duration: parseInt(durationSeconds),
                     orderIndex: parseInt(order),
@@ -311,34 +533,50 @@ updateAllBulkOrders: function() {
                     courseModelId: Lesson.currentCourseId
                 });
             }
-        });
+        }
 
         if (lessons.length === 0) {
-            Toast1.fire({ icon: 'warning', title: 'Bác chưa nhập bài học nào vào bảng cả' });
+            Toast1.fire({ icon: 'warning', title: 'Không có bài học nào hợp lệ để lưu!' });
+            // Mở khóa lại nếu có lỗi validate để người dùng sửa
+            $('#tblBulkLessons').find('input, select, button').prop('disabled', false);
             return;
         }
 
-        try {
-            // KHÓA MÀN HÌNH KHI GỬI LƯU HÀNG LOẠT
-            GlobalLoader.show();
+        // ==========================================
+        // 📍 GIAI ĐOẠN 3: GỬI MẢNG JSON LÊN BACKEND C#
+        // ==========================================
+        GlobalLoader.show(); 
 
-            await $.ajax({
-                url: `${Lesson.config.apiUrl}/bulk`,
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify(lessons)
-            });
+        await $.ajax({
+            url: `${Lesson.config.apiUrl}/bulk`,
+            type: 'POST',
+            contentType: 'application/json',
+            headers: { 
+                "Authorization": "Bearer " + token 
+            },
+            data: JSON.stringify(lessons)
+        });
 
-            Toast1.fire({ icon: 'success', title: 'Đã lưu toàn bộ bài học thành công!' });
-            $('#lessonModal').modal('hide');
-            Lesson.loadData(); 
-        } catch (e) {
-            console.error(e);
-            Toast1.fire({ icon: 'error', title: 'Server từ chối nhận mảng bài học này rồi!' });
-        } finally {
-            GlobalLoader.hide();
+        Toast1.fire({ icon: 'success', title: 'Đã lưu toàn bộ bài học thành công!' });
+        $('#lessonModal').modal('hide');
+        Lesson.loadData(); 
+
+    } catch (e) {
+        console.error("Lỗi:", e);
+        if (e.status === 401) {
+            Toast1.fire({ icon: 'error', title: 'Phiên làm việc hết hạn hoặc bác không có quyền Admin/Teacher!' });
+        } else {
+            Toast1.fire({ icon: 'error', title: 'Có lỗi trong quá trình upload hoặc lưu dữ liệu!' });
         }
-    },
+    } finally {
+        $('#btnSaveBulk').prop('disabled', false).html('<i class="bi bi-cloud-arrow-up me-1"></i> Lưu tất cả bài học');
+        
+        // 🚩 THÊM DÒNG NÀY ĐỂ MỞ KHÓA LẠI FORM (NẾU CÓ LỖI HOẶC UPLOAD XONG)
+        $('#tblBulkLessons').find('input, select, button').prop('disabled', false);
+        
+        GlobalLoader.hide();
+    }
+},
     // Hàm lấy dữ liệu từ API
      loadData:async function() {
         const urlParams = new URLSearchParams(window.location.search);
@@ -369,7 +607,9 @@ updateAllBulkOrders: function() {
             }
         });
         if (res.success || res.Success) {
+            debugger
             Lesson.currentCourseId = res.courseId;
+            Lesson.lessontrash.currentCourseId= res.courseId;
             if (!Lesson.isChapterNameLoaded && res.data && res.data.length > 0) {
                 $('#displayChapterId').text(res.data[0].chapterName);
                 Lesson.isChapterNameLoaded = true; 
@@ -392,7 +632,8 @@ updateAllBulkOrders: function() {
 //     // Mở modal
 //     $('#previewModal').modal('show');
 // },
-renderVideo: function(iframeId, videoId, provider = "YouTube") {
+// 🎯 Đổi thành async function và nhận thêm tham số lessonId
+renderVideo: async function(iframeId, videoId, provider = "YouTube", lessonId = null) {
     const iframe = $(`#${iframeId}`);
     const placeholder = iframe.siblings('.video-placeholder');
     const id = videoId ? videoId.trim() : ""; 
@@ -403,24 +644,48 @@ renderVideo: function(iframeId, videoId, provider = "YouTube") {
 
     if (!id) return;
 
-    setTimeout(() => {
-        let embedUrl = "";
-
-        if (provider === "Bunny") {
-            // Cấu trúc URL của Bunny Stream
-            // Lưu ý: Thay YOUR_PULL_ZONE_ID bằng ID thư viện của bạn nếu cần cố định
-            const libraryId = "635360"; // Ví dụ ID thư viện Bunny của bạn
-            embedUrl = `https://iframe.mediadelivery.net/embed/${libraryId}/${id}?autoplay=false&loop=false&muted=false&preload=true&responsive=true`;
-        } else {
-            // Mặc định là YouTube
-            const cleanId = Lesson.extractVideoId(id);
-            const origin = window.location.origin;
-            embedUrl = `https://www.youtube.com/embed/${cleanId}?origin=${origin}&enablejsapi=1&rel=0&autoplay=0`;
+    // Kiểm tra xem là Bunny hay YouTube (viết thường để so sánh cho an toàn)
+    if (provider?.toLowerCase() === "bunny") {
+        if (!lessonId) {
+            console.error("❌ Không có lessonId để lấy link bảo mật Bunny!");
+            return;
         }
 
-        placeholder.addClass('d-none');
-        iframe.attr('src', embedUrl).removeClass('d-none'); 
-    }, 200);
+        try {
+            const token = localStorage.getItem("jwt_token");
+            
+            // Gọi API lấy link mã hóa từ Backend
+            const response = await fetch(`https://lms-u2jn.onrender.com/api/Lesson/${lessonId}/secure-video-url`, {
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!response.ok) throw new Error("Lỗi lấy token bảo mật từ Backend");
+            
+            const data = await response.json();
+            
+            if (data.secureUrl) {
+                // Nối thêm cấu hình giao diện cho Modal Admin
+                const embedUrl = `${data.secureUrl}&autoplay=false&loop=false&muted=false&preload=true&responsive=true`;
+                
+                placeholder.addClass('d-none');
+                iframe.attr('src', embedUrl).removeClass('d-none');
+            }
+        } catch (error) {
+            console.error("❌ Lỗi load video Bunny Modal:", error);
+            Toast1.fire({ icon: 'error', title: "Không tải được video bảo mật!" });
+        }
+    } else {
+        // Mặc định là YouTube - Vẫn giữ nguyên logic cũ của bác
+        setTimeout(() => {
+            const cleanId = Lesson.extractVideoId(id);
+            const origin = window.location.origin;
+            const embedUrl = `https://www.youtube.com/embed/${cleanId}?origin=${origin}&enablejsapi=1&rel=0&autoplay=0`;
+
+            placeholder.addClass('d-none');
+            iframe.attr('src', embedUrl).removeClass('d-none'); 
+        }, 200);
+    }
 },
    renderTable: function (data) {
     let html = '';
@@ -535,16 +800,16 @@ renderVideo: function(iframeId, videoId, provider = "YouTube") {
                         </small>
                     </div>
                 </td>
-
-                <td>
-                    <div class="d-inline-flex flex-column align-items-start">
-                        <span class="badge bg-white text-primary border mb-1" style="font-size: 0.7rem;">
-                            <i class="bi bi-youtube me-1 text-danger"></i>${item.provider || 'YouTube'}
-                        </span>
-                        <code class="text-muted small font-monospace">${item.videoId}</code>
-                    </div>
-                </td>
-
+<td>
+    <div class="d-flex flex-column align-items-start">
+        <span class="badge bg-white border mb-1" style="font-size: 0.7rem; color: #333;">
+            ${item.provider?.toLowerCase() === 'bunny' 
+                ? '<i class="bi bi-play-btn-fill me-1" style="color: #ff6600;"></i>Bunny' 
+                : '<i class="bi bi-youtube me-1 text-danger"></i>YouTube'}
+        </span>
+        <code class="text-muted small font-monospace">${item.videoId}</code>
+    </div>
+</td>
                 <td>
                     <span class="badge bg-light text-dark border fw-normal">
                         <i class="bi bi-clock me-1 text-primary"></i>${formattedTime}
@@ -637,23 +902,27 @@ openDetailModal: async function (id) {
             : '<span class="badge bg-secondary-subtle text-secondary border border-secondary px-3 py-2"><i class="bi bi-shield-lock me-1"></i>Trả phí</span>';
         
         $('#viewStatusBadges').html(statusHtml);
-        Lesson.renderVideo('viewVideoPlayer', item.videoId, item.provider);
+        Lesson.renderVideo('viewVideoPlayer', item.videoId, item.provider, id);
 
     } catch (err) {
         console.error("Lỗi:", err);
         // 📍 Sửa lại cách gọi Toast
-        Toast1.fire({ icon: 'error', title: "Bác ơi, lỗi tải chi tiết rồi!" });
+        Toast1.fire({ icon: 'error', title: "Lỗi tải chi tiết rồi!" });
         $('#modalViewLesson').modal('hide');
     }
 },
 goToTrash: function() {
-        if (!this.currentChapterId || this.currentChapterId == 0) {
-            Swal.fire("Lỗi", "Không xác định được khóa học!", "error");
-            return;
-        }
-        // Chuyển hướng kèm theo tham số courseId trên URL
-        window.location.href = `/lesson/lesson_trash.html?chapterId=${this.currentChapterId}`;
-    },
+    if (!this.currentChapterId || this.currentChapterId == 0) {
+        Swal.fire("Lỗi", "Không xác định được chapter!", "error");
+        return;
+    }
+
+    // 🚩 Bổ sung thêm courseId vào URL ở đây
+    const cId = this.currentCourseId || 0; 
+    
+    // Ghép cả chapterId và courseId vào link
+    window.location.href = `/lesson/lesson_trash.html?chapterId=${this.currentChapterId}&courseId=${cId}`;
+},
 renderDetailTable: function (data) {
     let html = '';
     let tbody = $('#detailLessonTableBody');
@@ -977,7 +1246,7 @@ create: async function() {
         } else {
             label.text('Đang Khóa').removeClass('text-success').addClass('text-danger');
         }
-        Lesson.renderVideo('editVideoPreview',item.videoId, item.provider);
+        Lesson.renderVideo('editVideoPreview',item.videoId, item.provider, id);
         $('#modalEditLesson').modal('show');
     } catch (error) {
         console.error("Lỗi khi load dữ liệu sửa:", error);
@@ -1138,6 +1407,7 @@ showPaging: function (totalCount, totalPages, currentPage) {
     });
 },
 lessontrash: {
+    currentCourseId : 0,
     init: function() {
          const urlParams = new URLSearchParams(window.location.search);
             const id = urlParams.get('chapterId');
@@ -1251,9 +1521,7 @@ restoreBulk: function() {
         if (error.status === 401) {
             console.warn("Phiên đăng nhập hết hạn, vui lòng login lại.");
         }
-    } finally {
-        if (typeof TableLoader !== 'undefined') TableLoader.hide('#lessonTrashData');
-    }
+    } 
 },
 
    renderTable: function(data, currentRole) {
@@ -1551,9 +1819,28 @@ restoreBulk: function() {
     getSelectedIds: function() {
             return Array.from($('.item-check:checked')).map(cb => parseInt($(cb).val()));
         },
+        goBackToLessons: function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    debugger
+    // 2. Bốc chapterId và courseId từ URL (nếu trên URL không có thì mới xài biến dự phòng)
+    const chapterId = urlParams.get('chapterId') || Lesson.currentChapterId || "";
+    const courseId = urlParams.get('courseId')|| 0;
+    
+    // 3. Tiến hành ghép chuỗi điều hướng quay lại
+    window.location.href = `/lesson/index.html?chapterId=${chapterId}&courseId=${courseId}`;
 }
-};
+},
 
+};
+$(document).ready(function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const courseId = urlParams.get('courseId'); // Lấy được ID từ URL rồi nhé!
+
+    // Nếu có courseId thì cập nhật cho nút Quay lại
+    if (courseId) {
+        $('#backLink').attr('href', `/course/index.html#manage-chapters-${courseId}`);
+    }
+});
 
 // Chạy khởi tạo
 // $(document).ready(function () {

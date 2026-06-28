@@ -55,6 +55,7 @@ builder.Services.AddScoped<IWithDrawRepository, WithDrawRepository>();
 builder.Services.AddScoped<IWithdrawalService, WithdrawalService>();
 builder.Services.AddScoped<IRankService, RankService>();
 builder.Services.AddScoped<IRankRepository, RankRepository>();
+builder.Services.AddScoped<IBunnyService, BunnyService>();
 builder.Services.AddHostedService<OrderCleanupService>();
 builder.Services.AddSignalR(options =>
 {

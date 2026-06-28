@@ -53,7 +53,7 @@
         <h3 class="fw-bold mb-1"><i class="bi bi-trash3-fill me-2 text-danger"></i>THÙNG RÁC BÀI HỌC</h3>
         <p class="text-muted small mb-0">Danh sách các bài học đã xóa tạm thời thuộc chương học này.</p>
     </div>
-    <button onclick="window.location.href='lesson_index.html'" class="btn btn-outline-dark rounded-pill px-4 fw-bold">
+    <button onclick="Lesson.lessontrash.goBackToLessons()" class="btn btn-outline-dark rounded-pill px-4 fw-bold">
         <i class="bi bi-arrow-left"></i> QUAY LẠI
     </button>
 </div>
@@ -141,12 +141,14 @@
     </div>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/twbs-pagination/1.4.2/jquery.twbsPagination.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="../assets/js/admin-loader.js"></script>
     <script src="../assets/js/lesson.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
     <script src="../assets/js/global-loader.js"></script>
+    <script src="../assets/js/common.js"></script>
     <script>
         $(document).ready(function() {
             if (typeof Lesson !== 'undefined' && Lesson.lessontrash) {

@@ -137,15 +137,23 @@ var Auth = {
         }
     },
 
-    loginWithSocial: function(provider) {
-        const courseId = new URLSearchParams(window.location.search).get('id');
-        const frontendDomain = "https://lms-azure-mu.vercel.app"; 
-        
-        let returnUrl = courseId 
-            ? `${frontendDomain}/Home/detail.html?id=${courseId}`
-            : `${frontendDomain}/auth/login-success.html`;
-
-        const backendUrl = `https://lms-u2jn.onrender.com/api/auth/external-login?provider=${provider}&returnUrl=${encodeURIComponent(returnUrl)}`;
-        window.location.href = backendUrl;
+   loginWithSocial: function(provider) {
+    const frontendDomain = window.location.origin;
+    
+    const courseId = new URLSearchParams(window.location.search).get('id');
+    
+    if (courseId) {
+        localStorage.setItem("return_course_id", courseId);
+    } else {
+        localStorage.removeItem("return_course_id");
     }
+
+    // Link login-success lúc này sẽ nằm dưới máy local của bác để test tính năng redirect mới
+    const returnUrl = `${frontendDomain}/auth/login-success.html`;
+    const apiBaseUrl = "https://lms-u2jn.onrender.com"; 
+    
+    // 🚩 Đã thêm dấu ? và sửa đúng format đường dẫn
+    const backendUrl = `${apiBaseUrl}/api/auth/external-login?provider=${provider}&returnUrl=${encodeURIComponent(returnUrl)}`;
+    window.location.href = backendUrl;
+}
 };

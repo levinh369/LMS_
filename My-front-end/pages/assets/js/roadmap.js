@@ -122,6 +122,20 @@ registerEvents: function () {
 
 loadData: async function(page) {
     const userInfoRaw = localStorage.getItem("user_info");
+    if (userInfoRaw) {
+        const user = JSON.parse(userInfoRaw);
+        const roleId = parseInt(user.roleId || user.role);
+        
+        if (roleId !== 1) { 
+            // Nếu không phải Admin, đá về trang 403 hoặc trang Dashboard của Teacher luôn
+            window.location.href = "/403.html"; 
+            return; // Dừng toàn bộ luồng xử lý bên dưới ngay lập tức
+        }
+    } else {
+        // Trường hợp không có cả user_info trong localStorage thì bắt đăng nhập lại
+        window.location.href = "/auth/login.html";
+        return;
+    }
     const user = JSON.parse(userInfoRaw);
     const roleId = parseInt(user.role);
 
@@ -165,15 +179,13 @@ loadData: async function(page) {
         if (error.status === 401) {
             console.warn("Phiên đăng nhập hết hạn.");
         }
-    } finally {
-        if (typeof TableLoader !== 'undefined') TableLoader.hide('#roadmapBody');
-    }
+    } 
 },
-renderTable: function (data) { // 📍 BỎ tham số roleId vì mặc định luôn là Admin dùng
+renderTable: function (data) { 
     let html = '';
     if (!data || data.length === 0) {
-        // Cố định colSpan là 6 cột vì giao diện đã được chuẩn hóa cố định cho Admin
-        html = `<tr><td colspan="6" class="text-center py-5 text-muted">Không tìm thấy lộ trình nào bác ơi!</td></tr>`;
+        // SỬA Ở ĐÂY: Đổi colSpan từ 6 thành 7 để bao phủ trọn vẹn bề ngang của bảng
+        html = `<tr><td colspan="7" class="text-center py-5 text-muted fw-bold"><i class="bi bi-folder-x me-2 fs-4"></i>Không tìm thấy lộ trình nào!</td></tr>`;
     } else {
         data.forEach(item => {
             html += `
@@ -181,28 +193,23 @@ renderTable: function (data) { // 📍 BỎ tham số roleId vì mặc định l
                 <td class="ps-4">
                     <input class="form-check-input item-check" type="checkbox" value="${item.id}" style="cursor: pointer;">
                 </td>
-
                 <td class="ps-4">
                     <img src="${item.thumbnailUrl || 'https://via.placeholder.com/100x60'}" 
                         class="roadmap-img shadow-sm" style="width:70px; height:45px; object-fit:cover; border-radius:8px">
                 </td>
-
                 <td>
                     <div class="fw-bold text-dark">${item.title}</div>
                     <div class="text-muted small" style="font-size: 0.7rem;">ID: #${item.id}</div>
                 </td>
-
                 <td>
-                    <div class="fw-bold small">${item.createdByName || 'Hệ thống'}</div>
-                    <div class="text-muted" style="font-size:0.7rem">ID Admin: ${item.createdById || 'N/A'}</div>
+                    <div class="fw-bold small">${item.instructorName || 'Hệ thống'}</div>
+                    <div class="text-muted" style="font-size:0.7rem">ID Admin: ${item.instructorId || 'N/A'}</div>
                 </td>
-
                 <td class="text-center">
                     <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary px-3">
                         ${item.courseCount || 0} khóa
                     </span>
                 </td>
-
                 <td class="text-center">
                     <button class="btn btn-sm px-3 rounded-pill fw-bold shadow-sm transition-all
                             ${item.isActive ? 'btn-light-success text-success border-success' : 'btn-light-secondary text-secondary border-secondary'}" 
@@ -211,21 +218,17 @@ renderTable: function (data) { // 📍 BỎ tham số roleId vì mặc định l
                         ${item.isActive ? '<i class="bi bi-check-circle-fill me-1"></i>Hoạt động' : '<i class="bi bi-pause-circle-fill me-1"></i>Tạm ẩn'}
                     </button>
                 </td>
-
                 <td class="text-center">
                     <div class="d-flex justify-content-center gap-2">
                         <button class="btn btn-sm btn-outline-info" onclick="RoadMap.viewDetail(${item.id})" title="Xem chi tiết">
                             <i class="bi bi-eye"></i>
                         </button>
-
                         <a href="roadmap-builder.html?id=${item.id}" class="btn btn-sm btn-outline-primary" title="Xây dựng lộ trình">
                             <i class="bi bi-diagram-3"></i>
                         </a>
-                        
                         <button class="btn btn-sm btn-outline-warning" onclick="RoadMap.openEditModal(${item.id})" title="Sửa thông tin">
                             <i class="bi bi-pencil-square"></i>
                         </button>
-                        
                         <button class="btn btn-sm btn-outline-danger" onclick="RoadMap.delete(${item.id})" title="Xóa lộ trình">
                             <i class="bi bi-trash3-fill"></i>
                         </button>

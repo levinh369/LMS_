@@ -22,7 +22,7 @@ namespace LMS.Services.Interfaces
         Task<List<CourseHomeDTO>> GetCourseFree();
         Task<List<CourseHomeDTO>> GetCoursePremium();
         Task<CourseResponeDTO> GetCourseDetailHomeAsync(int id, int? userId = null);
-        Task<CourseResponeDTO?> GetCourseDetailForLearning(int courseId, int? userId = null);
+        Task<CourseResponeDTO?> GetCourseDetailForLearning(int courseId, int userId, string userRole);
         Task<List<CourseResponeDTO>> GetCoursesForUser(int userId);
         Task<(int completedCount, int totalCount, bool isFinished)> MarkAsCompleted(int lessonId, int userId);
         Task UpdateLastWatchedTime(int userId, int lessonId, int time);

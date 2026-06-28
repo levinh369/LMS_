@@ -362,22 +362,34 @@ namespace LMS.Services
         {
             var course = await courseRepository.GetCourseDetail(id);
             if (course == null) return null;
+
+            // 1. LỌC TRƯỚC DỮ LIỆU THÔ: Chỉ lấy những chương và bài học đang hiển thị (Active) và chưa bị xóa (!IsDeleted)
+            var activeChapters = course.Chapters?
+                .Where(ch => ch.IsActive && !ch.IsDeleted)
+                .ToList() ?? new List<ChapterModel>();
+
+            var activeLessons = activeChapters
+                .SelectMany(ch => ch.Lessons?.Where(l => l.IsActive && !l.IsDeleted) ?? new List<LessonModel>())
+                .ToList();
+
             var response = new CourseResponeDTO
             {
                 CourseId = course.Id,
                 Title = course.Title,
                 Description = course.Description,
                 ThumbnailUrl = course.ThumbnailUrl,
-                TotalDurationSeconds = course.Chapters.Sum(ch => ch.Lessons.Sum(ls => ls.Duration ?? 0)),
+                TotalDurationSeconds = activeLessons.Sum(ls => ls.Duration ?? 0),
+                TotalLessons = activeLessons.Count,
+                totalChapters = activeChapters.Count,
+
                 Price = course.Price,
                 CreateAt = course.CreatedAt,
                 IsActive = course.IsActive,
                 CategoryId = course.CategoryId,
                 CategoryName = course.Category?.Name ?? "Chưa phân loại",
                 TotalEnrolled = course.Enrollments?.Count ?? 0,
-                TotalLessons = course.Chapters.Sum(ch => ch.Lessons.Count),
-                totalChapters = course.Chapters.Count(),
-                InstructorName = course.Teacher?.FullName ?? " Giảng viên LMS",
+
+                InstructorName = course.Teacher?.FullName ?? "Giảng viên LMS",
                 InstructorId = course.Teacher?.Id,
                 InstructorUrl = course.Teacher?.AvatarUrl ?? "/images/default-avatar.png",
                 IsEnrolled = userId.HasValue && course.Enrollments.Any(e => e.UserId == userId.Value && e.IsActive),
@@ -388,37 +400,60 @@ namespace LMS.Services
                     Content = cd.Content,
                     DetailType = (int)cd.DetailType,
                 }).ToList() ?? new List<CourseResponeDetailDTO>(),
-
-                Chapters = course.Chapters?.OrderBy(ch => ch.OrderIndex).Select(ch => new ChapterResponseDTO
+                Chapters = activeChapters.OrderBy(ch => ch.OrderIndex).Select(ch => new ChapterResponseDTO
                 {
                     Id = ch.Id,
                     Title = ch.Title,
                     Order = ch.OrderIndex,
                     IsActive = ch.IsActive,
-                    Lessons = ch.Lessons?.OrderBy(l => l.OrderIndex).Select(l => new LessonResponseDTO
-                    {
-                        Id = l.Id,
-                        Title = l.Title,
-                        Provider = l.Provider,
-                        VideoId = l.VideoId,
-                        OrderIndex = l.OrderIndex,
-                        Duration = l.Duration,
-                        IsPreview = l.IsPreview,
-                        IsActive = l.IsActive
-                    }).ToList() ?? new List<LessonResponseDTO>()
+                    Lessons = ch.Lessons?
+                        .Where(l => l.IsActive && !l.IsDeleted) 
+                        .OrderBy(l => l.OrderIndex)
+                        .Select(l => new LessonResponseDTO
+                        {
+                            Id = l.Id,
+                            Title = l.Title,
+                            Provider = l.Provider,
+                            VideoId = l.VideoId,
+                            OrderIndex = l.OrderIndex,
+                            Duration = l.Duration,
+                            IsPreview = l.IsPreview,
+                            IsActive = l.IsActive
+                        }).ToList() ?? new List<LessonResponseDTO>()
                 }).ToList() ?? new List<ChapterResponseDTO>()
             };
 
             return response;
         }
 
-        public async Task<CourseResponeDTO?> GetCourseDetailForLearning(int courseId, int? userId = null)
+        public async Task<CourseResponeDTO?> GetCourseDetailForLearning(int courseId, int userId, string userRole)
         {
             var course = await courseRepository.GetCourseDetailForLearning(courseId, userId);
             if (course == null) return null;
 
+            bool isBypass = false;
+            if (userRole == "Admin" || (userRole == "Teacher" && course.TeacherId == userId))
+            {
+                isBypass = true;
+            }
+
+            if (!isBypass)
+            {
+                bool isPurchased = await courseRepository.CheckUserEnrollmentAsync(courseId, userId);
+                if (!isPurchased) return null; 
+            }
+
             var completedLessonIds = await userProgressRepository.GetCompletedLessonIdsAsync(userId);
-            bool isPreviousCompleted = true;
+            var activeChapters = course.Chapters
+                .Where(ch => ch.IsActive && !ch.IsDeleted)
+                .OrderBy(ch => ch.OrderIndex)
+                .ToList();
+
+            var activeLessonsInOrder = activeChapters
+                .SelectMany(ch => ch.Lessons
+                    .Where(l => l.IsActive && !l.IsDeleted)
+                    .OrderBy(l => l.OrderIndex))
+                .ToList();
 
             var response = new CourseResponeDTO
             {
@@ -427,50 +462,62 @@ namespace LMS.Services
                 TotalLessons = course.TotalLessons,
                 CompletedLessons = course.CompletedLessons,
                 ProgressPercent = course.ProgressPercent,
-                Chapters = course.Chapters.OrderBy(c => c.OrderIndex).Select(c => new ChapterResponseDTO
+                Chapters = activeChapters.Select(ch => new ChapterResponseDTO
                 {
-                    Id = c.Id,
-                    Title = c.Title,
-                    Lessons = c.Lessons.OrderBy(l => l.OrderIndex).Select(l =>
-                    {
-                        // --- LOGIC XỬ LÝ TRẠNG THÁI ---
-                        bool lockedState = !isPreviousCompleted;
-                        bool completedState = completedLessonIds.Contains(l.Id);
-                        isPreviousCompleted = completedState;
+                    Id = ch.Id,
+                    Title = ch.Title,
+                    Lessons = ch.Lessons
+                        .Where(l => l.IsActive && !l.IsDeleted)
+                        .OrderBy(l => l.OrderIndex)
+                        .Select(l =>
+                        {
+                            bool completedState = completedLessonIds != null && completedLessonIds.Contains(l.Id);
+                            bool lockedState = false;
 
-                        // --- LOGIC TẠO URL VIDEO BẢO MẬT ---
-                        string finalVideoUrl = "";
-                        if (l.Provider == "Bunny")
-                        {
-                            // Gọi hàm băm mã Token mà mình đã viết ở bước trước
-                            finalVideoUrl = lessonService.GenerateSecureBunnyUrl(l.VideoId, l.LibraryId);
-                        }
-                        else
-                        {
-                            // Link YouTube đơn giản
-                            finalVideoUrl = $"https://www.youtube.com/embed/{l.VideoId}?rel=0";
-                        }
+                            if (!isBypass)
+                            {
+                                int currentIndex = activeLessonsInOrder.IndexOf(l);
 
-                        return new LessonResponseDTO
-                        {
-                            Id = l.Id,
-                            Title = l.Title,
-                            // VideoId giữ nguyên để Frontend dùng khi cần
-                            VideoId = l.VideoId,
-                            Provider = l.Provider,
-                            // VideoUrl là link "ăn liền" đã có Token cho Iframe
-                            VideoUrl = finalVideoUrl,
-                            FormattedDuration = FormatDuration(l.Duration),
-                            IsLocked = lockedState,
-                            IsCompleted = completedState,
-                            WatchedLastTime = l.UserProgress.FirstOrDefault()?.LastWatchedTime ?? 0
-                        };
-                    }).ToList()
+                                if (currentIndex == 0)
+                                {
+                                    lockedState = false;
+                                }
+                                else
+                                {
+                                    var previousLesson = activeLessonsInOrder[currentIndex - 1];
+                                    bool isPreviousLessonCompleted = completedLessonIds != null && completedLessonIds.Contains(previousLesson.Id);
+                                    lockedState = !isPreviousLessonCompleted;
+                                }
+                            }
+
+                            string finalVideoUrl = "";
+                            if (l.Provider == "Bunny")
+                            {
+                                finalVideoUrl = lessonService.GenerateSecureBunnyUrl(l.VideoId, l.LibraryId);
+                            }
+                            else
+                            {
+                                finalVideoUrl = $"https://www.youtube.com/embed/{l.VideoId}?rel=0";
+                            }
+
+                            return new LessonResponseDTO
+                            {
+                                Id = l.Id,
+                                Title = l.Title,
+                                VideoId = l.VideoId,
+                                Provider = l.Provider,
+                                VideoUrl = finalVideoUrl,
+                                FormattedDuration = FormatDuration(l.Duration),
+                                IsLocked = lockedState,
+                                IsCompleted = completedState,
+                                WatchedLastTime = l.UserProgress?.FirstOrDefault()?.LastWatchedTime ?? 0
+                            };
+                        }).ToList()
                 }).ToList()
             };
+
             return response;
         }
-
         public async Task<List<CourseResponeDTO>> GetCoursesForUser(int userId)
         {
             var enrollments = await enrollRepository.GetUserEnrollmentsAsync(userId);
@@ -662,26 +709,19 @@ namespace LMS.Services
         }
         public async Task<PagedResultDto<CourseSearchResultItemDto>> SearchCoursesAsync(CourseSearchRequestDTO filter)
         {
-            var (courses, total) = await courseRepository.GetPublicCoursesAsync(filter);
+            // Gọi repo lấy dữ liệu đã được tối ưu
+            var (data, total) = await courseRepository.GetPublicCoursesAsync(filter);
 
-            var mappedItems = courses.Select(c => new CourseSearchResultItemDto
+            // Format thời gian hiển thị (Vì hàm FormatDuration thường nằm ở Service/Helper)
+            foreach (var item in data)
             {
-                Id = c.Id,
-                Title = c.Title,
-                ThumbnailUrl = c.ThumbnailUrl ?? "/img/default-course.png",
-                Price = c.Price,
-                IsFree = c.Price == 0,
-                Level = (int)c.Level,
-                InstructorName = c.Teacher != null ? c.Teacher.FullName : "Giảng viên LMS",
+                item.Duration = FormatDuration(item.DurationRaw);
+            }
 
-                LessonCount = c.Lessons?.Count ?? 0,
-                StudentCount = c.Enrollments?.Count ?? 0,
-                Duration = FormatDuration(c.Lessons?.Sum(l => l.Duration) ?? 0)
-            }).ToList();
-
+            // Trả về kết quả phân trang hoàn chỉnh
             return new PagedResultDto<CourseSearchResultItemDto>
             {
-                Data = mappedItems,
+                Data = data,
                 TotalRecords = total,
                 TotalPages = (int)Math.Ceiling(total / (double)filter.PageSize),
                 PageIndex = filter.PageIndex,

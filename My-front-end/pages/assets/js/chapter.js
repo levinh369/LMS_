@@ -17,6 +17,7 @@ const chapter = {
         apiUrl: "https://lms-u2jn.onrender.com/api/chapter"
     },
     openModal: async function(courseId) {
+        $('#currentCourseId').val(courseId);
         TableLoader.show('#chapterListBody');
         chapter.currentCourseId = courseId;
         
@@ -147,7 +148,7 @@ const chapter = {
                         <div class="btn-group shadow-sm">
                             
                             <button class="btn btn-sm btn-outline-info" title="Quản lý bài học" 
-                                    onclick="Lesson.MapsToLesson(${item.id})">
+                                    onclick="Lesson.MapsToLesson(${item.id}, ${this.currentCourseId})")">
                                 <i class="bi bi-collection-play-fill"></i>
                             </button>
                             

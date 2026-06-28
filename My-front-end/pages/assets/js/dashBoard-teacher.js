@@ -10,7 +10,7 @@ const Toast = Swal.mixin({
     }
 });
 window.DashboardTeacher = {
-    onlineCount: 0, // Biến đếm nằm ở đây cho gọn
+    onlineCount: 0, 
     revenueChartInstance: null,
     progressChartInstance: null,
 
@@ -46,18 +46,20 @@ window.DashboardTeacher = {
                 }
             });
         });
+
         $(document).on("click", "#btn-reset-filter", () => {
             const today = new Date();
             const sevenDaysAgo = new Date();
-            sevenDaysAgo.setDate(today.getDate() - 6); // Lùi lại 6 ngày + hôm nay là tròn 7 ngày
+            sevenDaysAgo.setDate(today.getDate() - 6); 
 
-            // Đổ lại ngày mặc định vào 2 ô input ô date trên giao diện
+            // Đổ lại ngày mặc định vào 2 ô input date trên giao diện
             $("#filter-end-date").val(today.toISOString().split('T')[0]);
             $("#filter-start-date").val(sevenDaysAgo.toISOString().split('T')[0]);
 
             // Gọi hàm loadData để kéo lại dữ liệu của 7 ngày mặc định
             this.loadData();
         });
+
         // Sự kiện Tìm kiếm Học viên Online (Client-side)
         $(document).on("keyup", "#search-online-input", function () {
             let keyword = $(this).val().toLowerCase().trim();
@@ -74,134 +76,177 @@ window.DashboardTeacher = {
 
     // 2. Hàm CORE: Gọi API bốc dữ liệu từ Backend C# về
     loadData: function () {
-        const token = localStorage.getItem("jwt_token") || localStorage.getItem("token");
-        const startDate = $("#filter-start-date").val();
-        const endDate = $("#filter-end-date").val();
+    const token = localStorage.getItem("jwt_token") || localStorage.getItem("token");
+    const startDate = $("#filter-start-date").val();
+    const endDate = $("#filter-end-date").val();
 
-        // Xây dựng đường dẫn URL kèm Query String lọc ngày tháng
-        let apiUrl = "https://lms-u2jn.onrender.com/api/DashBoard/dashboard-data";
-        if (startDate && endDate) {
-            apiUrl += `?startDate=${startDate}&endDate=${endDate}`;
-        }
+    // Xây dựng đường dẫn URL kèm Query String lọc ngày tháng
+    let apiUrl = "https://lms-u2jn.onrender.com/api/DashBoard/dashboard-data";
+    if (startDate && endDate) {
+        apiUrl += `?startDate=${startDate}&endDate=${endDate}`;
+    }
 
-        $.ajax({
-            url: apiUrl,
-            type: "GET",
-            headers: { "Authorization": "Bearer " + token },
-            beforeSend: function() {
-                // Có thể đắp thêm hiệu ứng loading vào đây nếu muốn
-                $(".stat-value").css("opacity", "0.5");
-            },
-            success: (response) => {
-                $(".stat-value").css("opacity", "1");
-                // Đổ dữ liệu chữ/số vào HTML
-                this.renderDashboardData(response);
-                
-                // Vẽ lại 2 biểu đồ (Cột doanh thu & Tròn tiến độ)
-                this.initCharts(response);
-            },
-            error: (err) => {
-                $(".stat-value").css("opacity", "1");
-                console.error("❌ Không thể lấy dữ liệu Dashboard giảng viên:", err);
-                if(err.status === 401) {
-                    alert("Phiên làm việc hết hạn, vui lòng đăng nhập lại!");
+    $.ajax({
+        url: apiUrl,
+        type: "GET",
+        headers: { "Authorization": "Bearer " + token },
+        beforeSend: function() {
+            // 1. Bật loader của SweetAlert2 ngay khi bắt đầu gửi request
+            Swal.fire({
+                title: 'Đang trích xuất dữ liệu...',
+                allowOutsideClick: false, // Ngăn người dùng click ra ngoài tắt mất khi đang load
+                didOpen: () => { 
+                    Swal.showLoading(); 
                 }
+            });
+            $(".stat-value").css("opacity", "0.5");
+        },
+        success: (response) => {
+            // Đổ dữ liệu chữ/số vào HTML
+            this.renderDashboardData(response);
+            
+            // Vẽ lại 2 biểu đồ (Cột doanh thu & Tròn tiến độ)
+            if (typeof this.initCharts === "function") {
+                this.initCharts(response);
             }
-        });
-    },
-        openWithDrawModal: function(){
+        },
+        error: (err) => {
+            console.error("❌ Không thể lấy dữ liệu Dashboard giảng viên:", err);
+            if(err.status === 401) {
+                // Thay vì alert thô, dùng luôn Swal thông báo lỗi cho đồng bộ
+                Swal.fire('Hết hạn phiên', 'Vui lòng đăng nhập lại!', 'error');
+            } else {
+                Swal.fire('Lỗi', 'Không thể tải dữ liệu dashboard!', 'error');
+            }
+        },
+        complete: function() {
+            // 2. DÙ THÀNH CÔNG HAY LỖI: Đều đóng loader và trả lại độ sáng cho text
+            $(".stat-value").css("opacity", "1");
+            
+            // Chỉ đóng nếu Swal đang hiển thị loading, tránh đè lên Swal thông báo lỗi ở tầng error
+            if (Swal.isLoading()) {
+                Swal.close();
+            }
+        }
+    });
+},
+
+    openWithDrawModal: function(){
         $('#withdrawForm')[0].reset();
-        // Course.addedDetails=[];
-        // Course.renderDetails();
         $('#withdrawModal').modal('show');
     },
-    // 3. Hàm render văn bản, tiền tệ, bảng biểu vào giao diện
-    renderDashboardData: function (data) {
-        // Hàm phụ hỗ trợ định dạng tiền VNĐ nhanh gọn
-        const formatVND = (num) => {
-            return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' })
-                .format(num ?? 0).replace("₫", "đ");
-        };
 
-        // --- RENDER KHỐI HẠNG THÀNH VIÊN (RANK CARD) ---
-        $("#lbl-rank-name").text(data.rankName);
-        $("header h1").text(`Xin chào, Giảng viên ${data.teacherName}! 👋`);
-        let rankNameHtml = `${data.rankTitle} <span class="commission-tag">Hoa hồng thực nhận: ${data.commissionRate}%</span>`;
-        $(".rank-info .rank-name").html(rankNameHtml);
+   renderDashboardData: function (data) {
+    // Hàm phụ hỗ trợ định dạng tiền VNĐ nhanh gọn
+    const formatVND = (num) => {
+        return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' })
+            .format(num ?? 0).replace("₫", "đ");
+    };
 
-        // Tính toán phần trăm tiến trình lên hạng kế tiếp
-        let progressPercent = 0;
-        if (data.targetRevenueForRank > 0) {
-            progressPercent = (data.currentRevenueForRank / data.targetRevenueForRank) * 100;
-            if (progressPercent > 100) progressPercent = 100; // Ghim tối đa 100% nếu max cấp
-        }
-        
-        $(".progress-labels span:last-child").html(`<strong>${formatVND(data.currentRevenueForRank)}</strong> / ${formatVND(data.targetRevenueForRank)}`);
-        $(".progress-bar .progress-fill").css("width", progressPercent + "%");
+    // --- RENDER KHỐI HẠNG THÀNH VIÊN (RANK CARD) ---
+    const currentRank = data.rankName || "Đồng"; 
+    const currentTitle = data.rankTitle || "Hạng Đồng";
+    const currentCommission = data.commissionRate ?? 0; 
 
-        // Hiển thị thông báo động dựa trên việc có Rank kế tiếp hay không
-        if (data.nextRankName && data.targetRevenueForRank > data.currentRevenueForRank) {
-            let missingRevenue = data.targetRevenueForRank - data.currentRevenueForRank;
-            $(".rank-info p").html(`Cố lên! Bạn chỉ còn thiếu <strong>${formatVND(missingRevenue)}</strong> tích lũy để thăng tiến lên <strong>${data.nextRankName}</strong>.`);
-        } else {
-            $(".rank-info p").html(`Chúc mừng! Bạn đã đạt cấp bậc cao nhất hệ thống: <strong>${data.rankName}</strong>.`);
-        }
+    // 🔥 ĐÃ SỬA: Logic tự động đổi Emoji Huy chương theo Rank từ DB
+    let rankIcon = "🥉"; // Mặc định là Đồng
+    const rankUpper = currentRank.toUpperCase();
+    
+    if (rankUpper.includes("BẠC") || rankUpper.includes("SILVER")) {
+        rankIcon = "🥈";
+    } else if (rankUpper.includes("VÀNG") || rankUpper.includes("GOLD")) {
+        rankIcon = "🥇";
+    } else if (rankUpper.includes("KIM CƯƠNG") || rankUpper.includes("DIAMOND")) {
+        rankIcon = "💎";
+    }
 
-        // --- RENDER THẺ THỐNG KÊ NHANH (STATS GRID) ---
-        const cards = $(".stats-grid .stat-card");
-        
-        // Cột 1: Gross
-        cards.eq(0).find(".stat-value").text(formatVND(data.totalGrossRevenue));
-        cards.eq(0).find(".stat-change").text(data.revenueChangeText);
-        
-        // Cột 2: Phí sàn
-        cards.eq(1).find(".stat-value").text("-" + formatVND(data.platformFee));
-        cards.eq(1).find(".stat-change").text(`Khấu trừ ${100 - data.commissionRate}% dựa theo ${data.rankName}`);
-        
-        // Cột 3: Thực nhận Net
-        cards.eq(2).find(".stat-value").text(formatVND(data.netRevenue));
-        
-        // Cột 4: Số dư ví khả dụng
-        cards.eq(3).find(".stat-value").text(formatVND(data.availableBalance));
-        const balance = data.availableBalance; // Lấy số dư từ API trả về
-        const formattedBalance = new Intl.NumberFormat('vi-VN').format(balance);
-        document.getElementById("displayAvailableBalance").innerText = formattedBalance + " VNĐ";
-        // --- RENDER BẢNG HIỆU SUẤT KHÓA HỌC (COURSE PERFORMANCE TABLE) ---
-        let tableRows = "";
-        if (data.coursePerformances && data.coursePerformances.length > 0) {
-            data.coursePerformances.forEach(course => {
-                let badge = course.isPro ? '<span class="badge-pro">PRO</span>' : '<span class="badge-free">MIỄN PHÍ</span>';
-                tableRows += `
-                    <tr>
-                        <td class="course-name">${course.courseName} ${badge}</td>
-                        <td><i class="bi bi-people me-1 text-muted"></i>${course.studentCount}</td>
-                        <td class="fw-semibold">${formatVND(course.grossRevenue)}</td>
-                        <td class="text-success fw-semibold">${formatVND(course.netRevenue)}</td>
-                    </tr>`;
-            });
-        } else {
-            tableRows = `<tr><td colspan="4" class="text-center text-muted py-4">Không có dữ liệu khóa học phát sinh doanh thu trong kỳ này.</td></tr>`;
-        }
-        $(".panel table tbody").html(tableRows);
+    // Đổ data động vào HTML (Bỏ hoàn toàn fix cứng)
+    $("#lbl-rank-icon").text(rankIcon);
+    $("#lbl-rank-name").text(currentTitle);
+    $("header h1").text(`Xin chào, Giảng viên ${data.teacherName || 'Giảng viên'}! 👋`);
+    
+    let rankNameHtml = `${currentTitle} <span class="commission-tag">Hoa hồng thực nhận: ${currentCommission}%</span>`;
+    $(".rank-info .rank-name").html(rankNameHtml);
 
-        // --- RENDER DANH SÁCH GIAO DỊCH GẦN NHẤT ---
-        let txHtml = "";
-        if (data.recentTransactions && data.recentTransactions.length > 0) {
-            data.recentTransactions.forEach(tx => {
-                let amtClass = tx.isIncome ? 'up fw-semibold' : 'text-danger fw-semibold';
-                let prefix = tx.isIncome ? '+' : '-';
-                txHtml += `
-                    <div style="display: flex; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid #f1f5f9;">
-                        <span><i class="bi bi-wallet2 me-2 text-secondary"></i>${tx.description}</span>
-                        <span class="${amtClass}">${prefix}${formatVND(tx.amount)}</span>
-                    </div>`;
-            });
-        } else {
-            txHtml = `<div class="text-muted text-center py-3">Không có giao dịch nào phát sinh gần đây.</div>`;
-        }
-        $("#recent-transactions-container").html(txHtml);
-    },
+    // Tính toán tỷ lệ phần trăm tiến trình thăng hạng
+    let progressPercent = 0;
+    const targetRevenue = data.targetRevenueForRank || 25000000; // Mốc động từ API (ví dụ mốc Bạc: 25.000.000)
+    const currentRevenue = data.currentRevenueForRank || 0;
 
+    if (targetRevenue > 0) {
+        progressPercent = (currentRevenue / targetRevenue) * 100;
+        if (progressPercent > 100) progressPercent = 100; 
+    }
+    
+    $(".progress-labels span:last-child").html(`<strong>${formatVND(currentRevenue)}</strong> / ${formatVND(targetRevenue)}`);
+    $(".progress-bar .progress-fill").css("width", progressPercent + "%");
+
+    // ✨ THIẾT KẾ MỚI CHUẨN LOGIC: Tính toán số tiền còn thiếu để thăng hạng (Né từ "Chúc mừng" vô lý khi tài khoản bằng 0)
+    if (targetRevenue > currentRevenue) {
+        let missingRevenue = targetRevenue - currentRevenue; // Lấy mốc Bạc (25tr) trừ đi doanh thu hiện tại (0đ)
+        $(".rank-info p").html(`Tài khoản của bạn đang ở mức <strong>${currentTitle}</strong>. Bạn cần tích lũy thêm <strong>${formatVND(missingRevenue)}</strong> doanh thu nữa để thăng cấp lên <strong>${data.nextRankName || 'Bạc'}</strong>.`);
+    } else {
+        $(".rank-info p").html(`Chúc mừng! Bạn đã xuất sắc đạt cấp bậc cao nhất hệ thống: <strong>${currentRank}</strong>.`);
+    }
+
+    // --- RENDER THÊ THỐNG KÊ NHANH (STATS GRID) ---
+    const cards = $(".stats-grid .stat-card");
+    
+    // Cột 1: Gross
+    cards.eq(0).find(".stat-value").text(formatVND(data.totalGrossRevenue));
+    cards.eq(0).find(".stat-change").text(data.revenueChangeText || "Chưa có biến động");
+    
+    // Cột 2: Phí sàn
+    cards.eq(1).find(".stat-value").text("-" + formatVND(data.platformFee));
+    cards.eq(1).find(".stat-change").text(`Khấu trừ ${100 - currentCommission}% dựa theo hạng ${currentRank}`);
+    
+    // Cột 3: Thực nhận Net
+    cards.eq(2).find(".stat-value").text(formatVND(data.netRevenue));
+    
+    // Cột 4: Số dư ví khả dụng
+    cards.eq(3).find(".stat-value").text(formatVND(data.availableBalance));
+    const balance = data.availableBalance || 0;
+    const formattedBalance = new Intl.NumberFormat('vi-VN').format(balance);
+    const displayBalanceElem = document.getElementById("displayAvailableBalance");
+    if (displayBalanceElem) {
+        displayBalanceElem.innerText = formattedBalance + " VNĐ";
+    }
+
+    // --- RENDER BẢNG HIỆU SUẤT KHÓA HỌC (COURSE PERFORMANCE TABLE) ---
+    let tableRows = "";
+    if (data.coursePerformances && data.coursePerformances.length > 0) {
+        data.coursePerformances.forEach(course => {
+            let badge = course.isPro ? '<span class="badge-pro">PRO</span>' : '<span class="badge-free">MIỄN PHÍ</span>';
+            tableRows += `
+                <tr>
+                    <td class="course-name">${course.courseName} ${badge}</td>
+                    <td><i class="bi bi-people me-1 text-muted"></i>${course.studentCount}</td>
+                    <td class="fw-semibold">${formatVND(course.grossRevenue)}</td>
+                    <td class="text-success fw-semibold">${formatVND(course.netRevenue)}</td>
+                </tr>`;
+        });
+    } else {
+        tableRows = `<tr><td colspan="4" class="text-center text-muted py-4">Không có dữ liệu khóa học phát sinh doanh thu trong kỳ này.</td></tr>`;
+    }
+    $(".panel table tbody").html(tableRows);
+
+    // --- RENDER DANH SÁCH GIAO DỊCH GẦN NHẤT ---
+    let txHtml = "";
+    if (data.recentTransactions && data.recentTransactions.length > 0) {
+        data.recentTransactions.forEach(tx => {
+            let amtClass = tx.isIncome ? 'up fw-semibold' : 'text-danger fw-semibold';
+            let prefix = tx.isIncome ? '+' : '-';
+            txHtml += `
+                <div style="display: flex; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid #f1f5f9;">
+                    <span><i class="bi bi-wallet2 me-2 text-secondary"></i>${tx.description}</span>
+                    <span class="${amtClass}">${prefix}${formatVND(tx.amount)}</span>
+                </div>`;
+        });
+    } else {
+        txHtml = `<div class="text-muted text-center py-3">Không có giao dịch nào phát sinh gần đây.</div>`;
+    }
+    $("#recent-transactions-container").html(txHtml);
+},
     // 4. Hàm dựng và cập nhật dữ liệu vẽ Biểu đồ Chart.js
     initCharts: function (data) {
         // Khử trùng biểu đồ cũ nếu đã tồn tại để tránh lỗi đè chuột (Hover lag)

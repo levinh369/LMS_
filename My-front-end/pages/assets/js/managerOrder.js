@@ -33,6 +33,7 @@ const AdminOrder = {
 
     // 1. LẤY DANH SÁCH DỮ LIỆU
   loadData: async function(page) {
+    
     const { pageSize, apiUrl } = AdminOrder.config;
     const token = localStorage.getItem('jwt_token');
     TableLoader.show('#admin-order-table-body');

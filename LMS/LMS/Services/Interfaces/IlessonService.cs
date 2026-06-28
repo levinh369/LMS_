@@ -34,6 +34,6 @@ namespace LMS.Services.Interfaces
         Task<bool> HardDeleteBulkAsync(List<int> ids, string role, int userId);
         Task<bool> SoftDeleteBulkAsync(List<int> ids, string role, int userId);
         Task<bool> ChangeStatusAsync(int id, string role, int userId);
-
+        string GenerateSecureUrl(int lessonId);
     }
 }

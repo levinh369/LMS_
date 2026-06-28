@@ -64,6 +64,16 @@ namespace LMS.Data
                 .WithMany()
                 .HasForeignKey(p => p.CourseId)
                 .OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<CourseModel>() // Thay đúng tên Class Model của ông
+     .HasOne(c => c.Teacher)
+     .WithMany()
+     .HasForeignKey(c => c.TeacherId)
+     .HasConstraintName("FK_Courses_Users_TeacherId"); // Tạo khóa ngoại
+
+            // Gõ thêm dòng này để ép tạo mới tinh một Non-Clustered Index
+            modelBuilder.Entity<CourseModel>()
+                .HasIndex(c => c.TeacherId)
+                .HasDatabaseName("IX_Courses_teacherId");
         }
     }
 

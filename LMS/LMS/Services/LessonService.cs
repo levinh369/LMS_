@@ -55,7 +55,8 @@ namespace LMS.Services
                 CourseModelId = chapter.CourseId,
                 CreatedAt = DateTime.UtcNow.AddHours(7),
                 UpdatedAt = DateTime.UtcNow.AddHours(7),
-                IsDeleted = false
+                IsDeleted = false,
+                
             };
 
             await lessonRepository.AddAsync(lesson);
@@ -88,6 +89,7 @@ namespace LMS.Services
                 Provider = entity.Provider,
                 IsPreview = entity.IsPreview,
                 FormattedDuration = FormatDuration(entity.Duration),
+                OrderIndex = entity.OrderIndex,
             };
             return course;
 
@@ -536,6 +538,38 @@ namespace LMS.Services
             await lessonRepository.UpdateAsync(entity);
 
             return entity.IsActive;
+        }
+        public string GenerateSecureUrl(int lessonId)
+        {
+            // 1. Lấy VideoId từ Repo
+            string videoId = lessonRepository.GetBunnyVideoId(lessonId)?.Trim().ToLower();
+            if (string.IsNullOrEmpty(videoId)) return null;
+
+            string libraryId = _bunnySettings.LibraryId;
+            string securityKey = _bunnySettings.SecurityKey?.Trim();
+
+            long expires = DateTimeOffset.UtcNow.AddSeconds(30).ToUnixTimeSeconds();
+
+            // Chuỗi đầu vào chuẩn: SecurityKey + videoId + expires
+            string input = securityKey + videoId + expires;
+
+            // 🎯 SỬA LỖI CHÍ MẠNG: Dùng thuật toán SHA256
+            using (var sha256 = SHA256.Create())
+            {
+                byte[] inputBytes = Encoding.UTF8.GetBytes(input);
+                byte[] hashBytes = sha256.ComputeHash(inputBytes);
+
+                // Convert sang chuỗi Hex dạng viết thường chuẩn chỉ
+                StringBuilder sb = new StringBuilder();
+                foreach (byte b in hashBytes)
+                {
+                    sb.Append(b.ToString("x2"));
+                }
+                string token = sb.ToString();
+
+                // 3. Trả về URL khớp hoàn toàn cấu trúc hệ thống xác thực
+                return $"https://iframe.mediadelivery.net/embed/{libraryId}/{videoId}?token={token}&expires={expires}";
+            }
         }
     }
 }

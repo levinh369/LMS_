@@ -341,7 +341,7 @@ renderTable: function (data, roleId) {
     
 loadCategories: async function () {
     if (Array.isArray(Course.categories) && Course.categories.length > 0) {
-        return; 
+        return true; 
     }
 
     try {
@@ -349,7 +349,7 @@ loadCategories: async function () {
         const result = await response.json(); 
         Course.categories = result.data || []; 
 
-        let filterHtml = '<option value="0">Tất cả danh mục</option>'; // Để value 0 cho đồng bộ với các filter khác
+        let filterHtml = '<option value="0">Tất cả danh mục</option>'; 
         let modalHtml = '<option value="">-- Chọn danh mục --</option>';
 
         Course.categories.forEach(item => {
@@ -357,19 +357,26 @@ loadCategories: async function () {
             filterHtml += option;
             modalHtml += option;
         });
-        const userInfo = JSON.parse(localStorage.getItem("user_info"));
-        if (userInfo.role === 1) {
-            $('#adminFilterCategory').html(filterHtml);
-        } else {
-            $('#teacherFilterCategory').html(filterHtml);
-        }
-
-        // Các select trong Modal (thêm/sửa) thì luôn cần đổ vào
         $('#ddlCategoryId').html(modalHtml);
         $('#editDdlCategoryId').html(modalHtml);
+        const userInfoRaw = localStorage.getItem("user_info");
+        if (userInfoRaw) {
+            const userInfo = JSON.parse(userInfoRaw);
+            const roleId = parseInt(userInfo.roleId || userInfo.role);
+            
+            if (roleId === 1) {
+                $('#adminFilterCategory').html(filterHtml);
+            } else {
+                $('#teacherFilterCategory').html(filterHtml);
+            }
+        }
+
+        console.log("✅ Hệ thống: Đã nạp và render xong danh mục vào HTML");
+        return true; 
 
     } catch (error) {
         console.error("Lỗi load danh mục:", error);
+        return false;
     }
 },
 create: async function() {
@@ -1260,5 +1267,43 @@ resetFilter: function() {
 }
 }
 };
+$(document).ready(async function () { 
+   const urlParams = new URLSearchParams(window.location.search);
+    const courseId = urlParams.get('id') || urlParams.get('courseId');
+    const hash = window.location.hash; 
 
+    try {
+        if (typeof Course !== 'undefined' && typeof Course.loadCategories === 'function') {
+            await Course.loadCategories(); 
+        }
+
+        // Ưu tiên mở Modal chương nếu có hash trước (Vì nó quan trọng hơn)
+        if (hash.startsWith('#manage-chapters-')) {
+            const courseIdFromHash = hash.split('-')[2];
+            console.log("📍 Tự động mở Modal Chương cho ID:", courseIdFromHash);
+            
+            setTimeout(() => {
+                chapter.openModal(parseInt(courseIdFromHash));
+            }, 500); 
+        } 
+        // Nếu không có hash mới mở Modal Cập nhật khóa học
+        else if (courseId) {
+            console.log("📍 Tự động mở Modal cập nhật cho khóa học ID:", courseId);
+            await Course.openUpdateModal(parseInt(courseId));
+        }
+
+    } catch (e) {
+        console.error("Lỗi khởi tạo:", e);
+    }
+
+    $('#chapterModal').on('shown.bs.modal', function () {
+        const courseId = $('#currentCourseId').val(); 
+        if (courseId) {
+            history.replaceState(null, null, window.location.pathname + window.location.search + `#manage-chapters-${courseId}`);
+        }
+    });
+    $('#chapterModal').on('hidden.bs.modal', function () {
+        history.replaceState(null, null, window.location.pathname + window.location.search);
+    });
+});
 

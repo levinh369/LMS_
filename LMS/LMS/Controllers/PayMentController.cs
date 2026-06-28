@@ -46,14 +46,12 @@ public class PaymentController : ControllerBase
             nowInVietnam = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Ho_Chi_Minh"));
         }
 
-        // 2. Xử lý logic tạo mới hoặc lấy lại đơn cũ
         if (request.OrderId == 0)
         {
             var course = await _context.Courses.FindAsync(request.CourseId);
             if (course == null) return NotFound("Không thấy khóa học này.");
-
-            var exists = await _context.Orders.AnyAsync(o => o.UserId == userId && o.CourseId == request.CourseId && o.Status == OrderStatusEnum.Success);
-            if (exists) return BadRequest(new { message = "Bác đã sở hữu khóa học này rồi!" });
+            var isEnrolled = await _context.Enrollments.AnyAsync(e => e.UserId == userId && e.CourseId == request.CourseId);
+            if (isEnrolled) return BadRequest(new { message = "Bác đã sở hữu khóa học này rồi!" });
 
             order = new OrderModel
             {
@@ -92,7 +90,6 @@ public class PaymentController : ControllerBase
         long vnpAmount = (long)(order.Amount * 100);
         vnpay.AddRequestData("vnp_Amount", vnpAmount.ToString());
 
-        // CHỈ ĐỂ 1 DÒNG NÀY THÔI
         vnpay.AddRequestData("vnp_CreateDate", order.CreatedAt.ToString("yyyyMMddHHmmss"));
 
         vnpay.AddRequestData("vnp_CurrCode", "VND");
@@ -123,22 +120,29 @@ public class PaymentController : ControllerBase
         var vnpay = new VnPayLibrary();
         string hashSecret = _configuration["Vnpay:HashSecret"];
 
+        // 1. Lấy chữ ký do VNPay gửi sang trước để so sánh sau
+        string vnp_SecureHash = queryData["vnp_SecureHash"];
+
+        // 2. Chỉ nạp các tham số dữ liệu, BỎ QUA tham số chứa chữ ký
         foreach (var (key, value) in queryData)
         {
             if (!string.IsNullOrEmpty(key) && key.StartsWith("vnp_"))
             {
+                // THÊM DÒNG NÀY ĐỂ LOẠI BỎ CHỮ KÝ RA KHỎI CHUỖI DATA HASH
+                if (key == "vnp_SecureHash") continue;
+
                 vnpay.AddResponseData(key, value);
             }
         }
 
+        // 3. Đọc các thông tin cần thiết từ thư viện
         int orderId = int.Parse(vnpay.GetResponseData("vnp_TxnRef"));
         string vnp_ResponseCode = vnpay.GetResponseData("vnp_ResponseCode");
         string vnp_TransactionStatus = vnpay.GetResponseData("vnp_TransactionStatus");
         string vnp_TransactionNo = vnpay.GetResponseData("vnp_TransactionNo");
-        string vnp_SecureHash = queryData["vnp_SecureHash"];
 
+        // 4. Xác thực chữ ký chuẩn chỉnh
         bool isSignatureValid = vnpay.ValidateSignature(vnp_SecureHash, hashSecret);
-
         if (isSignatureValid)
         {
             var order = await _context.Orders

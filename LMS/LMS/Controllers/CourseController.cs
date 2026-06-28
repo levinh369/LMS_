@@ -342,19 +342,25 @@ namespace LMS.Controllers
         }
 
 
-        // --- NHÓM 2: CÁC API HỌC TẬP & TIẾN ĐỘ (STUDENT VÀ CÁC QUYỀN KHÁC ĐỀU VÀO ĐƯỢC) ---
-
-        [Authorize] // ✅ FIX 2: Chỉ giữ duy nhất Authorize trơn để cho phép Student được học bài bài bản
+        [Authorize]
         [HttpGet("course-learning/{id}")]
         public async Task<IActionResult> GetCourseDetailForLearning(int id)
         {
             var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+            // Lấy thêm Role Claim từ token (.NET thường dùng ClaimTypes.Role)
+            var roleClaim = User.FindFirst(System.Security.Claims.ClaimTypes.Role);
+
             if (userIdClaim == null) return Unauthorized();
+
             int userId = int.Parse(userIdClaim.Value);
-            var courserDetail = await courseService.GetCourseDetailForLearning(id, userId);
+            string userRole = roleClaim != null ? roleClaim.Value : "Student";
+
+            // Truyền thêm userRole vào hàm service
+            var courserDetail = await courseService.GetCourseDetailForLearning(id, userId, userRole);
+
             if (courserDetail == null)
             {
-                return NotFound(new { success = false, message = "Không tìm thấy khóa học này bác ơi!" });
+                return NotFound(new { success = false, message = "Không tìm thấy hoặc bác không có quyền truy cập khóa học này!" });
             }
             return Ok(new { success = true, data = courserDetail });
         }
@@ -374,13 +380,27 @@ namespace LMS.Controllers
             return Ok(new { success = true, data = myCourses });
         }
 
-        [Authorize] // ✅ FIX 4: Chỉ giữ duy nhất Authorize trơn
+        [Authorize] 
         [HttpPost("complete-lesson/{lessonId}")]
         public async Task<IActionResult> MarkAsCompleted(int lessonId)
         {
             var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
             if (userIdClaim == null) return Unauthorized();
             int userId = int.Parse(userIdClaim.Value);
+
+            var roleClaim = User.FindFirst(System.Security.Claims.ClaimTypes.Role);
+            string userRole = roleClaim != null ? roleClaim.Value : "Student";
+            if (userRole == "Admin" || userRole == "Teacher")
+            {
+                return Ok(new
+                {
+                    success = true,
+                    completedCount = 0, 
+                    isFinished = false,
+                    totalCount = 100,
+                    message = "Bypass thành công cho tài khoản nội bộ (Admin/Teacher)"
+                });
+            }
 
             try
             {
@@ -398,8 +418,7 @@ namespace LMS.Controllers
                 return BadRequest(new { success = false, message = ex.Message });
             }
         }
-
-        [Authorize] // ✅ FIX 5: Chỉ giữ duy nhất Authorize trơn
+        [Authorize] 
         [HttpPost("update-last-watched")]
         public async Task<IActionResult> UpdateLastWatched([FromBody] UserProgressRequestDTO request)
         {
@@ -412,7 +431,7 @@ namespace LMS.Controllers
             return Ok(new { success = true });
         }
 
-        [Authorize] // ✅ FIX 6: Chỉ giữ duy nhất Authorize trơn
+        [Authorize] 
         [HttpGet("resume/{courseId}")]
         public async Task<IActionResult> ResumeLesson(int courseId)
         {

@@ -1,12 +1,18 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đang xử lý đăng nhập...</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="../assets/js/common.js"></script> 
 </head>
 <body>
+    <div style="text-align: center; margin-top: 100px; font-family: sans-serif; color: #666;">
+        <h3>Đang xác thực tài khoản...</h3>
+        <p>Vui lòng đợi trong giây lát.</p>
+    </div>
+
     <script>
     const params = new URLSearchParams(window.location.search);
     
@@ -16,31 +22,41 @@
         userId: params.get('userId'),
         username: params.get('username'),
         avatarUrl: params.get('avatar'),
-        role: params.get('role'), // 📍 Hứng RoleId (ví dụ: 1, 2, 3) từ Render bắn về
+        role: params.get('role'), // Hứng RoleId (1, 2, 3) từ Backend
         email: params.get('email')
     };
 
     if (authData.accessToken && authData.userId) {
-        // 1. Lưu toàn bộ dữ liệu vào localStorage sạch sẽ
+        // 1. Lưu thông tin đăng nhập vào hệ thống cookie/localStorage
         AuthHelper.saveAuth(authData);
         
-        // Kiểm tra xem có đang trong luồng click ghi danh khóa học từ ngoài vào không
-        const courseId = params.get('id'); 
+        // Luồng 1: Hứng id trực tiếp từ URL (áp dụng cho luồng deploy cũ của bác)
+        const courseIdFromUrl = params.get('id'); 
+        
+        // Luồng 2: Hứng id từ localStorage (áp dụng khi bác chạy local dùng link tĩnh né lỗi Google 400)
+        const courseIdFromStorage = localStorage.getItem("return_course_id"); 
+        
         const roleId = parseInt(authData.role || 0);
 
-        // 2. ĐIỀU HƯỚNG THÔNG MINH THEO ROLE ĐỒNG BỘ VỚI HÀM LOGIN THƯỜNG
+        // 2. ĐIỀU HƯỚNG THÔNG MINH ĐA MÔI TRƯỜNG
         setTimeout(() => {
-            if (courseId) {
-                // Ưu tiên 1: Đang mua dở khóa học -> Vào thẳng lớp học
-                window.location.href = `/learn/learning.html?id=${courseId}`;
+            if (courseIdFromUrl) {
+                // Ưu tiên 1: Có id trên URL từ bản deploy -> Vào thẳng lớp học học luôn
+                window.location.href = `/learn/learning.html?id=${courseIdFromUrl}`;
+                
+            } else if (courseIdFromStorage) {
+                // Ưu tiên 2: Có id cất trong ví localStorage -> Quay lại trang chi tiết cũ sạch sẽ
+                localStorage.removeItem("return_course_id"); // Dọn dẹp bộ nhớ ngay lập tức
+                window.location.href = `/Home/detail.html?id=${courseIdFromStorage}`;
+                
             } else {
-                // Ưu tiên 2: Điều hướng theo phân quyền vai trò
+                // Ưu tiên 3: Đăng nhập vãng lai không có bối cảnh khóa học -> Đi theo phân quyền Role
                 if (roleId === 1) {
                     window.location.href = "/Dashboard/index.html";              // Admin -> Thống kê
                 } else if (roleId === 3) {
-                    window.location.href = "/Dashboard/Dashboard-teacher.html";  // Teacher -> Quản lý lớp
+                    window.location.href = "/Dashboard/Dashboard-teacher.html";  // Teacher -> Quản lý
                 } else {
-                    window.location.href = "/index.html";                        // Student/Guest -> Trang chủ
+                    window.location.href = "/index.html";                        // Student -> Trang chủ
                 }
             }
         }, 500);
@@ -49,6 +65,6 @@
         alert("Lỗi dữ liệu xác thực từ mạng xã hội!");
         window.location.href = "/auth/login.html";
     }
-</script>
+    </script>
 </body>
 </html>

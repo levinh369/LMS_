@@ -53,6 +53,7 @@ namespace LMS.Services
                 ThumbnailUrl = imageUrl,
                 CreatedAt = DateTime.UtcNow.AddHours(7),
                 UpdatedAt = DateTime.UtcNow.AddHours(7),
+                CreatedById = teacherId,
             };
             await roadMapRepository.AddAsync(roadMap);
         }
