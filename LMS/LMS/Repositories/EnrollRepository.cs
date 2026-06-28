@@ -32,28 +32,51 @@ namespace LMS.Repositories
         }
         public async Task<bool> UnenrollStudentAsync(int studentId, int courseId, int teacherId)
         {
-            var enrollment = await _context.Enrollments
-                .FirstOrDefaultAsync(e => e.UserId == studentId
-                                       && e.CourseId == courseId
-                                       && e.Course.TeacherId == teacherId);
-
-            if (enrollment == null)
+            // Sử dụng Transaction để đảm bảo nếu trừ tiền lỗi thì toàn bộ quá trình sẽ Rollback
+            using (var transaction = await _context.Database.BeginTransactionAsync())
             {
-                return false;
-            }
-            _context.Enrollments.Remove(enrollment);
-            var order = await _context.Orders
-                .FirstOrDefaultAsync(o => o.UserId == studentId
-                                       && o.CourseId == courseId
-                                       && o.Status == OrderStatusEnum.Success);
+                try
+                {
+                    var enrollment = await _context.Enrollments
+                        .Include(e => e.Course)
+                        .FirstOrDefaultAsync(e => e.UserId == studentId
+                                               && e.CourseId == courseId
+                                               && e.Course.TeacherId == teacherId);
 
-            if (order != null)
-            {
-                order.Status = OrderStatusEnum.Revoked;
-            }
+                    if (enrollment == null) return false;
 
-            await _context.SaveChangesAsync();
-            return true;
+                    var order = await _context.Orders
+                        .FirstOrDefaultAsync(o => o.UserId == studentId
+                                               && o.CourseId == courseId
+                                               && o.Status == OrderStatusEnum.Success);
+
+                    if (order != null)
+                    {
+                        var teacher = await _context.Users.FirstOrDefaultAsync(u => u.Id == teacherId);
+                        if (teacher != null)
+                        {
+                            teacher.WalletBalance -= order.Amount;
+                            _context.Users.Update(teacher);
+                        }
+
+                      
+                        order.Status = OrderStatusEnum.Revoked;
+                    }
+
+                    _context.Enrollments.Remove(enrollment);
+
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync(); 
+                                                      
+                    return false;
+                }
+            }
         }
         public async Task<List<object>> FilterMyStudentsAsync(int teacherId, List<string> onlineUserIds)
         {

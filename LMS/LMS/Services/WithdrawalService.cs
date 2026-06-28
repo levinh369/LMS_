@@ -245,7 +245,7 @@ namespace LMS.Services
                 await _withdrawRepo.SaveChangesAsync();
 
                 string msg = $"Giảng viên <b>{teacher.FullName}</b> vừa đặt lệnh rút {requestDto.Amount:N0} VNĐ.";
-                string uniqueUrl = $"/withdraw/index.html?action=new_request&id={withdrawalRecord.Id}";
+                string uniqueUrl = $"/withDraw/index.html?action=new_request&id={withdrawalRecord.Id}";
 
                 // ==========================================
                 // 1. QUÉT TÌM ADMIN VÀ GỬI THÔNG BÁO (Bỏ fix cứng 1029)
@@ -308,7 +308,7 @@ namespace LMS.Services
             int senderId = entity.UserId;
 
             string msg = $"Giảng viên báo lỗi chưa nhận được tiền cho giao dịch <b>#WD{id}</b>. Lý do: {reason}";
-            string uniqueUrl = $"/withdraw/index.html?action=view_dispute&id={id}";
+            string uniqueUrl = $"/withDraw/index.html?action=view_dispute&id={id}";
 
             // ==========================================
             // 2. QUÉT TÌM ADMIN VÀ GỬI THÔNG BÁO (Đã bỏ 1029)

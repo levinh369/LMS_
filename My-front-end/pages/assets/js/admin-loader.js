@@ -59,7 +59,7 @@ function loadAdminLayout() {
         } else { // NẾU LÀ GIẢNG VIÊN (TEACHER)
             roleText = "GIẢNG VIÊN";
             // Ép link menu Thống kê của Teacher về đúng file riêng của họ nếu cần
-            $("#btn-nav-dashboard").attr("href", "/Dashboard/dashboard-teacher.html"); 
+            $("#btn-nav-dashboard").attr("href", "/Dashboard/Dashboard-teacher.html"); 
             
             // Xóa các quyền của Teacher
             $("#btn-nav-rank").remove();

@@ -283,8 +283,7 @@ updateProfile: async function() {
         if (userInfoRaw) {
             let userInfo = JSON.parse(userInfoRaw);
             
-            // Đè dữ liệu mới từ Backend trả về
-            userInfo.username = res.newName; 
+            userInfo.fullName = res.newName;
             userInfo.avatar = res.newAvatar;
 
             // Cất lại vào kho
@@ -297,7 +296,9 @@ updateProfile: async function() {
 
         // 7. Hoàn tất: Đóng loading và hiện Toast thành công
         Swal.close(); 
-
+        if (typeof checkLoginStatus === 'function') {
+            AuthHelper.checkLoginStatus(); 
+        }
         Toast.fire({
             icon: 'success',
             title: 'Ngon lành! Cập nhật thành công.'

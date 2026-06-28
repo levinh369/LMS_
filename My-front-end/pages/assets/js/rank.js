@@ -137,59 +137,78 @@ const Rank = {
         `).join('');
     },
 
-   saveConfig: async function (id) {
-        const revenue = document.getElementById(`revenue-${id}`).value;
-        const rate = document.getElementById(`rate-${id}`).value;
+saveConfig: async function (id) {
+    // 1. Lấy tham chiếu nút bấm và các giá trị từ input
+    const btnSave = $(event.currentTarget);
+    const revenueInput = document.getElementById(`revenue-${id}`);
+    const rateInput = document.getElementById(`rate-${id}`);
 
-        const payload = {
-            requiredRevenue: parseFloat(revenue),
-            defaultRate: parseInt(rate)
-        };
+    // 2. Validate dữ liệu tại chỗ (tránh NaN)
+    const revenue = parseFloat(revenueInput.value);
+    const rate = parseInt(rateInput.value);
 
-        try {
-            GlobalLoader.show();
-            
-            // 📍 1. Lấy Token từ kho
-            const token = localStorage.getItem("jwt_token");
+    if (isNaN(revenue) || isNaN(rate)) {
+        Toast.fire({ icon: 'warning', title: 'Vui lòng nhập số hợp lệ!' });
+        return;
+    }
 
-            // 📍 2. Dùng $.ajax để tự động kẹp vé thông hành
-            const result = await $.ajax({
-                url: `${this.baseUrl}/ranks/${id}`,
-                type: 'PUT',
-                contentType: 'application/json',
-                data: JSON.stringify(payload),
-                headers: {
-                    "Authorization": `Bearer ${token}`
-                }
-            });
+    const payload = {
+        requiredRevenue: revenue,
+        defaultRate: rate
+    };
 
-            // Nếu $.ajax thành công, 'result' đã là object JSON rồi
-            Toast.fire({
-                icon: 'success',
-                title: result.message || 'Cập nhật thành công!'
-            });
-            
-            this.loadDashboard(); // Refresh lại số liệu
-            
-        } catch (error) {
-            console.error("Lỗi:", error);
-            
-            // 📍 Xử lý báo lỗi chi tiết
-            let errorMsg = 'Lỗi kết nối đến server!';
-            if (error.responseJSON && error.responseJSON.message) {
-                errorMsg = error.responseJSON.message;
-            } else if (error.status === 401) {
-                errorMsg = 'Phiên đăng nhập hết hạn!';
+    try {
+        // 3. Khóa nút bấm, tránh nhấn spam
+        btnSave.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> Đang lưu...');
+        GlobalLoader.show();
+        
+        const token = localStorage.getItem("jwt_token");
+
+        // 4. Gửi yêu cầu PUT lên server
+        const result = await $.ajax({
+            url: `${this.baseUrl}/ranks/${id}`,
+            type: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify(payload),
+            headers: {
+                "Authorization": `Bearer ${token}`
             }
+        });
 
-            Toast.fire({
-                icon: 'error',
-                title: errorMsg
-            });
-        } finally {
-            GlobalLoader.hide();
+        // 5. Thông báo thành công
+        Toast.fire({
+            icon: 'success',
+            title: result.message || 'Cập nhật thành công!'
+        });
+        
+        // 6. Refresh lại dữ liệu Dashboard
+        this.loadDashboard();
+        
+    } catch (error) {
+        console.error("Lỗi khi save config:", error);
+        
+        // 7. Xử lý lỗi chuyên sâu
+        let errorMsg = 'Có lỗi xảy ra, thử lại sau!';
+        
+        if (error.responseJSON && error.responseJSON.message) {
+            errorMsg = error.responseJSON.message; // Lỗi do server trả về
+        } else if (error.status === 401) {
+            errorMsg = 'Phiên đăng nhập hết hạn, vui lòng đăng nhập lại!';
+        } else if (error.status === 403) {
+            errorMsg = 'Bạn không có quyền thực hiện thao tác này!';
         }
-    },
+
+        Toast.fire({
+            icon: 'error',
+            title: errorMsg
+        });
+        
+    } finally {
+        // 8. Mở khóa nút bấm và ẩn loader
+        btnSave.prop('disabled', false).html('<i class="bi bi-save me-1"></i> Lưu');
+        GlobalLoader.hide();
+    }
+},
     // 5. Mở Modal và load danh sách giảng viên
     showTeacherList: async function (rankEnum, rankName) {
     const modal = new bootstrap.Modal(document.getElementById('teacherListModal'));
