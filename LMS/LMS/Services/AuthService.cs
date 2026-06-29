@@ -15,6 +15,7 @@ using NETCore.MailKit.Core;
 using Newtonsoft.Json.Linq;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using IEmailService = LMS.Services.Interfaces.IEmailService;
 
@@ -184,23 +185,32 @@ namespace LMS.Services
             {
                 throw new Exception("Email không tồn tại trong hệ thống!");
             }
-
-            Random rnd = new Random();
-            string otpCode = rnd.Next(100000, 999999).ToString();
+            string otpCode = RandomNumberGenerator.GetInt32(100000, 999999).ToString();
 
             user.ResetPasswordOtp = otpCode;
             user.ResetPasswordOtpExpiry = DateTime.UtcNow.AddMinutes(5);
-
             await userRepository.UpdateAsync(user);
+
             string subject = "Mã xác nhận khôi phục mật khẩu";
             string body = $@"
-                <h3>Xin chào {user.FullName},</h3>
-                <p>Bạn vừa yêu cầu khôi phục mật khẩu trên hệ thống LMS.</p>
-                <p>Mã xác nhận (OTP) của bạn là: <strong style='font-size:24px; color:blue;'>{otpCode}</strong></p>
-                <p>Mã này sẽ hết hạn sau <strong>5 phút</strong>. Vui lòng không chia sẻ mã này cho bất kỳ ai.</p>
-                <p>Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này.</p>
-            ";
-            await emailService.SendEmailAsync(user.Email, subject, body);
+        <h3>Xin chào {user.FullName},</h3>
+        <p>Bạn vừa yêu cầu khôi phục mật khẩu trên hệ thống LMS.</p>
+        <p>Mã xác nhận (OTP) của bạn là: <strong style='font-size:24px; color:blue;'>{otpCode}</strong></p>
+        <p>Mã này sẽ hết hạn sau <strong>5 phút</strong>. Vui lòng không chia sẻ mã này cho bất kỳ ai.</p>
+        <p>Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này.</p>
+    ";
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await emailService.SendEmailAsync(user.Email, subject, body);
+                }
+                catch (Exception ex)
+                {
+                    
+                    Console.WriteLine($"Lỗi gửi email ngầm: {ex.Message}");
+                }
+            });
         }
         public async Task<bool> VerifyOtpAsync(string email, string otpCode)
         {

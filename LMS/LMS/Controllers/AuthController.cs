@@ -130,16 +130,12 @@ namespace LMS.Controllers
 
             try
             {
-                // Gọi xuống Service để xử lý
                 await authService.ForgotPasswordAsync(request.Email);
-
-                // Trả về báo thành công
-                return Ok(new { Success = true, Message = "Mã xác nhận đã được gửi đến email của bạn." });
+                return Ok(new { Success = true, Message = "Nếu email tồn tại trên hệ thống, mã xác nhận đã được gửi đi." });
             }
             catch (Exception ex)
             {
-                // Có thể là lỗi "Email không tồn tại" hoặc lỗi không gửi được mail
-                return BadRequest(new { Success = false, Message = ex.Message });
+                return StatusCode(500, new { Success = false, Message = "Có lỗi xảy ra trong quá trình xử lý. Vui lòng thử lại sau!" });
             }
         }
         [HttpPost("verify-otp")]
